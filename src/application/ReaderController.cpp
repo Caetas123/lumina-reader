@@ -1,5 +1,6 @@
 #include "application/ReaderController.h"
 
+#include "domain/ocr/OcrProvider.h"
 #include "domain/reader/DocumentEngine.h"
 #include "infrastructure/library/LibraryStore.h"
 #include "infrastructure/ocr/TesseractOcrProvider.h"
@@ -51,6 +52,23 @@ bool sameFilePath(const QString &first, const QString &second)
     constexpr Qt::CaseSensitivity pathCaseSensitivity = Qt::CaseSensitive;
 #endif
     return firstPath.compare(secondPath, pathCaseSensitivity) == 0;
+}
+
+QVariantList ocrWordsAsVariants(const Lumina::Domain::OcrProvider::Result &result)
+{
+    QVariantList words;
+    for (const Lumina::Domain::OcrProvider::Word &word : result.words) {
+        words.append(QVariantMap{
+            {QStringLiteral("text"), word.text},
+            {QStringLiteral("start"), word.start},
+            {QStringLiteral("length"), word.length},
+            {QStringLiteral("x"), word.x},
+            {QStringLiteral("y"), word.y},
+            {QStringLiteral("width"), word.width},
+            {QStringLiteral("height"), word.height},
+        });
+    }
+    return words;
 }
 
 } // namespace
@@ -737,6 +755,69 @@ bool ReaderController::renderDocument(QPagedPaintDevice &device) const
                 }
                 painter.restore();
             }
+            for (const QVariant &highlightValue : savedHighlights) {
+                const QVariantMap highlight = highlightValue.toMap();
+                if (highlight.value(QStringLiteral("page")).toInt() != page) {
+                    continue;
+                }
+                const QStringList highlightParts = highlight.value(QStringLiteral("locator"))
+                                                       .toString()
+                                                       .split(QChar(':'), Qt::KeepEmptyParts);
+                if (highlightParts.size() < 4
+                    || highlightParts.first() != QStringLiteral("text")) {
+                    continue;
+                }
+                bool highlightStartOk = false;
+                bool highlightEndOk = false;
+                const int highlightStart = highlightParts.at(highlightParts.size() - 2)
+                                               .toInt(&highlightStartOk);
+                const int highlightEnd = highlightParts.last().toInt(&highlightEndOk);
+                if (!highlightStartOk || !highlightEndOk || highlightEnd <= highlightStart) {
+                    continue;
+                }
+                for (const QVariant &wordValue : savedAnnotations) {
+                    const QVariantMap word = wordValue.toMap();
+                    if (word.value(QStringLiteral("kind")).toString().toLower()
+                            != QStringLiteral("ocr-word")
+                        || word.value(QStringLiteral("page")).toInt() != page) {
+                        continue;
+                    }
+                    const QStringList wordParts = word.value(QStringLiteral("locator"))
+                                                      .toString()
+                                                      .split(QChar(':'), Qt::KeepEmptyParts);
+                    if (wordParts.size() < 4 || wordParts.first() != QStringLiteral("ocr")) {
+                        continue;
+                    }
+                    bool wordStartOk = false;
+                    bool wordEndOk = false;
+                    const int wordStart = wordParts.at(wordParts.size() - 2).toInt(&wordStartOk);
+                    const int wordEnd = wordParts.last().toInt(&wordEndOk);
+                    if (!wordStartOk || !wordEndOk || wordEnd <= highlightStart || wordStart >= highlightEnd) {
+                        continue;
+                    }
+                    const qreal x = std::clamp(word.value(QStringLiteral("x")).toDouble(), 0.0, 1.0);
+                    const qreal y = std::clamp(word.value(QStringLiteral("y")).toDouble(), 0.0, 1.0);
+                    const qreal width = std::clamp(word.value(QStringLiteral("width")).toDouble(), 0.0, 1.0 - x);
+                    const qreal height = std::clamp(word.value(QStringLiteral("height")).toDouble(), 0.0, 1.0 - y);
+                    if (width <= 0.0 || height <= 0.0) {
+                        continue;
+                    }
+                    QRectF region(QPointF(topLeft) + QPointF(x * scaledSize.width(), y * scaledSize.height()),
+                                  QSizeF(width * scaledSize.width(), height * scaledSize.height()));
+                    QColor color(highlight.value(QStringLiteral("color")).toString());
+                    if (!color.isValid()) {
+                        color = QColor(QStringLiteral("#f6c945"));
+                    }
+                    const QString style = highlight.value(QStringLiteral("style")).toString().toLower();
+                    color.setAlpha(style == QStringLiteral("highlight") ? 96 : 42);
+                    painter.save();
+                    painter.setPen(QPen(color.darker(140),
+                                        std::max<qreal>(1.0, pageRect.width() / 2200.0)));
+                    painter.setBrush(color);
+                    painter.drawRect(region);
+                    painter.restore();
+                }
+            }
             continue;
         }
 
@@ -893,7 +974,7 @@ bool ReaderController::startOcr(const QString &language)
     const bool started = ocrProvider_->recognize(
         image,
         language,
-        [this](const QString &text, const QString &error) {
+        [this](const Lumina::Domain::OcrProvider::Result &result, const QString &error) {
             const QString targetDocumentId = ocrDocumentId_;
             const QString targetLanguage = ocrLanguage_;
             const int targetPage = ocrPage_;
@@ -911,18 +992,19 @@ bool ReaderController::startOcr(const QString &language)
             if (!library_->saveOcrPage(targetDocumentId,
                                        targetPage,
                                        targetLanguage,
-                                       text,
-                                       QStringLiteral("completed"))) {
+                                       result.text,
+                                       QStringLiteral("completed"),
+                                       ocrWordsAsVariants(result))) {
                 ocrStatus_ = QStringLiteral("The recognized text could not be saved.");
                 emit stateChanged();
                 return;
             }
             if (targetDocumentId == documentId_ && targetPage == currentPage_) {
-                textContent_ = text;
-                showOcrText_ = !text.isEmpty();
+                textContent_ = result.text;
+                showOcrText_ = !result.text.isEmpty();
                 rebuildSearchMatches();
             }
-            ocrStatus_ = text.isEmpty()
+            ocrStatus_ = result.text.isEmpty()
                 ? QStringLiteral("No text was recognized on this page.")
                 : QStringLiteral("Text recognized and saved to the Knowledge center.");
             emit stateChanged();
@@ -1029,7 +1111,8 @@ void ReaderController::processNextDocumentOcrPage()
     const bool started = ocrProvider_->recognize(
         image,
         targetLanguage,
-        [this, targetDocumentId, targetLanguage, targetPage](const QString &text,
+        [this, targetDocumentId, targetLanguage, targetPage](
+            const Lumina::Domain::OcrProvider::Result &result,
                                                               const QString &error) {
             if (!ocrDocumentRunning_ || targetDocumentId != ocrBatchDocumentId_
                 || library_ == nullptr) {
@@ -1039,8 +1122,9 @@ void ReaderController::processNextDocumentOcrPage()
                 && library_->saveOcrPage(targetDocumentId,
                                          targetPage,
                                          targetLanguage,
-                                         text,
-                                         QStringLiteral("completed"))) {
+                                         result.text,
+                                         QStringLiteral("completed"),
+                                         ocrWordsAsVariants(result))) {
                 ++ocrBatchSucceeded_;
             } else {
                 ++ocrBatchFailed_;

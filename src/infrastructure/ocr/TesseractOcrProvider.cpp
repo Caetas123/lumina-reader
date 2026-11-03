@@ -4,6 +4,63 @@
 #include <QRegularExpression>
 #include <QStandardPaths>
 
+#include <algorithm>
+
+namespace {
+
+Lumina::Domain::OcrProvider::Result parseTesseractTsv(const QByteArray &data, const QSize &imageSize)
+{
+    Lumina::Domain::OcrProvider::Result result;
+    if (imageSize.isEmpty()) {
+        return result;
+    }
+
+    QString previousLine;
+    const QStringList lines = QString::fromUtf8(data).split(QChar('\n'), Qt::KeepEmptyParts);
+    for (const QString &rawLine : lines) {
+        const QStringList fields = rawLine.trimmed().split(QChar('\t'), Qt::KeepEmptyParts);
+        if (fields.size() < 12 || fields.at(0) != QStringLiteral("5")) {
+            continue;
+        }
+        const QString wordText = fields.at(11).trimmed();
+        if (wordText.isEmpty()) {
+            continue;
+        }
+
+        bool leftOk = false;
+        bool topOk = false;
+        bool widthOk = false;
+        bool heightOk = false;
+        const int left = fields.at(6).toInt(&leftOk);
+        const int top = fields.at(7).toInt(&topOk);
+        const int width = fields.at(8).toInt(&widthOk);
+        const int height = fields.at(9).toInt(&heightOk);
+        if (!leftOk || !topOk || !widthOk || !heightOk || width <= 0 || height <= 0) {
+            continue;
+        }
+
+        const QString lineKey = fields.mid(1, 4).join(QChar(':'));
+        if (!result.text.isEmpty()) {
+            result.text += lineKey == previousLine ? QChar(' ') : QChar('\n');
+        }
+        const int start = result.text.size();
+        result.text += wordText;
+        result.words.append(Lumina::Domain::OcrProvider::Word{
+            wordText,
+            start,
+            static_cast<int>(wordText.size()),
+            std::clamp(static_cast<double>(left) / imageSize.width(), 0.0, 1.0),
+            std::clamp(static_cast<double>(top) / imageSize.height(), 0.0, 1.0),
+            std::clamp(static_cast<double>(width) / imageSize.width(), 0.0, 1.0),
+            std::clamp(static_cast<double>(height) / imageSize.height(), 0.0, 1.0),
+        });
+        previousLine = lineKey;
+    }
+    return result;
+}
+
+} // namespace
+
 namespace Lumina::Infrastructure {
 
 TesseractOcrProvider::TesseractOcrProvider(QObject *parent)
@@ -83,7 +140,9 @@ bool TesseractOcrProvider::recognize(const QImage &image,
                            QStringLiteral("--language"),
                            normalizedLanguage,
                            QStringLiteral("--psm"),
-                           QStringLiteral("3")});
+                           QStringLiteral("3"),
+                           QStringLiteral("tsv")});
+    imageSize_ = image.size();
     process_.start();
     return true;
 }
@@ -109,7 +168,7 @@ void TesseractOcrProvider::handleFinished(int exitCode, QProcess::ExitStatus exi
                        : QStringLiteral("Tesseract could not recognize this page: %1").arg(details));
         return;
     }
-    finish(QString::fromUtf8(process_.readAllStandardOutput()).trimmed(), {});
+    finish(parseTesseractTsv(process_.readAllStandardOutput(), imageSize_), {});
 }
 
 void TesseractOcrProvider::handleError(QProcess::ProcessError error)
@@ -120,7 +179,8 @@ void TesseractOcrProvider::handleError(QProcess::ProcessError error)
     finish({}, QStringLiteral("Lumina Reader could not start the OCR provider."));
 }
 
-void TesseractOcrProvider::finish(const QString &text, const QString &error)
+void TesseractOcrProvider::finish(const Lumina::Domain::OcrProvider::Result &result,
+                                  const QString &error)
 {
     if (!busy_ && completion_ == nullptr) {
         return;
@@ -128,9 +188,10 @@ void TesseractOcrProvider::finish(const QString &text, const QString &error)
     busy_ = false;
     emit busyChanged();
     imageFile_.close();
+    imageSize_ = {};
     const Completion completion = std::move(completion_);
     if (completion != nullptr) {
-        completion(text, error);
+        completion(result, error);
     }
 }
 

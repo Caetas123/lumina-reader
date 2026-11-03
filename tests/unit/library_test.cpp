@@ -491,6 +491,69 @@ private slots:
         reloadedStore.setDatabase(&database);
         QCOMPARE(reloadedStore.knowledgeSearch(QStringLiteral("democracy")).size(), 2);
     }
+
+    void persistsOcrWordCoordinatesWithoutKnowledgeNoise()
+    {
+        Lumina::Infrastructure::Database database;
+        Lumina::Domain::Error error;
+        QVERIFY2(database.open(QStringLiteral(":memory:"), &error),
+                 qPrintable(error.logMessage()));
+        QVERIFY2(database.migrate(&error), qPrintable(error.logMessage()));
+
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const QString filePath = directory.filePath(QStringLiteral("ocr-source.txt"));
+        QFile file(filePath);
+        QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Text));
+        QVERIFY(file.write("Democracy words\n") > 0);
+        file.close();
+
+        Lumina::Infrastructure::LibraryStore store;
+        store.setDatabase(&database);
+        QVERIFY(store.importFiles({filePath}));
+        const QString documentId = store.data(
+            store.index(0, 0), Lumina::Infrastructure::LibraryStore::IdRole).toString();
+        QVERIFY(!documentId.isEmpty());
+
+        const QVariantList words{
+            QVariantMap{
+                {QStringLiteral("text"), QStringLiteral("Democracy")},
+                {QStringLiteral("start"), 0},
+                {QStringLiteral("length"), 9},
+                {QStringLiteral("x"), 0.1},
+                {QStringLiteral("y"), 0.2},
+                {QStringLiteral("width"), 0.3},
+                {QStringLiteral("height"), 0.1},
+            },
+            QVariantMap{
+                {QStringLiteral("text"), QStringLiteral("words")},
+                {QStringLiteral("start"), 10},
+                {QStringLiteral("length"), 5},
+                {QStringLiteral("x"), 0.45},
+                {QStringLiteral("y"), 0.2},
+                {QStringLiteral("width"), 0.2},
+                {QStringLiteral("height"), 0.1},
+            },
+        };
+        QVERIFY(store.saveOcrPage(documentId,
+                                  0,
+                                  QStringLiteral("eng"),
+                                  QStringLiteral("Democracy words"),
+                                  QStringLiteral("completed"),
+                                  words));
+
+        const QVariantList annotations = store.annotationsForDocument(documentId);
+        QCOMPARE(annotations.size(), 2);
+        QCOMPARE(annotations.first().toMap().value(QStringLiteral("kind")).toString(),
+                 QStringLiteral("ocr-word"));
+        QCOMPARE(annotations.first().toMap().value(QStringLiteral("locator")).toString(),
+                 QStringLiteral("ocr:0:0:9"));
+        QCOMPARE(annotations.first().toMap().value(QStringLiteral("x")).toDouble(), 0.1);
+        const QVariantList results = store.knowledgeSearch(QStringLiteral("democracy"));
+        QCOMPARE(results.size(), 1);
+        QCOMPARE(results.first().toMap().value(QStringLiteral("kind")).toString(),
+                 QStringLiteral("ocr"));
+    }
 };
 
 QTEST_GUILESS_MAIN(LibraryTest)

@@ -39,6 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - System read-aloud can now highlight the spoken word when the installed Qt Speech backend reports word progress.
 - Saved image and PDF region annotations are now redrawn over their original page coordinates after reopening.
 - PDF export and system printing now carry saved text highlights and visual region annotations into the output.
+- OCR now persists Tesseract word coordinates so saved OCR highlights can be restored over the source image.
 - Linux release packaging now publishes both an x86_64 AppImage and a Debian/Ubuntu-compatible `.deb` from the same versioned build.
 
 ### Changed

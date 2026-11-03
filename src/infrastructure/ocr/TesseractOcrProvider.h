@@ -3,6 +3,7 @@
 #include "domain/ocr/OcrProvider.h"
 
 #include <QProcess>
+#include <QSize>
 #include <QTemporaryFile>
 
 namespace Lumina::Infrastructure {
@@ -31,11 +32,12 @@ private slots:
 
 private:
     [[nodiscard]] QString executablePath() const;
-    void finish(const QString &text, const QString &error);
+    void finish(const Lumina::Domain::OcrProvider::Result &result, const QString &error);
 
     QProcess process_;
     QTemporaryFile imageFile_;
     Completion completion_;
+    QSize imageSize_;
     bool busy_ = false;
 };
 

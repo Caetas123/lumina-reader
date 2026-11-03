@@ -2587,7 +2587,8 @@ bool LibraryStore::saveOcrPage(const QString &documentId,
                                int page,
                                const QString &language,
                                const QString &text,
-                               const QString &status)
+                               const QString &status,
+                               const QVariantList &words)
 {
     if (!isReady() || documentId.trimmed().isEmpty() || documentDetails(documentId).isEmpty()
         || page < 0) {
@@ -2621,6 +2622,16 @@ bool LibraryStore::saveOcrPage(const QString &documentId,
     bool success = pageQuery.exec();
 
     if (success) {
+        QSqlQuery removeWords(connection);
+        removeWords.prepare(QStringLiteral(
+            "DELETE FROM annotations WHERE document_id = :document AND page = :page "
+            "AND kind = 'ocr-word'"));
+        removeWords.bindValue(QStringLiteral(":document"), documentId);
+        removeWords.bindValue(QStringLiteral(":page"), page);
+        success = removeWords.exec();
+    }
+
+    if (success) {
         QSqlQuery removeSearch(connection);
         removeSearch.prepare(QStringLiteral(
             "DELETE FROM knowledge_items_search WHERE source_id = :source AND source_kind = 'ocr'"));
@@ -2640,6 +2651,47 @@ bool LibraryStore::saveOcrPage(const QString &documentId,
         search.bindValue(QStringLiteral(":page"), page);
         search.bindValue(QStringLiteral(":locator"), QStringLiteral("ocr:") + QString::number(page));
         success = search.exec();
+    }
+
+    if (success && normalizedStatus == QStringLiteral("completed")) {
+        QSqlQuery wordQuery(connection);
+        wordQuery.prepare(QStringLiteral(
+            "INSERT INTO annotations "
+            "(id, document_id, text, kind, locator, page, x, y, width, height) "
+            "VALUES (:id, :document, :text, 'ocr-word', :locator, :page, :x, :y, :width, :height)"));
+        for (const QVariant &value : words) {
+            const QVariantMap word = value.toMap();
+            const QString wordText = word.value(QStringLiteral("text")).toString().left(1024);
+            const int start = std::max(0, word.value(QStringLiteral("start")).toInt());
+            const int requestedLength = word.value(QStringLiteral("length")).toInt();
+            const int wordTextLength = static_cast<int>(wordText.size());
+            const int length = std::min(requestedLength > 0 ? requestedLength : wordTextLength,
+                                        wordTextLength);
+            const double x = std::clamp(word.value(QStringLiteral("x")).toDouble(), 0.0, 1.0);
+            const double y = std::clamp(word.value(QStringLiteral("y")).toDouble(), 0.0, 1.0);
+            const double width = std::clamp(word.value(QStringLiteral("width")).toDouble(), 0.0, 1.0 - x);
+            const double height = std::clamp(word.value(QStringLiteral("height")).toDouble(), 0.0, 1.0 - y);
+            if (wordText.trimmed().isEmpty() || length <= 0 || width <= 0.0 || height <= 0.0) {
+                continue;
+            }
+            wordQuery.bindValue(QStringLiteral(":id"), QUuid::createUuid().toString(QUuid::WithoutBraces));
+            wordQuery.bindValue(QStringLiteral(":document"), documentId);
+            wordQuery.bindValue(QStringLiteral(":text"), wordText);
+            wordQuery.bindValue(QStringLiteral(":locator"),
+                                QStringLiteral("ocr:%1:%2:%3")
+                                    .arg(page)
+                                    .arg(start)
+                                    .arg(start + length));
+            wordQuery.bindValue(QStringLiteral(":page"), page);
+            wordQuery.bindValue(QStringLiteral(":x"), x);
+            wordQuery.bindValue(QStringLiteral(":y"), y);
+            wordQuery.bindValue(QStringLiteral(":width"), width);
+            wordQuery.bindValue(QStringLiteral(":height"), height);
+            if (!wordQuery.exec()) {
+                success = false;
+                break;
+            }
+        }
     }
 
     if (!success || !connection.commit()) {

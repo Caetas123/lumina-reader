@@ -24,6 +24,7 @@ ApplicationWindow {
     property bool twoPageMode: false
     property bool speechHighlightActive: false
     property var savedReaderRegions: []
+    property var savedReaderOcrHighlights: []
     property real imageZoom: 1.0
     property string zoomDocumentId: ""
     property var highlightColors: ["#f6c945", "#7acb8a", "#77a8e8", "#ed8fb3", "#aa8bd8"]
@@ -253,18 +254,60 @@ ApplicationWindow {
     function refreshReaderRegions() {
         if (!appController.reader.open || !appController.reader.imageDocument) {
             window.savedReaderRegions = []
+            window.savedReaderOcrHighlights = []
             return
         }
         var allAnnotations = appController.library.annotationsForDocument(appController.reader.documentId)
         var regions = []
+        var ocrWords = []
         for (var index = 0; index < allAnnotations.length; ++index) {
             var annotation = allAnnotations[index]
-            if (String(annotation.kind).toLowerCase() === "region"
-                    && Number(annotation.page) === appController.reader.currentPage) {
+            var kind = String(annotation.kind).toLowerCase()
+            if (kind === "region" && Number(annotation.page) === appController.reader.currentPage) {
                 regions.push(annotation)
+            } else if (kind === "ocr-word" && Number(annotation.page) === appController.reader.currentPage) {
+                ocrWords.push(annotation)
             }
         }
         window.savedReaderRegions = regions
+
+        var ocrHighlights = []
+        var highlights = appController.library.highlightsForDocument(appController.reader.documentId)
+        for (var highlightIndex = 0; highlightIndex < highlights.length; ++highlightIndex) {
+            var highlight = highlights[highlightIndex]
+            var parts = String(highlight.locator).split(":")
+            if (parts.length < 4 || parts[0] !== "text"
+                    || Number(parts[1]) !== appController.reader.currentPage) {
+                continue
+            }
+            var highlightStart = Number(parts[parts.length - 2])
+            var highlightEnd = Number(parts[parts.length - 1])
+            if (!isFinite(highlightStart) || !isFinite(highlightEnd) || highlightEnd <= highlightStart) {
+                continue
+            }
+            for (var wordIndex = 0; wordIndex < ocrWords.length; ++wordIndex) {
+                var word = ocrWords[wordIndex]
+                var wordParts = String(word.locator).split(":")
+                if (wordParts.length < 4 || wordParts[0] !== "ocr") {
+                    continue
+                }
+                var wordStart = Number(wordParts[wordParts.length - 2])
+                var wordEnd = Number(wordParts[wordParts.length - 1])
+                if (!isFinite(wordStart) || !isFinite(wordEnd)
+                        || wordEnd <= highlightStart || wordStart >= highlightEnd) {
+                    continue
+                }
+                ocrHighlights.push({
+                    x: Number(word.x),
+                    y: Number(word.y),
+                    width: Number(word.width),
+                    height: Number(word.height),
+                    color: String(highlight.color || "#f6c945"),
+                    style: String(highlight.style || "highlight")
+                })
+            }
+        }
+        window.savedReaderOcrHighlights = ocrHighlights
     }
 
     function setLibraryFilter(filter) {
@@ -879,6 +922,7 @@ ApplicationWindow {
             textHighlightDialog.editingId = ""
             textHighlightNote.clear()
             readerText.deselect()
+            window.refreshReaderRegions()
         }
         onRejected: {
             textHighlightDialog.editingId = ""
@@ -2981,6 +3025,28 @@ ApplicationWindow {
                                     border.color: "#d29b1d"
                                     border.width: 2
                                     z: 0
+                                }
+                            }
+
+                            Repeater {
+                                model: window.savedReaderOcrHighlights
+                                delegate: Rectangle {
+                                    required property var modelData
+                                    x: readerImage.x
+                                        + (readerImage.width - readerImage.paintedWidth) / 2
+                                        + Number(modelData.x) * readerImage.paintedWidth
+                                    y: readerImage.y
+                                        + (readerImage.height - readerImage.paintedHeight) / 2
+                                        + Number(modelData.y) * readerImage.paintedHeight
+                                    width: Number(modelData.width) * readerImage.paintedWidth
+                                    height: Number(modelData.height) * readerImage.paintedHeight
+                                    color: String(modelData.style) === "highlight"
+                                        ? String(modelData.color || "#f6c945")
+                                        : "transparent"
+                                    opacity: 0.28
+                                    border.color: String(modelData.color || "#f6c945")
+                                    border.width: 2
+                                    z: 1
                                 }
                             }
 

@@ -51,7 +51,7 @@ The current application provides:
 - single-page and two-page layouts for visual documents, with page-aware navigation;
 - optional in-process CBR, CB7, CBT, RAR, and 7Z reading when libarchive is available at configure time;
 - optional in-process DJVU/DJV page rendering and hidden-text extraction when DjVuLibre is available at configure time;
-- optional asynchronous page and document OCR through Tesseract when it is installed on the system, with local progress and cancellation;
+- optional asynchronous page and document OCR through Tesseract when it is installed on the system, with local progress, cancellation, word coordinates, and image-region mapping;
 - PDF export and system printing for the opened document, including saved text highlights and visual region annotations, without modifying the original file;
 - in-document search for text pages and EPUB chapters;
 - a Contents panel for multi-page documents, with EPUB chapter labels when the source provides them;

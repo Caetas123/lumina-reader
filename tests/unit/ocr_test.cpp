@@ -17,7 +17,7 @@ private slots:
     {
         Lumina::Infrastructure::TesseractOcrProvider provider;
         QVERIFY(!provider.recognize(QImage(), QStringLiteral("eng"),
-                                    [](const QString &, const QString &) {}));
+                                    [](const Lumina::Domain::OcrProvider::Result &, const QString &) {}));
         QVERIFY(!provider.busy());
     }
 };

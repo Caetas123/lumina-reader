@@ -149,7 +149,8 @@ public:
                      int page,
                      const QString &language,
                      const QString &text,
-                     const QString &status = QStringLiteral("completed"));
+                     const QString &status = QStringLiteral("completed"),
+                     const QVariantList &words = {});
     Q_INVOKABLE QVariantList bookmarksForDocument(const QString &documentId) const;
     Q_INVOKABLE bool addBookmark(const QString &documentId,
                                  const QString &label,

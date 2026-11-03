@@ -15,7 +15,7 @@ This report describes the behavior implemented in the repository, not only the c
 - Persistent highlights with color/style/comment, selected-passage notes, image-region annotations with restored coordinate overlays, bookmarks, OCR page storage, document-wide OCR, global Knowledge center search, filters, ordering, editing, deletion, export, and Knowledge undo/redo.
 - Scoped local search history for the library, the open document, and the Knowledge center, including deduplication, retention, reopening, and clearing.
 - Explicit Google, dictionary, and translation actions; lookup history can be reopened, cleared, favorited, and copied.
-- Optional local Tesseract OCR with selectable English, Portuguese, Spanish, Japanese, Korean, and Chinese language codes.
+- Optional local Tesseract OCR with selectable English, Portuguese, Spanish, Japanese, Korean, and Chinese language codes, persisted word coordinates, and selection-to-image mapping.
 - Optional system text-to-speech with start, pause, resume, stop, rate, volume, selected-passage reading, continuous-document reading, and backend-dependent spoken-word highlighting.
 - Themes, font size, line spacing, continuous reading, high contrast, keyboard navigation, accessible labels/tooltips, settings export/restore, library export/restore, knowledge export, and database backup.
 - Plain-text export of the opened document without changing the source file.
@@ -61,7 +61,7 @@ The graphical executable also stayed alive for more than ten seconds with `QT_QP
 
 - EPUB is rendered as a safe native text view. CSS pagination, embedded fonts/media, links, and nested navigation levels are not reproduced; the Contents panel follows the EPUB spine and uses chapter labels when available.
 - PDF pages are rendered through Qt PDF when available. Extracted text is exposed in a selectable fallback view, visual pages support single-page/two-page layouts, saved manual regions are restored as coordinate overlays, and text highlights/visual regions are carried into exported or printed output; native PDF text-selection coordinate mapping remains limited because the fallback view does not expose the source PDF glyph geometry.
-- OCR now supports asynchronous page and document-wide passes. Word-level overlays over OCR output remain future work; manual region annotations are stored and restored over the original image coordinates as the safe fallback.
+- OCR supports asynchronous page and document-wide passes, persists normalized Tesseract word boxes, and maps saved OCR text highlights back over the original image; manual region annotations remain the safe fallback when OCR is unavailable.
 - Dictionary and translation providers are explicit online integrations. No local dictionary database is bundled, and no external request occurs without a user action.
 - Qt Speech word-level highlighting is enabled when the selected backend exposes the Qt 6.6+ word-progress capability; engines without that capability still support read-aloud without visual word tracking.
 - The current Windows workspace did not provide the optional Qt PDF, CorePrivate, libarchive, DjVuLibre, or Tesseract dependencies, so those runtime paths were not claimed as locally executed in this audit.
