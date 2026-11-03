@@ -47,6 +47,7 @@ ApplicationWindow {
         target: appController.library
         function onLibraryChanged() {
             window.refreshLibraryBrowseOptions()
+            knowledgePage.refreshDocumentOptions()
         }
         function onViewFilterChanged() {
             var filter = appController.library.viewFilter
@@ -1450,14 +1451,40 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 property var results: []
+                property var documentOptions: []
                 property var formatFilters: ["", "epub", "pdf", "mobi", "azw", "azw3", "fb2", "txt", "rtf", "cbz", "cbr", "cb7", "cbt", "rar", "7z", "zip"]
                 property var colorFilters: [""].concat(window.highlightColors)
+                property var orderFilters: ["relevance", "newest", "oldest"]
+
+                Component.onCompleted: refreshDocumentOptions()
+
+                function refreshDocumentOptions() {
+                    var options = [{ label: qsTr("All documents"), id: "" }]
+                    var documents = appController.library.knowledgeDocumentOptions()
+                    for (var index = 0; index < documents.length; ++index) {
+                        var document = documents[index]
+                        var label = document.title
+                        if (document.author && document.author.length > 0) {
+                            label += " · " + document.author
+                        }
+                        options.push({ label: label, id: document.id })
+                    }
+                    documentOptions = options
+                }
 
                 function refreshResults() {
+                    var documentId = knowledgeDocumentFilter.currentIndex >= 0
+                        && knowledgeDocumentFilter.currentIndex < documentOptions.length
+                        ? documentOptions[knowledgeDocumentFilter.currentIndex].id : ""
                     results = appController.library.knowledgeSearch(
                         knowledgeSearch.text,
                         formatFilters[knowledgeFormatFilter.currentIndex],
-                        colorFilters[knowledgeColorFilter.currentIndex])
+                        colorFilters[knowledgeColorFilter.currentIndex],
+                        documentId,
+                        knowledgeAuthor.text,
+                        knowledgeCreatedAfter.text,
+                        knowledgeCreatedBefore.text,
+                        orderFilters[knowledgeOrder.currentIndex])
                 }
 
                 ColumnLayout {
@@ -1507,6 +1534,41 @@ ApplicationWindow {
                             Layout.preferredWidth: 140
                             model: [qsTr("All colors"), qsTr("Yellow"), qsTr("Green"), qsTr("Blue"),
                                     qsTr("Pink"), qsTr("Purple")]
+                            onActivated: knowledgePage.refreshResults()
+                        }
+                        ComboBox {
+                            id: knowledgeDocumentFilter
+                            Layout.preferredWidth: 190
+                            model: knowledgePage.documentOptions
+                            textRole: "label"
+                            valueRole: "id"
+                            onActivated: knowledgePage.refreshResults()
+                        }
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        TextField {
+                            id: knowledgeAuthor
+                            Layout.fillWidth: true
+                            placeholderText: qsTr("Filter by author")
+                            onTextChanged: knowledgePage.refreshResults()
+                        }
+                        TextField {
+                            id: knowledgeCreatedAfter
+                            Layout.preferredWidth: 150
+                            placeholderText: qsTr("From YYYY-MM-DD")
+                            onTextChanged: knowledgePage.refreshResults()
+                        }
+                        TextField {
+                            id: knowledgeCreatedBefore
+                            Layout.preferredWidth: 150
+                            placeholderText: qsTr("To YYYY-MM-DD")
+                            onTextChanged: knowledgePage.refreshResults()
+                        }
+                        ComboBox {
+                            id: knowledgeOrder
+                            Layout.preferredWidth: 140
+                            model: [qsTr("Relevance"), qsTr("Newest"), qsTr("Oldest")]
                             onActivated: knowledgePage.refreshResults()
                         }
                     }

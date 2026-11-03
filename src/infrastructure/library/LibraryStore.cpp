@@ -1314,9 +1314,35 @@ bool LibraryStore::setTags(const QString &documentId, const QStringList &tags)
     return true;
 }
 
+QVariantList LibraryStore::knowledgeDocumentOptions() const
+{
+    QVariantList results;
+    if (!isReady()) {
+        return results;
+    }
+    QSqlQuery query(database_->connection());
+    if (!query.exec(QStringLiteral(
+            "SELECT id, title, author FROM documents ORDER BY title COLLATE NOCASE"))) {
+        return results;
+    }
+    while (query.next()) {
+        results.append(QVariantMap{
+            {QStringLiteral("id"), query.value(0)},
+            {QStringLiteral("title"), query.value(1)},
+            {QStringLiteral("author"), query.value(2)},
+        });
+    }
+    return results;
+}
+
 QVariantList LibraryStore::knowledgeSearch(const QString &term,
                                            const QString &format,
-                                           const QString &color) const
+                                           const QString &color,
+                                           const QString &documentId,
+                                           const QString &author,
+                                           const QString &createdAfter,
+                                           const QString &createdBefore,
+                                           const QString &order) const
 {
     QVariantList results;
     if (!isReady() || term.trimmed().isEmpty()) {
@@ -1342,13 +1368,36 @@ QVariantList LibraryStore::knowledgeSearch(const QString &term,
         "WHERE knowledge_items_search MATCH :match");
     const QString normalizedFormat = format.trimmed().toLower();
     const QString normalizedColor = color.trimmed().toLower();
+    const QString normalizedDocumentId = documentId.trimmed();
+    const QString normalizedAuthor = author.trimmed();
+    const QString normalizedCreatedAfter = createdAfter.trimmed();
+    const QString normalizedCreatedBefore = createdBefore.trimmed();
     if (!normalizedFormat.isEmpty()) {
         statement += QStringLiteral(" AND d.format = :format");
     }
     if (!normalizedColor.isEmpty()) {
         statement += QStringLiteral(" AND COALESCE(h.color, '') = :color");
     }
-    statement += QStringLiteral(" ORDER BY rank, ks.created_at DESC");
+    if (!normalizedDocumentId.isEmpty()) {
+        statement += QStringLiteral(" AND ks.document_id = :document");
+    }
+    if (!normalizedAuthor.isEmpty()) {
+        statement += QStringLiteral(" AND lower(COALESCE(d.author, '')) LIKE lower(:author)");
+    }
+    if (!normalizedCreatedAfter.isEmpty()) {
+        statement += QStringLiteral(" AND ks.created_at >= :created_after");
+    }
+    if (!normalizedCreatedBefore.isEmpty()) {
+        statement += QStringLiteral(" AND ks.created_at <= :created_before");
+    }
+    const QString normalizedOrder = order.trimmed().toLower();
+    if (normalizedOrder == QStringLiteral("oldest")) {
+        statement += QStringLiteral(" ORDER BY ks.created_at ASC");
+    } else if (normalizedOrder == QStringLiteral("newest")) {
+        statement += QStringLiteral(" ORDER BY ks.created_at DESC");
+    } else {
+        statement += QStringLiteral(" ORDER BY rank, ks.created_at DESC");
+    }
     query.prepare(statement);
     query.bindValue(QStringLiteral(":match"), match);
     if (!normalizedFormat.isEmpty()) {
@@ -1356,6 +1405,18 @@ QVariantList LibraryStore::knowledgeSearch(const QString &term,
     }
     if (!normalizedColor.isEmpty()) {
         query.bindValue(QStringLiteral(":color"), normalizedColor);
+    }
+    if (!normalizedDocumentId.isEmpty()) {
+        query.bindValue(QStringLiteral(":document"), normalizedDocumentId);
+    }
+    if (!normalizedAuthor.isEmpty()) {
+        query.bindValue(QStringLiteral(":author"), QStringLiteral("%") + normalizedAuthor + QStringLiteral("%"));
+    }
+    if (!normalizedCreatedAfter.isEmpty()) {
+        query.bindValue(QStringLiteral(":created_after"), normalizedCreatedAfter + QStringLiteral(" 00:00:00"));
+    }
+    if (!normalizedCreatedBefore.isEmpty()) {
+        query.bindValue(QStringLiteral(":created_before"), normalizedCreatedBefore + QStringLiteral(" 23:59:59"));
     }
     if (!query.exec()) {
         return results;

@@ -166,6 +166,38 @@ private slots:
                                        QStringLiteral("#7acb8a"))
                      .size(),
                  0);
+        QCOMPARE(store.knowledgeDocumentOptions().size(), 2);
+        QCOMPARE(store.knowledgeSearch(QStringLiteral("democ"),
+                                       QStringLiteral(""),
+                                       QStringLiteral(""),
+                                       documentId,
+                                       QStringLiteral("Lumina author"))
+                     .size(),
+                 1);
+        QCOMPARE(store.knowledgeSearch(QStringLiteral("democ"),
+                                       QStringLiteral(""),
+                                       QStringLiteral(""),
+                                       QStringLiteral(""),
+                                       QStringLiteral("Different author"))
+                     .size(),
+                 0);
+        QCOMPARE(store.knowledgeSearch(QStringLiteral("democ"),
+                                       QStringLiteral(""),
+                                       QStringLiteral(""),
+                                       QStringLiteral(""),
+                                       QStringLiteral(""),
+                                       QStringLiteral("2000-01-01"))
+                     .size(),
+                 1);
+        QCOMPARE(store.knowledgeSearch(QStringLiteral("democ"),
+                                       QStringLiteral(""),
+                                       QStringLiteral(""),
+                                       QStringLiteral(""),
+                                       QStringLiteral(""),
+                                       QStringLiteral(""),
+                                       QStringLiteral("2000-01-01"))
+                     .size(),
+                 0);
 
         QVERIFY(store.saveOcrPage(documentId,
                                   3,
