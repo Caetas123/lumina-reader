@@ -15,6 +15,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Replaceable `PdfEngine` abstraction.
 - Initial unit tests, cross-platform CI configuration, and open-source project documentation.
 
+## [0.1.2] - 2026-11-02
+
+### Added
+
+- System-language detection for the Windows installer, with Portuguese and English user interfaces.
+
+### Changed
+
+- The installer now selects Portuguese for Portuguese Windows installations and uses English as the fallback language.
+- The application and release metadata now use version `0.1.2`.
+
 ## [0.1.1] - 2026-11-02
 
 ### Added

@@ -18,3 +18,5 @@ Every public release gets a new Git tag in the form `vMAJOR.MINOR.PATCH`. Existi
 6. Commit the versioned changes, create the tag, and publish the GitHub Release with checksums for every artifact.
 
 The version shown in the application window comes from `LUMINA_VERSION`, which is generated from the CMake project version.
+
+The Windows installer detects the operating system UI language. Portuguese Windows installations use the Portuguese installer interface; other languages use English until an additional translation is added.
