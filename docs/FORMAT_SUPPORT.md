@@ -14,7 +14,7 @@ This document describes the behavior of the code that is currently shipped. A fi
 | Format | Import | Open and navigate | Text/search | Highlights, notes, bookmarks, progress | Current limitation or alternative |
 | --- | --- | --- | --- | --- | --- |
 | EPUB | Available with Qt archive support | Available, following the EPUB spine | Available for XHTML chapters | Available for text locations and the global Knowledge center | CSS layout, embedded fonts, media, and a visual table of contents are not yet reproduced by the native text view |
-| PDF | Conditional on `Qt6::Pdf` | Available when the module is present | Page rendering is available; text extraction/selection is not yet wired to the reader | Progress and bookmarks are available; text highlights require extracted text | Release builds request Qt PDF. A build without it reports a clear capability message |
+| PDF | Conditional on `Qt6::Pdf` | Available when the module is present | Page text is indexed and in-document search can find it; visual text selection/highlight overlays are not yet wired to the rendered page | Progress and bookmarks are available; text highlights require a visual selection bridge | Release builds request Qt PDF. A build without it reports a clear capability message |
 | MOBI | Unavailable | — | — | — | Requires a dedicated, license-compatible MOBI/PalmDB reader; DRM removal is never attempted |
 | AZW | Unavailable | — | — | — | Requires a dedicated Kindle format reader; DRM-protected content is not supported |
 | AZW3 | Unavailable | — | — | — | Requires a dedicated KF8 reader; DRM-protected content is not supported |

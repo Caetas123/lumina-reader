@@ -18,6 +18,10 @@
 #include <QStandardPaths>
 #include <QUuid>
 
+#ifdef LUMINA_HAS_QT_PDF
+#include <QPdfDocument>
+#endif
+
 #include <algorithm>
 
 namespace {
@@ -134,6 +138,26 @@ QString calculateHash(const QString &path)
 
 QString searchableText(const QString &path, const QString &format)
 {
+#ifdef LUMINA_HAS_QT_PDF
+    if (format == QStringLiteral("pdf")) {
+        QPdfDocument document;
+        if (document.load(path) != QPdfDocument::Error::None) {
+            return {};
+        }
+        QString text;
+        for (int page = 0; page < document.pageCount(); ++page) {
+            const auto selection = document.getAllText(page);
+            if (selection.isValid()) {
+                text.append(selection.text());
+                text.append(QChar('\n'));
+            }
+            if (text.size() >= 4 * 1024 * 1024) {
+                break;
+            }
+        }
+        return text.left(4 * 1024 * 1024);
+    }
+#endif
     if (format == QStringLiteral("epub")) {
         Lumina::Infrastructure::ArchiveReader archive;
         if (!archive.open(path, format)) {

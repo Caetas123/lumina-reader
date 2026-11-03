@@ -302,6 +302,9 @@ bool ReaderController::renderPdfPage()
     }
     imageSource_ = QStringLiteral("data:image/png;base64,")
         + QString::fromLatin1(encoded.toBase64());
+    const auto selection = pdfDocument_->getAllText(currentPage_);
+    textContent_ = selection.isValid() ? selection.text() : QString();
+    rebuildSearchMatches();
     return true;
 #else
     return false;
