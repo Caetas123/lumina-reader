@@ -1066,6 +1066,15 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 property var results: []
+                property var formatFilters: ["", "epub", "pdf", "mobi", "azw", "azw3", "fb2", "txt", "rtf", "cbz", "zip"]
+                property var colorFilters: ["", "#f6c945", "#7acb8a", "#77a8e8", "#ed8fb3", "#aa8bd8"]
+
+                function refreshResults() {
+                    results = appController.library.knowledgeSearch(
+                        knowledgeSearch.text,
+                        formatFilters[knowledgeFormatFilter.currentIndex],
+                        colorFilters[knowledgeColorFilter.currentIndex])
+                }
 
                 ColumnLayout {
                     anchors.fill: parent
@@ -1092,11 +1101,29 @@ ApplicationWindow {
                             onClicked: knowledgeExportDialog.open()
                         }
                     }
-                    TextField {
-                        id: knowledgeSearch
+                    RowLayout {
                         Layout.fillWidth: true
-                        placeholderText: qsTr("Search highlights and notes")
-                        onTextChanged: knowledgePage.results = appController.library.knowledgeSearch(text)
+                        TextField {
+                            id: knowledgeSearch
+                            Layout.fillWidth: true
+                            placeholderText: qsTr("Search highlights and notes")
+                            onTextChanged: knowledgePage.refreshResults()
+                        }
+                        ComboBox {
+                            id: knowledgeFormatFilter
+                            Layout.preferredWidth: 140
+                            model: [qsTr("All formats"), qsTr("EPUB"), qsTr("PDF"), qsTr("MOBI"),
+                                    qsTr("AZW"), qsTr("AZW3"), qsTr("FB2"), qsTr("TXT"),
+                                    qsTr("RTF"), qsTr("CBZ"), qsTr("ZIP")]
+                            onActivated: knowledgePage.refreshResults()
+                        }
+                        ComboBox {
+                            id: knowledgeColorFilter
+                            Layout.preferredWidth: 140
+                            model: [qsTr("All colors"), qsTr("Yellow"), qsTr("Green"), qsTr("Blue"),
+                                    qsTr("Pink"), qsTr("Purple")]
+                            onActivated: knowledgePage.refreshResults()
+                        }
                     }
                     Rectangle {
                         Layout.fillWidth: true
@@ -1127,7 +1154,7 @@ ApplicationWindow {
                                     anchors.margins: 13
                                     spacing: 4
                                     Label {
-                                        text: modelData.documentTitle
+                                        text: modelData.documentTitle + " · " + String(modelData.format).toUpperCase()
                                         color: Theme.textPrimary
                                         font.pixelSize: 13
                                         font.weight: Font.DemiBold

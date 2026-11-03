@@ -90,6 +90,16 @@ private slots:
         QCOMPARE(results.first().toMap().value(QStringLiteral("documentId")).toString(), documentId);
         QCOMPARE(results.first().toMap().value(QStringLiteral("kind")).toString(),
                  QStringLiteral("highlight"));
+        QCOMPARE(store.knowledgeSearch(QStringLiteral("democ"),
+                                       QStringLiteral("txt"),
+                                       QStringLiteral("#f6c945"))
+                     .size(),
+                 1);
+        QCOMPARE(store.knowledgeSearch(QStringLiteral("democ"),
+                                       QStringLiteral("epub"),
+                                       QStringLiteral("#f6c945"))
+                     .size(),
+                 0);
 
         QVERIFY(store.addAnnotation(documentId,
                                      QStringLiteral("Review this argument later."),

@@ -1082,7 +1082,9 @@ bool LibraryStore::setTags(const QString &documentId, const QStringList &tags)
     return true;
 }
 
-QVariantList LibraryStore::knowledgeSearch(const QString &term) const
+QVariantList LibraryStore::knowledgeSearch(const QString &term,
+                                           const QString &format,
+                                           const QString &color) const
 {
     QVariantList results;
     if (!isReady() || term.trimmed().isEmpty()) {
@@ -1095,15 +1097,31 @@ QVariantList LibraryStore::knowledgeSearch(const QString &term) const
     }
 
     QSqlQuery query(database_->connection());
-    query.prepare(QStringLiteral(
-        "SELECT ks.source_id, ks.source_kind, ks.document_id, d.title, d.author, ks.text, "
+    QString statement = QStringLiteral(
+        "SELECT ks.source_id, ks.source_kind, ks.document_id, d.title, d.author, d.format, ks.text, "
         "COALESCE(h.note, ''), COALESCE(h.color, '#f6c945'), ks.page, ks.locator, "
         "ks.created_at, COALESCE(a.kind, '') "
         "FROM knowledge_items_search ks JOIN documents d ON d.id = ks.document_id "
         "LEFT JOIN highlights h ON h.id = ks.source_id AND ks.source_kind = 'highlight' "
         "LEFT JOIN annotations a ON a.id = ks.source_id AND ks.source_kind = 'annotation' "
-        "WHERE knowledge_items_search MATCH :match ORDER BY rank, ks.created_at DESC"));
+        "WHERE knowledge_items_search MATCH :match");
+    const QString normalizedFormat = format.trimmed().toLower();
+    const QString normalizedColor = color.trimmed().toLower();
+    if (!normalizedFormat.isEmpty()) {
+        statement += QStringLiteral(" AND d.format = :format");
+    }
+    if (!normalizedColor.isEmpty()) {
+        statement += QStringLiteral(" AND COALESCE(h.color, '') = :color");
+    }
+    statement += QStringLiteral(" ORDER BY rank, ks.created_at DESC");
+    query.prepare(statement);
     query.bindValue(QStringLiteral(":match"), match);
+    if (!normalizedFormat.isEmpty()) {
+        query.bindValue(QStringLiteral(":format"), normalizedFormat);
+    }
+    if (!normalizedColor.isEmpty()) {
+        query.bindValue(QStringLiteral(":color"), normalizedColor);
+    }
     if (!query.exec()) {
         return results;
     }
@@ -1114,13 +1132,14 @@ QVariantList LibraryStore::knowledgeSearch(const QString &term) const
             {QStringLiteral("documentId"), query.value(2)},
             {QStringLiteral("documentTitle"), query.value(3)},
             {QStringLiteral("author"), query.value(4)},
-            {QStringLiteral("text"), query.value(5)},
-            {QStringLiteral("note"), query.value(6)},
-            {QStringLiteral("color"), query.value(7)},
-            {QStringLiteral("page"), query.value(8)},
-            {QStringLiteral("locator"), query.value(9)},
-            {QStringLiteral("createdAt"), query.value(10)},
-            {QStringLiteral("annotationKind"), query.value(11)},
+            {QStringLiteral("format"), query.value(5)},
+            {QStringLiteral("text"), query.value(6)},
+            {QStringLiteral("note"), query.value(7)},
+            {QStringLiteral("color"), query.value(8)},
+            {QStringLiteral("page"), query.value(9)},
+            {QStringLiteral("locator"), query.value(10)},
+            {QStringLiteral("createdAt"), query.value(11)},
+            {QStringLiteral("annotationKind"), query.value(12)},
         });
     }
     return results;

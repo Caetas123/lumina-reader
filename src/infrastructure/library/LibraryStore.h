@@ -80,7 +80,9 @@ public:
     Q_INVOKABLE QVariantList tags() const;
     Q_INVOKABLE QStringList tagsForDocument(const QString &documentId) const;
     Q_INVOKABLE bool setTags(const QString &documentId, const QStringList &tags);
-    Q_INVOKABLE QVariantList knowledgeSearch(const QString &term) const;
+    Q_INVOKABLE QVariantList knowledgeSearch(const QString &term,
+                                             const QString &format = {},
+                                             const QString &color = {}) const;
     Q_INVOKABLE QVariantList highlightsForDocument(const QString &documentId) const;
     Q_INVOKABLE bool removeHighlight(const QString &highlightId);
     Q_INVOKABLE bool addHighlight(const QString &documentId,
