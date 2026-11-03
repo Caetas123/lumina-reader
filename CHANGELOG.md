@@ -14,3 +14,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Typed domain errors and categorized diagnostic logging.
 - Replaceable `PdfEngine` abstraction.
 - Initial unit tests, cross-platform CI configuration, and open-source project documentation.
+
+## [0.1.1] - 2026-11-02
+
+### Added
+
+- Graphical Windows installer with an English welcome screen, installation confirmation, progress feedback, and Start menu shortcut creation.
+- Windows x64 installer download published alongside the portable package.
+
+### Changed
+
+- The application and release metadata now use version `0.1.1`.
