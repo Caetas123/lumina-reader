@@ -2,7 +2,7 @@
 
 Audit date: 2026-11-03  
 Branch: `main`
-Release candidate: `0.2.2`
+Release candidate: `0.2.3`
 
 This report describes the behavior implemented in the repository, not only the controls visible in QML. Optional capabilities are marked as conditional instead of being presented as universally available.
 
@@ -57,6 +57,7 @@ The rebuilt executable was exercised through the native GUI, including the Windo
 - verified the Settings sections, the `Back to library` action, and the localized installer progress copy;
 - resized the application to 980×620 and verified the library, reader toolbar wrapping, and Settings pages without horizontal clipping; the normal 1100×700 and maximized states were also checked;
 - invoked OCR from the reader and verified the honest fallback message because Tesseract is not installed on this Windows host.
+- generated a two-page PDF fixture, imported it through the Windows file picker, opened it with the Qt PDF engine, rendered both pages, changed zoom, exposed selectable text, and searched `Aurora`; after page navigation the result counter correctly restored `1/1` on the matching page instead of remaining at `0/1`.
 
 The detailed requirement matrix and evidence boundaries are in [AUDIT_CHECKLIST_2026-11-03.md](AUDIT_CHECKLIST_2026-11-03.md). A ZIP containing only a text file was deliberately tested and rejected by the comic archive reader; ZIP support in this project is for image-page archives, as documented in `FORMAT_SUPPORT.md`.
 
@@ -84,7 +85,7 @@ The detailed requirement matrix and evidence boundaries are in [AUDIT_CHECKLIST_
 - Dictionary and translation providers are explicit online integrations. No bundled local dictionary database is shipped; previously fetched definitions and translations are cached in the local database and reused offline, and no external request occurs without a user action.
 - Reader appearance preferences support global, format, content-type, and document layers with document-first fallback to type, format, and global values. Named user profiles are not implemented yet.
 - Qt Speech word-level highlighting is enabled when the selected backend exposes the Qt 6.6+ word-progress capability; engines without that capability still support read-aloud without visual word tracking.
-- The current Windows workspace did not provide the optional Qt PDF, CorePrivate, libarchive, DjVuLibre, or Tesseract dependencies, so those runtime paths were not claimed as locally executed in this audit.
+- The Windows validation kit provided Qt PDF 6.8.3 for the GUI PDF pass. The current workspace still did not provide libarchive, DjVuLibre, or Tesseract, so those runtime paths remain conditional rather than being claimed as locally executed.
 - Native macOS and Linux execution was not performed in this Windows workspace; the workflows and packaging scripts remain the source of truth for those platforms.
 
 ## Recent thematic commits
@@ -112,4 +113,4 @@ The detailed requirement matrix and evidence boundaries are in [AUDIT_CHECKLIST_
 - `b33707f` — add library metadata filters and sorting.
 - `7e91a7f` — add optional DjVu engine.
 
-Release `v0.2.2` was published after the versioned commits were pushed and all tag-triggered GitHub Actions jobs completed successfully. The remote evidence is recorded in `docs/AUDIT_CHECKLIST_2026-11-03.md`, including run IDs, direct asset names, and SHA-256 digests. Native Linux/macOS GUI rendering and optional PDF/libarchive/DjVu/Tesseract providers remain conditional where they were not available for direct local interaction.
+Release `v0.2.2` was published after the versioned commits were pushed and all tag-triggered GitHub Actions jobs completed successfully. The `0.2.3` candidate adds the verified PDF search restoration and is ready for the next same-version Windows/Linux/macOS package gate. Native Linux/macOS GUI rendering and optional libarchive/DjVu/Tesseract providers remain conditional where they were not available for direct local interaction.

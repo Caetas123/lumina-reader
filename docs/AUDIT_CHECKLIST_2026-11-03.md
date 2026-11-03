@@ -1,7 +1,7 @@
 # Lumina Reader final audit checklist
 
 Audit date: 2026-11-03
-Target release: `0.2.2`
+Target release: `0.2.3`
 Local platform: Windows x64
 Validation executable: `C:\Users\caeta\AppData\Local\Temp\lumina-reader-ui-build-20261103\lumina_reader.exe`
 
@@ -27,7 +27,7 @@ This checklist is evidence-bounded. `PASS` means the behavior was exercised in t
 - [x] `PASS` CBZ: imported and opened through the GUI; a two-page image archive was navigated with Next.
 - [x] `PASS` ZIP comics: the same image-page archive was accepted by the ZIP path. A text-only ZIP was deliberately rejected because ZIP support is defined as image-page archive support.
 - [x] `PASS` unencrypted MOBI/AZW/AZW3 decoding is covered by automated reader tests.
-- [ ] `CONDITIONAL` PDF: Qt PDF was not available in this Windows validation kit; the release/CI workflows request it.
+- [x] `PASS` PDF: a two-page fixture was imported and opened through the native Windows GUI with Qt PDF 6.8.3; page rendering, page navigation, zoom, selectable extracted text, and in-document search were exercised. After the search-selection fix, the GUI reported `1/1` on the matching page, `No matches` on the second page, and `1/1` again after returning to the first page.
 - [ ] `CONDITIONAL` CBR/CB7/CBT/RAR/7Z: libarchive was not available in this Windows validation kit.
 - [ ] `CONDITIONAL` DJVU/DJV: DjVuLibre was not available in this Windows validation kit.
 - [ ] `CONDITIONAL` WEBP/AVIF/GIF: availability depends on the Qt image plugins shipped by the target package.
@@ -69,7 +69,7 @@ This checklist is evidence-bounded. `PASS` means the behavior was exercised in t
 
 ## Packaging and release gate
 
-- [x] `PASS` `project-version.txt` is the single source of the `0.2.2` release version;
+- [x] `PASS` `project-version.txt` is the single source of the `0.2.3` release version;
 - [x] `PASS` Windows workflow builds the graphical installer and publishes the direct `.exe` asset, with its internal ZIP kept out of the end-user download table;
 - [x] `PASS` the Windows installer script was run locally for `0.2.1`; the generated installer was copied to `C:\Users\caeta\Downloads\LuminaReader-Setup-windows-x64.exe` and its SHA-256 matched the repository staging copy;
 - [x] `PASS` Linux workflow builds both the direct x86_64 AppImage and Debian package from the same tag;
@@ -84,4 +84,4 @@ This checklist is evidence-bounded. `PASS` means the behavior was exercised in t
 
 ## Audit conclusion
 
-The Windows build is locally validated for the core reader/library flow and the formats listed as `PASS`. The release workflows and package assets are remotely validated for all three target runners. Optional PDF, libarchive, DjVu, Tesseract, and native Linux/macOS visual evidence remains explicitly conditional because those dependencies or GUI environments were not available for direct local interaction in this Windows session. This checklist does not call those areas `100%` by inference; every `REMOTE` item above is closed with actual GitHub Actions and release evidence.
+The Windows build is locally validated for the core reader/library flow and the formats listed as `PASS`, including a real two-page PDF opened and searched through the GUI. The release workflows and package assets for `0.2.2` are remotely validated for all three target runners; the `0.2.3` package gate is tracked separately after the version tag is published. Optional libarchive, DjVu, Tesseract, and native Linux/macOS visual evidence remains explicitly conditional because those dependencies or GUI environments were not available for direct local interaction in this Windows session. This checklist does not call those areas `100%` by inference.
