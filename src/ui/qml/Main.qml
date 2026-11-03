@@ -1355,6 +1355,13 @@ ApplicationWindow {
                             }
                             Button {
                                 visible: appController.reader.open && appController.reader.imageDocument
+                                text: qsTr("Rotate")
+                                onClicked: appController.reader.rotatePage(90)
+                                ToolTip.visible: hovered
+                                ToolTip.text: qsTr("Rotate this page clockwise")
+                            }
+                            Button {
+                                visible: appController.reader.open && appController.reader.imageDocument
                                 text: appController.reader.showOcrText
                                     ? qsTr("Show page")
                                     : appController.reader.ocrRunning

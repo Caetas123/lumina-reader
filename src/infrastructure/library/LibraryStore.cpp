@@ -342,6 +342,7 @@ QHash<int, QByteArray> LibraryStore::roleNames() const
         {LanguageRole, "language"},
         {FavoriteRole, "isFavorite"},
         {RatingRole, "rating"},
+        {PageRotationRole, "pageRotation"},
     };
 }
 
@@ -423,7 +424,7 @@ void LibraryStore::reload()
         "d.id, d.title, d.author, d.file_path, d.format, d.content_type, d.status, "
         "d.progress, d.current_page, d.page_count, d.cover_path, d.file_size, "
         "d.added_at, COALESCE(d.last_opened_at, ''), d.description, d.language, "
-        "d.is_favorite, d.rating");
+        "d.is_favorite, d.rating, d.page_rotation");
     QStringList predicates;
     const QString filterPredicate = viewFilterPredicate(viewFilter_);
     if (!filterPredicate.isEmpty()) {
@@ -501,6 +502,7 @@ QVariantMap LibraryStore::recordFromQuery(const QSqlQuery &query) const
         {QStringLiteral("language"), query.value(15)},
         {QStringLiteral("isFavorite"), query.value(16)},
         {QStringLiteral("rating"), query.value(17)},
+        {QStringLiteral("pageRotation"), query.value(18)},
     };
 }
 
@@ -904,6 +906,32 @@ bool LibraryStore::setCoverPath(const QString &documentId, const QString &coverP
     return true;
 }
 
+bool LibraryStore::setPageRotation(const QString &documentId, int rotation)
+{
+    if (!isReady() || documentId.trimmed().isEmpty()) {
+        return false;
+    }
+    int normalized = rotation % 360;
+    if (normalized < 0) {
+        normalized += 360;
+    }
+    if (normalized != 0 && normalized != 90 && normalized != 180 && normalized != 270) {
+        return false;
+    }
+
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral(
+        "UPDATE documents SET page_rotation = :rotation, updated_at = CURRENT_TIMESTAMP "
+        "WHERE id = :id"));
+    query.bindValue(QStringLiteral(":rotation"), normalized);
+    query.bindValue(QStringLiteral(":id"), documentId);
+    if (!query.exec() || query.numRowsAffected() == 0) {
+        return false;
+    }
+    reload();
+    return true;
+}
+
 bool LibraryStore::updateProgress(const QString &documentId, double progress, int currentPage)
 {
     if (!isReady() || documentId.trimmed().isEmpty()) {
@@ -956,7 +984,7 @@ QVariantMap LibraryStore::documentDetails(const QString &documentId) const
     query.prepare(QStringLiteral(
         "SELECT id, title, author, file_path, format, content_type, status, progress, "
         "current_page, page_count, cover_path, file_size, added_at, COALESCE(last_opened_at, ''), "
-        "description, language, is_favorite, rating "
+        "description, language, is_favorite, rating, page_rotation "
         "FROM documents WHERE id = :id"));
     query.bindValue(QStringLiteral(":id"), documentId);
     if (!query.exec() || !query.next()) {

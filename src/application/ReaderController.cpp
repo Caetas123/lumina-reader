@@ -8,6 +8,7 @@
 #include <QBuffer>
 #include <QFileInfo>
 #include <QImage>
+#include <QTransform>
 
 #include <algorithm>
 
@@ -148,6 +149,11 @@ int ReaderController::currentPage() const
     return currentPage_;
 }
 
+int ReaderController::pageRotation() const
+{
+    return pageRotation_;
+}
+
 QString ReaderController::searchQuery() const
 {
     return searchQuery_;
@@ -199,6 +205,7 @@ void ReaderController::clearState()
     showOcrText_ = false;
     pageCount_ = 0;
     currentPage_ = 0;
+    pageRotation_ = 0;
     searchQuery_.clear();
     searchStarts_.clear();
     searchCurrent_ = -1;
@@ -222,9 +229,12 @@ bool ReaderController::refreshPage()
     Lumina::Domain::Error error;
     if (documentEngine_->pageKind(currentPage_)
         == Lumina::Domain::Reader::PageKind::Image) {
-        const QImage image = documentEngine_->renderPage(currentPage_, QSize(2200, 3100), &error);
+        QImage image = documentEngine_->renderPage(currentPage_, QSize(2200, 3100), &error);
         if (image.isNull()) {
             return false;
+        }
+        if (pageRotation_ != 0) {
+            image = image.transformed(QTransform().rotate(pageRotation_), Qt::SmoothTransformation);
         }
         imageSource_ = imageDataUrl(image);
         if (imageSource_.isEmpty()) {
@@ -265,7 +275,11 @@ void ReaderController::applyCachedOcr()
 QImage ReaderController::currentPageImage() const
 {
     if (documentEngine_ != nullptr && isImageDocument()) {
-        return documentEngine_->renderPage(currentPage_, QSize(2200, 3100));
+        QImage image = documentEngine_->renderPage(currentPage_, QSize(2200, 3100));
+        if (!image.isNull() && pageRotation_ != 0) {
+            image = image.transformed(QTransform().rotate(pageRotation_), Qt::SmoothTransformation);
+        }
+        return image;
     }
     return {};
 }
@@ -334,6 +348,10 @@ bool ReaderController::openDocument(const QString &documentId)
     format_ = format;
     contentType_ = record.value(QStringLiteral("contentType")).toString();
     currentPage_ = std::max(record.value(QStringLiteral("currentPage")).toInt(), 0);
+    pageRotation_ = record.value(QStringLiteral("pageRotation")).toInt();
+    if (pageRotation_ != 0 && pageRotation_ != 90 && pageRotation_ != 180 && pageRotation_ != 270) {
+        pageRotation_ = 0;
+    }
 
     documentEngine_ = Lumina::Infrastructure::createDocumentEngine(format);
     if (documentEngine_ == nullptr) {
@@ -385,6 +403,31 @@ bool ReaderController::nextPage()
 bool ReaderController::previousPage()
 {
     return goToPage(currentPage_ - 1);
+}
+
+bool ReaderController::rotatePage(int degrees)
+{
+    if (!open_ || !isImageDocument() || library_ == nullptr) {
+        return false;
+    }
+    int normalizedDegrees = degrees % 360;
+    if (normalizedDegrees < 0) {
+        normalizedDegrees += 360;
+    }
+    if (normalizedDegrees != 90 && normalizedDegrees != 180 && normalizedDegrees != 270) {
+        return false;
+    }
+    const int nextRotation = (pageRotation_ + normalizedDegrees) % 360;
+    if (!library_->setPageRotation(documentId_, nextRotation)) {
+        return false;
+    }
+    pageRotation_ = nextRotation;
+    if (!refreshPage()) {
+        return false;
+    }
+    applyCachedOcr();
+    emit stateChanged();
+    return true;
 }
 
 bool ReaderController::goToPage(int page)

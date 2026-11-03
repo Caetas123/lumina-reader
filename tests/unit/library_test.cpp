@@ -106,6 +106,9 @@ private slots:
                  QFileInfo(imagePath).absoluteFilePath());
         QVERIFY(store.setCoverPath(imageDocumentId, QStringLiteral("")));
         QVERIFY(store.documentDetails(imageDocumentId).value(QStringLiteral("coverPath")).toString().isEmpty());
+        QVERIFY(store.setPageRotation(imageDocumentId, 90));
+        QCOMPARE(store.documentDetails(imageDocumentId).value(QStringLiteral("pageRotation")).toInt(), 90);
+        QVERIFY(!store.setPageRotation(imageDocumentId, 45));
         QVERIFY(store.removeDocument(imageDocumentId));
 
         QVERIFY(store.addHighlight(documentId,

@@ -38,6 +38,7 @@ class ReaderController final : public QObject {
     Q_PROPERTY(bool showOcrText READ showOcrText WRITE setShowOcrText NOTIFY stateChanged)
     Q_PROPERTY(int pageCount READ pageCount NOTIFY stateChanged)
     Q_PROPERTY(int currentPage READ currentPage NOTIFY stateChanged)
+    Q_PROPERTY(int pageRotation READ pageRotation NOTIFY stateChanged)
     Q_PROPERTY(QString searchQuery READ searchQuery NOTIFY stateChanged)
     Q_PROPERTY(int searchMatches READ searchMatches NOTIFY stateChanged)
     Q_PROPERTY(int searchCurrent READ searchCurrent NOTIFY stateChanged)
@@ -68,6 +69,7 @@ public:
     void setShowOcrText(bool show);
     [[nodiscard]] int pageCount() const;
     [[nodiscard]] int currentPage() const;
+    [[nodiscard]] int pageRotation() const;
     [[nodiscard]] QString searchQuery() const;
     [[nodiscard]] int searchMatches() const;
     [[nodiscard]] int searchCurrent() const;
@@ -79,6 +81,7 @@ public:
     Q_INVOKABLE bool nextPage();
     Q_INVOKABLE bool previousPage();
     Q_INVOKABLE bool goToPage(int page);
+    Q_INVOKABLE bool rotatePage(int degrees = 90);
     Q_INVOKABLE bool updateProgress(double progress);
     Q_INVOKABLE bool findInDocument(const QString &query);
     Q_INVOKABLE bool nextSearchMatch();
@@ -119,6 +122,7 @@ private:
     bool showOcrText_ = false;
     int pageCount_ = 0;
     int currentPage_ = 0;
+    int pageRotation_ = 0;
     QString searchQuery_;
     QList<int> searchStarts_;
     int searchCurrent_ = -1;

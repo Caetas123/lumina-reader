@@ -260,6 +260,14 @@ QList<Migration> migrations()
                     "WHERE status = 'completed' AND text <> ''"),
             },
         },
+        {
+            7,
+            {
+                QStringLiteral(
+                    "ALTER TABLE documents ADD COLUMN page_rotation INTEGER NOT NULL DEFAULT 0 "
+                    "CHECK (page_rotation IN (0, 90, 180, 270))"),
+            },
+        },
     };
 }
 
