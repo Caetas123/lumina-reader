@@ -69,6 +69,7 @@ The graphical executable also stayed alive for more than ten seconds with `QT_QP
 
 ## Recent thematic commits
 
+- `ce81667` — highlight the spoken word when the speech backend provides progress.
 - `c6ce6ad` — add single-page and two-page visual reading layouts.
 - `cb6511e` — add basic PDF export and system printing.
 - `3d0acbb` — add document-wide OCR with progress and cancellation.
