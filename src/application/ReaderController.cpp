@@ -475,6 +475,14 @@ bool ReaderController::previousPage()
     return goToPage(currentPage_ - 1);
 }
 
+QString ReaderController::pageName(int page) const
+{
+    if (!open_ || documentEngine_ == nullptr || page < 0 || page >= pageCount_) {
+        return {};
+    }
+    return documentEngine_->pageName(page);
+}
+
 bool ReaderController::rotatePage(int degrees)
 {
     if (!open_ || !isImageDocument() || library_ == nullptr) {

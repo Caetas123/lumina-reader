@@ -98,6 +98,22 @@ QString htmlToText(const QByteArray &data)
     return document.toPlainText().simplified();
 }
 
+QString htmlPageLabel(const QByteArray &data)
+{
+    const QString html = QString::fromUtf8(data);
+    const QRegularExpression heading(
+        QStringLiteral(R"(<(?:title|h1|h2)\b[^>]*>(.*?)</(?:title|h1|h2)\s*>)"),
+        QRegularExpression::CaseInsensitiveOption | QRegularExpression::DotMatchesEverythingOption);
+    const QRegularExpressionMatch match = heading.match(html);
+    if (!match.hasMatch()) {
+        return {};
+    }
+
+    QTextDocument document;
+    document.setHtml(match.captured(1));
+    return document.toPlainText().simplified().left(160);
+}
+
 } // namespace
 
 namespace Lumina::Infrastructure {
@@ -200,7 +216,11 @@ bool ArchiveReader::pageIsImage(int page) const
 
 QString ArchiveReader::pageName(int page) const
 {
-    return page >= 0 && page < pages_.size() ? pages_.at(page).name : QString();
+    if (page < 0 || page >= pages_.size()) {
+        return {};
+    }
+    const Page &entry = pages_.at(page);
+    return entry.label.isEmpty() ? entry.name : entry.label;
 }
 
 QByteArray ArchiveReader::pageData(int page) const
@@ -238,7 +258,7 @@ bool ArchiveReader::openComic()
     for (const QZipReader::FileInfo &entry : zip_->fileInfoList()) {
         if (entry.isFile && !entry.isSymLink && !normalizedArchivePath(entry.filePath).isEmpty()
             && isImagePath(entry.filePath)) {
-            pages_.append(Page{entry.filePath, true});
+            pages_.append(Page{entry.filePath, true, {}});
         }
     }
     std::sort(pages_.begin(), pages_.end(), [](const Page &left, const Page &right) {
@@ -327,7 +347,7 @@ bool ArchiveReader::openLibArchive(const QString &path)
             break;
         }
         libArchiveData_.insert(normalized, data);
-        pages_.append(Page{normalized, true});
+        pages_.append(Page{normalized, true, {}});
     }
 
     archive_read_close(reader);
@@ -391,13 +411,14 @@ bool ArchiveReader::openEpub()
         const QString id = itemrefIterator.next().captured(1);
         const QString path = manifest.value(id);
         if (!path.isEmpty()) {
-            pages_.append(Page{path, false});
+            pages_.append(Page{path, false, htmlPageLabel(zip_->fileData(path))});
         }
     }
 
     if (pages_.isEmpty()) {
         for (auto iterator = manifest.cbegin(); iterator != manifest.cend(); ++iterator) {
-            pages_.append(Page{iterator.value(), false});
+            const QString path = iterator.value();
+            pages_.append(Page{path, false, htmlPageLabel(zip_->fileData(path))});
         }
         std::sort(pages_.begin(), pages_.end(), [](const Page &left, const Page &right) {
             return left.name.toLower() < right.name.toLower();

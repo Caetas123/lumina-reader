@@ -1227,7 +1227,7 @@ ApplicationWindow {
 
     Drawer {
         id: pageDrawer
-        width: 164
+        width: 260
         height: window.height
         edge: Qt.LeftEdge
         modal: true
@@ -1235,7 +1235,7 @@ ApplicationWindow {
         contentItem: ColumnLayout {
             spacing: 10
             Label {
-                text: qsTr("Pages")
+                text: appController.reader.imageDocument ? qsTr("Pages") : qsTr("Contents")
                 color: Theme.textPrimary
                 font.pixelSize: 18
                 font.weight: Font.DemiBold
@@ -1251,7 +1251,7 @@ ApplicationWindow {
 
                 delegate: Rectangle {
                     width: ListView.view.width - 20
-                    height: 144
+                    height: appController.reader.imageDocument ? 144 : 58
                     anchors.horizontalCenter: parent.horizontalCenter
                     radius: 8
                     color: Number(index) === appController.reader.currentPage
@@ -1262,6 +1262,7 @@ ApplicationWindow {
                         : Theme.border
 
                     Image {
+                        visible: appController.reader.imageDocument
                         anchors.top: parent.top
                         anchors.topMargin: 6
                         anchors.horizontalCenter: parent.horizontalCenter
@@ -1274,12 +1275,19 @@ ApplicationWindow {
                             : ""
                     }
                     Label {
-                        anchors.bottom: parent.bottom
-                        anchors.bottomMargin: 5
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: qsTr("Page %1").arg(Number(index) + 1)
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.margins: 8
+                        text: {
+                            var name = appController.reader.pageName(Number(index))
+                            return name.length > 0
+                                ? qsTr("%1 · Page %2").arg(name).arg(Number(index) + 1)
+                                : qsTr("Page %1").arg(Number(index) + 1)
+                        }
                         color: Theme.textSecondary
                         font.pixelSize: 11
+                        elide: Text.ElideRight
                     }
                     MouseArea {
                         anchors.fill: parent
@@ -2492,12 +2500,13 @@ ApplicationWindow {
                                 ToolTip.text: qsTr("Rotate this page clockwise")
                             }
                             Button {
-                                visible: appController.reader.open && appController.reader.imageDocument
-                                    && appController.reader.pageCount > 1
-                                text: qsTr("Pages")
+                                visible: appController.reader.open && appController.reader.pageCount > 1
+                                text: appController.reader.imageDocument ? qsTr("Pages") : qsTr("Contents")
                                 onClicked: pageDrawer.open()
                                 ToolTip.visible: hovered
-                                ToolTip.text: qsTr("Open page thumbnails")
+                                ToolTip.text: appController.reader.imageDocument
+                                    ? qsTr("Open page thumbnails")
+                                    : qsTr("Open document contents")
                             }
                             RowLayout {
                                 visible: appController.reader.open && appController.reader.imageDocument

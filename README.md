@@ -51,6 +51,7 @@ The current application provides:
 - optional in-process DJVU/DJV page rendering and hidden-text extraction when DjVuLibre is available at configure time;
 - optional asynchronous page OCR through Tesseract when it is installed on the system;
 - in-document search for text pages and EPUB chapters;
+- a Contents panel for multi-page documents, with EPUB chapter labels when the source provides them;
 - scoped, local search history for the library, the open document, and the Knowledge center, with deduplication, retention, reopening, and clearing;
 - persistent highlights, annotations, bookmarks, and a global FTS5 Knowledge center;
 - contextual copy, Google, integrated dictionary, translation, and highlight actions for selected text;

@@ -33,6 +33,7 @@ private:
     struct Page {
         QString name;
         bool image = false;
+        QString label;
     };
 
     void clear();

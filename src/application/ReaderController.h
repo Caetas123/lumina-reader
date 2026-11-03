@@ -87,6 +87,7 @@ public:
     Q_INVOKABLE bool nextPage();
     Q_INVOKABLE bool previousPage();
     Q_INVOKABLE bool goToPage(int page);
+    Q_INVOKABLE QString pageName(int page) const;
     Q_INVOKABLE QString thumbnailSource(int page) const;
     Q_INVOKABLE bool rotatePage(int degrees = 90);
     Q_INVOKABLE bool updateProgress(double progress);

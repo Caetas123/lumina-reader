@@ -13,7 +13,7 @@ This document describes the behavior of the code that is currently shipped. A fi
 
 | Format | Import | Open and navigate | Text/search | Highlights, notes, bookmarks, progress | Current limitation or alternative |
 | --- | --- | --- | --- | --- | --- |
-| EPUB | Available with Qt archive support | Available, following the EPUB spine | Available for XHTML chapters | Available for text locations and the global Knowledge center | CSS layout, embedded fonts, media, and a visual table of contents are not yet reproduced by the native text view |
+| EPUB | Available with Qt archive support | Available, following the EPUB spine | Available for XHTML chapters | Available for text locations and the global Knowledge center | The Contents panel follows the EPUB spine and uses chapter titles when present; CSS layout, embedded fonts, media, and nested navigation levels are not reproduced by the native text view |
 | PDF | Conditional on `Qt6::Pdf` | Available when the module is present | Page text is indexed and in-document search can find it; visual text selection/highlight overlays are not yet wired to the rendered page | Progress and bookmarks are available; text highlights require a visual selection bridge | Release builds request Qt PDF. A build without it reports a clear capability message |
 | MOBI | Available for unencrypted PalmDOC files | Available as paginated text | Available for decoded text | Available for text locations | PalmDOC compression is decoded; DRM and unsupported Huffman/KF8 variants are rejected with a normal reader error |
 | AZW | Available for unencrypted PalmDOC-compatible files | Available as paginated text | Available for decoded text | Available for text locations | DRM-protected content is not supported and is never unlocked |
