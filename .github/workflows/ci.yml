@@ -29,11 +29,11 @@ jobs:
           - name: Windows
             os: windows-latest
             qt-host: windows
-            qt-arch: win64_mingw
+            qt-arch: win64_msvc2022_64
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
@@ -53,11 +53,23 @@ jobs:
           cmake --version
           qtpaths --version
 
+      - name: Set up MSVC
+        if: matrix.name == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
       - name: Validate whitespace
         shell: bash
         run: git diff --check
 
-      - name: Configure
+      - name: Configure (Windows)
+        if: matrix.name == 'Windows'
+        shell: pwsh
+        run: cmake --preset default -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl
+
+      - name: Configure (Unix)
+        if: matrix.name != 'Windows'
         shell: bash
         run: cmake --preset default -DCMAKE_BUILD_TYPE=Release
 
