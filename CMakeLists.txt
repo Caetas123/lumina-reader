@@ -148,8 +148,19 @@ qt_add_qml_module(lumina_reader
     QML_FILES
         src/ui/qml/Main.qml
         src/ui/qml/Theme.qml
+        src/ui/qml/Icon.qml
+        src/ui/qml/Button.qml
+        src/ui/qml/ToolButton.qml
+        src/ui/qml/TextField.qml
+        src/ui/qml/ComboBox.qml
+        src/ui/qml/CheckBox.qml
+        src/ui/qml/Slider.qml
+        src/ui/qml/ProgressBar.qml
+        src/ui/qml/SpinBox.qml
     RESOURCES
         assets/lumina-logo.png
+        assets/empty-library-book.svg
+        assets/empty-library-reference.png
 )
 
 if(WIN32)
@@ -243,7 +254,13 @@ if(BUILD_TESTING)
     )
 
     add_test(NAME lumina_reader_tests COMMAND lumina_reader_tests)
-    set_tests_properties(lumina_reader_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+    if(WIN32)
+        # The Windows QPA backend is stable on the GitHub-hosted Windows runner
+        # and avoids the offscreen plugin deadlock observed by QPdfWriter.
+        set_tests_properties(lumina_reader_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=windows")
+    else()
+        set_tests_properties(lumina_reader_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+    endif()
 
     qt_add_executable(lumina_archive_tests
         tests/unit/archive_test.cpp

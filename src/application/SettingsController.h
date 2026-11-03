@@ -74,7 +74,7 @@ private:
     void persist(const QString &key, const QString &value);
 
     Lumina::Infrastructure::Database *database_ = nullptr;
-    QString theme_ = QStringLiteral("light");
+    QString theme_ = QStringLiteral("dark");
     int fontSize_ = 18;
     int lineSpacing_ = 120;
     bool continuousReading_ = true;

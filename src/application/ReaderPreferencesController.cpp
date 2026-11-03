@@ -28,7 +28,7 @@ ReaderPreferencesController::ReaderPreferencesController(SettingsController *set
 QString ReaderPreferencesController::theme() const
 {
     return value(QStringLiteral("theme"),
-                 settings_ != nullptr ? settings_->theme() : QStringLiteral("light"));
+                 settings_ != nullptr ? settings_->theme() : QStringLiteral("dark"));
 }
 
 int ReaderPreferencesController::fontSize() const
