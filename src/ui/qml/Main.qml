@@ -28,6 +28,16 @@ ApplicationWindow {
             anchors.rightMargin: 24
             spacing: 12
 
+            Image {
+                source: "qrc:/qt/qml/LuminaReader/assets/lumina-logo.png"
+                sourceSize.width: 36
+                sourceSize.height: 36
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                Layout.preferredWidth: 36
+                Layout.preferredHeight: 36
+            }
+
             Label {
                 text: qsTr("Lumina Reader")
                 color: Theme.textPrimary

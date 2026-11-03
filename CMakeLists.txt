@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(LuminaReader VERSION 0.1.2 LANGUAGES CXX)
+project(LuminaReader VERSION 0.1.3 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -70,6 +70,8 @@ qt_add_qml_module(lumina_reader
     QML_FILES
         src/ui/qml/Main.qml
         src/ui/qml/Theme.qml
+    RESOURCES
+        assets/lumina-logo.png
 )
 
 target_link_libraries(lumina_reader

@@ -15,6 +15,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Replaceable `PdfEngine` abstraction.
 - Initial unit tests, cross-platform CI configuration, and open-source project documentation.
 
+## [0.1.3] - 2026-11-02
+
+### Added
+
+- Lumina Reader logo asset used by the application and Windows installer.
+- User-facing installation folder selection and optional desktop shortcut creation.
+
+### Changed
+
+- The first installer screen now presents Lumina Reader as a product without technical implementation terms.
+- The application and release metadata now use version `0.1.3`.
+
 ## [0.1.2] - 2026-11-02
 
 ### Added

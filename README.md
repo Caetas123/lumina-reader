@@ -1,5 +1,9 @@
 # Lumina Reader
 
+<p align="center">
+  <img src="assets/lumina-logo.png" alt="Lumina Reader logo" width="128">
+</p>
+
 [![Build](https://github.com/Caetas123/lumina-reader/actions/workflows/ci.yml/badge.svg)](https://github.com/Caetas123/lumina-reader/actions/workflows/ci.yml)
 
 Lumina Reader is a native, local-first PDF reader foundation for Windows, macOS, and Linux. It is built with C++20, Qt 6, Qt Quick/QML, SQLite, and CMake.
@@ -12,14 +16,14 @@ Ready-to-run builds are published on [GitHub Releases](https://github.com/Caetas
 
 | Platform | Download | Notes |
 | --- | --- | --- |
-| Windows x64 | [Download installer EXE (`v0.1.2`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.1.2/LuminaReader-Setup-windows-x64.exe) | Recommended. Run it to install the application and its Qt dependencies. |
-| Windows x64 | [Portable ZIP (`v0.1.2`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.1.2/LuminaReader-windows-x64.zip) | Optional. Extract the complete ZIP and run `lumina_reader.exe`. |
+| Windows x64 | [Download installer EXE (`v0.1.3`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.1.3/LuminaReader-Setup-windows-x64.exe) | Recommended. Run it to install the application and its Qt dependencies. |
+| Windows x64 | [Portable ZIP (`v0.1.3`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.1.3/LuminaReader-windows-x64.zip) | Optional. Extract the complete ZIP and run `lumina_reader.exe`. |
 | macOS | Not packaged yet | [Build from source](docs/BUILDING.md). |
 | Linux | Not packaged yet | [Build from source](docs/BUILDING.md). |
 
 The Windows installer is a self-contained `.exe` that installs the Qt runtime and platform plugins before launching Lumina Reader. The portable package must keep all of its files together; do not copy only `lumina_reader.exe` to another folder.
 
-See the [release notes](https://github.com/Caetas123/lumina-reader/releases/tag/v0.1.2) for the current package and SHA-256 checksums.
+See the [release notes](https://github.com/Caetas123/lumina-reader/releases/tag/v0.1.3) for the current package and SHA-256 checksums.
 
 ## Principles
 
