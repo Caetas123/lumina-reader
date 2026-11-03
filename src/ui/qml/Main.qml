@@ -573,6 +573,22 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
 
+                Connections {
+                    target: appController.reader
+                    function onStateChanged() {
+                        if (!appController.reader.open) {
+                            documentSearch.text = ""
+                            return
+                        }
+                        Qt.callLater(function() {
+                            if (appController.reader.searchStart >= 0 && appController.reader.searchLength > 0) {
+                                readerText.select(appController.reader.searchStart,
+                                                  appController.reader.searchStart + appController.reader.searchLength)
+                            }
+                        })
+                    }
+                }
+
                 ColumnLayout {
                     anchors.fill: parent
                     spacing: 0
@@ -605,6 +621,32 @@ ApplicationWindow {
                                 text: appController.reader.engineName
                                 color: Theme.textSecondary
                                 font.pixelSize: 12
+                            }
+                            TextField {
+                                id: documentSearch
+                                Layout.preferredWidth: 180
+                                placeholderText: qsTr("Find in document")
+                                enabled: appController.reader.open
+                                onTextChanged: appController.reader.findInDocument(text)
+                                onAccepted: appController.reader.nextSearchMatch()
+                            }
+                            Label {
+                                visible: documentSearch.text.length > 0
+                                text: appController.reader.searchMatches > 0
+                                    ? qsTr("%1/%2").arg(appController.reader.searchCurrent + 1).arg(appController.reader.searchMatches)
+                                    : qsTr("No matches")
+                                color: Theme.textSecondary
+                                font.pixelSize: 11
+                            }
+                            Button {
+                                text: "‹"
+                                enabled: appController.reader.searchMatches > 0
+                                onClicked: appController.reader.previousSearchMatch()
+                            }
+                            Button {
+                                text: "›"
+                                enabled: appController.reader.searchMatches > 0
+                                onClicked: appController.reader.nextSearchMatch()
                             }
                             Button {
                                 text: qsTr("Previous")

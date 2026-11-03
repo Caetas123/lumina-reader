@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QList>
 #include <QString>
 
 #include <memory>
@@ -32,6 +33,11 @@ class ReaderController final : public QObject {
     Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY stateChanged)
     Q_PROPERTY(int pageCount READ pageCount NOTIFY stateChanged)
     Q_PROPERTY(int currentPage READ currentPage NOTIFY stateChanged)
+    Q_PROPERTY(QString searchQuery READ searchQuery NOTIFY stateChanged)
+    Q_PROPERTY(int searchMatches READ searchMatches NOTIFY stateChanged)
+    Q_PROPERTY(int searchCurrent READ searchCurrent NOTIFY stateChanged)
+    Q_PROPERTY(int searchStart READ searchStart NOTIFY stateChanged)
+    Q_PROPERTY(int searchLength READ searchLength NOTIFY stateChanged)
 
 public:
     explicit ReaderController(Lumina::Infrastructure::LibraryStore *library,
@@ -52,6 +58,11 @@ public:
     [[nodiscard]] QString errorMessage() const;
     [[nodiscard]] int pageCount() const;
     [[nodiscard]] int currentPage() const;
+    [[nodiscard]] QString searchQuery() const;
+    [[nodiscard]] int searchMatches() const;
+    [[nodiscard]] int searchCurrent() const;
+    [[nodiscard]] int searchStart() const;
+    [[nodiscard]] int searchLength() const;
 
     Q_INVOKABLE bool openDocument(const QString &documentId);
     Q_INVOKABLE void closeDocument();
@@ -59,6 +70,9 @@ public:
     Q_INVOKABLE bool previousPage();
     Q_INVOKABLE bool goToPage(int page);
     Q_INVOKABLE bool updateProgress(double progress);
+    Q_INVOKABLE bool findInDocument(const QString &query);
+    Q_INVOKABLE bool nextSearchMatch();
+    Q_INVOKABLE bool previousSearchMatch();
 
 signals:
     void stateChanged();
@@ -69,6 +83,8 @@ private:
     [[nodiscard]] QString loadText(const QString &path) const;
     void refreshTextPage();
     [[nodiscard]] bool refreshArchivePage();
+    void rebuildSearchMatches();
+    [[nodiscard]] bool selectSearchMatch(int index);
     void persistProgress();
     [[nodiscard]] bool renderPdfPage();
 
@@ -87,6 +103,11 @@ private:
     QString errorMessage_;
     int pageCount_ = 0;
     int currentPage_ = 0;
+    QString searchQuery_;
+    QList<int> searchStarts_;
+    int searchCurrent_ = -1;
+    int searchStart_ = -1;
+    int searchLength_ = 0;
 
 #ifdef LUMINA_HAS_QT_PDF
     std::unique_ptr<QPdfDocument> pdfDocument_;

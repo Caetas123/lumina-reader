@@ -150,6 +150,31 @@ int ReaderController::currentPage() const
     return currentPage_;
 }
 
+QString ReaderController::searchQuery() const
+{
+    return searchQuery_;
+}
+
+int ReaderController::searchMatches() const
+{
+    return searchStarts_.size();
+}
+
+int ReaderController::searchCurrent() const
+{
+    return searchCurrent_;
+}
+
+int ReaderController::searchStart() const
+{
+    return searchStart_;
+}
+
+int ReaderController::searchLength() const
+{
+    return searchLength_;
+}
+
 void ReaderController::clearState()
 {
     archiveReader_.reset();
@@ -169,6 +194,11 @@ void ReaderController::clearState()
     errorMessage_.clear();
     pageCount_ = 0;
     currentPage_ = 0;
+    searchQuery_.clear();
+    searchStarts_.clear();
+    searchCurrent_ = -1;
+    searchStart_ = -1;
+    searchLength_ = 0;
 }
 
 void ReaderController::fail(const QString &message)
@@ -194,6 +224,7 @@ void ReaderController::refreshTextPage()
     }
     const qsizetype start = static_cast<qsizetype>(currentPage_) * kTextCharactersPerPage;
     textContent_ = fullTextContent_.mid(start, kTextCharactersPerPage);
+    rebuildSearchMatches();
 }
 
 bool ReaderController::refreshArchivePage()
@@ -216,6 +247,44 @@ bool ReaderController::refreshArchivePage()
         }
         imageSource_.clear();
     }
+    rebuildSearchMatches();
+    return true;
+}
+
+void ReaderController::rebuildSearchMatches()
+{
+    searchStarts_.clear();
+    searchCurrent_ = -1;
+    searchStart_ = -1;
+    searchLength_ = searchQuery_.size();
+    if (searchQuery_.isEmpty() || textContent_.isEmpty()) {
+        return;
+    }
+
+    qsizetype offset = 0;
+    while (offset < textContent_.size()) {
+        const qsizetype match = textContent_.indexOf(searchQuery_, offset, Qt::CaseInsensitive);
+        if (match < 0) {
+            break;
+        }
+        searchStarts_.append(static_cast<int>(match));
+        offset = match + 1;
+    }
+}
+
+bool ReaderController::selectSearchMatch(int index)
+{
+    if (searchStarts_.isEmpty()) {
+        searchCurrent_ = -1;
+        searchStart_ = -1;
+        searchLength_ = searchQuery_.size();
+        return false;
+    }
+    const int normalized = (index % searchStarts_.size() + searchStarts_.size())
+        % searchStarts_.size();
+    searchCurrent_ = normalized;
+    searchStart_ = searchStarts_.at(normalized);
+    searchLength_ = searchQuery_.size();
     return true;
 }
 
@@ -406,6 +475,39 @@ bool ReaderController::updateProgress(double progress)
         emit stateChanged();
     }
     return success;
+}
+
+bool ReaderController::findInDocument(const QString &query)
+{
+    const QString normalized = query.trimmed();
+    if (normalized == searchQuery_) {
+        return !searchStarts_.isEmpty();
+    }
+    searchQuery_ = normalized;
+    rebuildSearchMatches();
+    const bool found = selectSearchMatch(0);
+    emit stateChanged();
+    return found;
+}
+
+bool ReaderController::nextSearchMatch()
+{
+    if (searchStarts_.isEmpty()) {
+        return false;
+    }
+    const bool found = selectSearchMatch(searchCurrent_ + 1);
+    emit stateChanged();
+    return found;
+}
+
+bool ReaderController::previousSearchMatch()
+{
+    if (searchStarts_.isEmpty()) {
+        return false;
+    }
+    const bool found = selectSearchMatch(searchCurrent_ - 1);
+    emit stateChanged();
+    return found;
 }
 
 void ReaderController::persistProgress()
