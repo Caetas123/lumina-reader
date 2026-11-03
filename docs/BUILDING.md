@@ -39,7 +39,7 @@ The current tests are Qt Test executables registered with CTest:
 
 - `lumina_smoke_tests` checks that the application version is defined;
 - `lumina_database_tests` checks SQLite migration, FTS5 table creation, idempotence, and invalid input handling;
-- `lumina_library_tests` covers import, duplicate detection, metadata, favorites, ratings, collections, tags, smart views, progress, highlights, annotations, and bookmarks;
+- `lumina_library_tests` covers import, duplicate detection, metadata, generated/custom covers, favorites, ratings, collections, tags, smart views, progress, rotation, highlights, annotations, and bookmarks;
 - `lumina_reader_tests` covers pagination, position persistence, document search, RTF conversion, and FB2 text extraction;
 - `lumina_archive_tests` covers EPUB/CBZ navigation and archive path-safety behavior when Qt Core private archive support is present;
 - `lumina_settings_tests` covers persisted reading preferences;

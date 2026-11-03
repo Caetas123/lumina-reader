@@ -42,6 +42,7 @@ The current application provides:
 - individual and multiple-file import, drag and drop, folder import, SHA-256 duplicate detection, and optional folder watching through the library model;
 - library filters for favorites, to-read, reading, and finished documents;
 - reading progress, last position, status, favorites, ratings, descriptions, language, collections, tags, and reading history;
+- generated or personalized covers, page rotation for visual documents, and backup/restoration of that reading metadata;
 - TXT, RTF, FB2, unencrypted PalmDOC-compatible MOBI/AZW/AZW3, raster-image, EPUB, CBZ, and ZIP reading when the matching Qt capabilities are present;
 - optional PDF rendering through Qt PDF in the CI/release build;
 - optional asynchronous page OCR through Tesseract when it is installed on the system;
@@ -90,9 +91,11 @@ Do not commit `CMakeUserPresets.json`, local build directories, or user data.
 src/
   application/       Application services and UI-facing orchestration
   domain/            Business types and rules
+  domain/reader/     Format-independent document engine contracts
   infrastructure/    SQLite, logging, filesystem, and external adapters
+  infrastructure/reader/ Document engine adapters and format selection
   infrastructure/text/ Text and lightweight RTF/FB2 decoding
-  pdf/               PdfEngine abstraction and future PDF adapters
+  pdf/               PDF-specific contracts kept behind the reader engine boundary
   ui/qml/            Qt Quick views and design tokens
 tests/unit/           Qt Test suites
 docs/                 Architecture, build, privacy, release, and format notes

@@ -20,6 +20,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Metadata restoration from a library JSON export, archive resource limits, Zip Slip checks, and a documented format-parity matrix.
 - Unencrypted PalmDOC-compatible MOBI/AZW/AZW3 decoding, keyboard navigation shortcuts, focus/full-screen reading controls, and manual region annotations for image-based pages.
 - Optional asynchronous Tesseract OCR for image/PDF/comic pages, with per-page persistence and Knowledge center indexing.
+- A format-independent `DocumentEngine` contract with adapters for text, images, archives, EPUB/CBZ/ZIP, and optional Qt PDF rendering.
+- Automatic and user-selected library covers, plus persisted page rotation for visual documents and backup restoration.
 
 ### Changed
 
