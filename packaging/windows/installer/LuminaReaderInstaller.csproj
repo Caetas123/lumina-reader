@@ -20,7 +20,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Uninstaller.cs" />
     <EmbeddedResource Include="$(ApplicationPackage)" LogicalName="LuminaReader-windows-x64.zip" />
     <EmbeddedResource Include="$(LogoPath)" LogicalName="lumina-logo.png" />
+    <EmbeddedResource Include="$(UninstallerPath)" LogicalName="LuminaReaderUninstaller.exe" Condition="'$(UninstallerPath)' != ''" />
   </ItemGroup>
 </Project>

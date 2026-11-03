@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Drawing.Drawing2D;
 using System.Globalization;
 using System.IO.Compression;
+using Microsoft.Win32;
 using System.Reflection;
 using System.Windows.Forms;
 
@@ -22,6 +23,10 @@ internal sealed class InstallerForm : Form
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
             .InformationalVersion
         ?? "unknown";
+    private static readonly string InstallerProductVersion = ApplicationVersion.Split('+')[0];
+    private const string UninstallerFileName = "LuminaReaderUninstaller.exe";
+    private const string UninstallRegistryPath =
+        @"Software\Microsoft\Windows\CurrentVersion\Uninstall\LuminaReader";
     private static readonly Color Accent = Color.FromArgb(79, 70, 229);
     private static readonly Color AccentDark = Color.FromArgb(55, 48, 163);
     private static readonly Color TextPrimary = Color.FromArgb(32, 36, 43);
@@ -47,6 +52,7 @@ internal sealed class InstallerForm : Form
     private Label? progressStatus;
     private Label? progressPercent;
     private TextBox? installPathTextBox;
+    private CheckBox? startMenuShortcutCheckBox;
     private CheckBox? desktopShortcutCheckBox;
     private bool installationInProgress;
 
@@ -436,6 +442,7 @@ internal sealed class InstallerForm : Form
 
     private async Task BeginInstallationAsync()
     {
+        var createStartMenuShortcut = startMenuShortcutCheckBox?.Checked ?? true;
         var createDesktopShortcut = desktopShortcutCheckBox?.Checked ?? true;
         installationInProgress = true;
         ShowProgressPage();
@@ -460,7 +467,7 @@ internal sealed class InstallerForm : Form
 
         try
         {
-            await Task.Run(() => InstallFiles(progress, createDesktopShortcut));
+            await Task.Run(() => InstallFiles(progress, createStartMenuShortcut, createDesktopShortcut));
             ShowCompletePage();
         }
         catch (Exception exception)
@@ -475,7 +482,10 @@ internal sealed class InstallerForm : Form
         }
     }
 
-    private void InstallFiles(IProgress<InstallProgress> progress, bool createDesktopShortcut)
+    private void InstallFiles(
+        IProgress<InstallProgress> progress,
+        bool createStartMenuShortcut,
+        bool createDesktopShortcut)
     {
         var resourceName = Assembly.GetExecutingAssembly()
             .GetManifestResourceNames()
@@ -525,13 +535,65 @@ internal sealed class InstallerForm : Form
             throw new InvalidOperationException(text.ExecutableMissing);
         }
 
-        progress.Report(new InstallProgress(100, text.CreatingShortcut));
-        CreateStartMenuShortcut();
-        if (createDesktopShortcut)
+        progress.Report(new InstallProgress(100, text.RegisteringApplication));
+        InstallUninstaller();
+        RegisterUninstallEntry();
+
+        if (createStartMenuShortcut || createDesktopShortcut)
         {
-            CreateDesktopShortcut();
+            progress.Report(new InstallProgress(100, text.CreatingShortcuts));
+            if (createStartMenuShortcut)
+            {
+                CreateStartMenuShortcut();
+            }
+
+            if (createDesktopShortcut)
+            {
+                CreateDesktopShortcut();
+            }
         }
         progress.Report(new InstallProgress(100, text.InstallationCompleteStatus));
+    }
+
+    private void InstallUninstaller()
+    {
+        var resourceName = Assembly.GetExecutingAssembly()
+            .GetManifestResourceNames()
+            .SingleOrDefault(name => name.EndsWith(UninstallerFileName, StringComparison.Ordinal));
+        if (resourceName is null)
+        {
+            throw new InvalidOperationException(text.UninstallerMissing);
+        }
+
+        using var resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName)
+            ?? throw new InvalidOperationException(text.UninstallerMissing);
+        var destination = Path.Combine(installRoot, UninstallerFileName);
+        using var output = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None);
+        resourceStream.CopyTo(output);
+    }
+
+    private void RegisterUninstallEntry()
+    {
+        var uninstallerPath = Path.Combine(installRoot, UninstallerFileName);
+        var estimatedSize = Directory.EnumerateFiles(installRoot, "*", SearchOption.AllDirectories)
+            .Select(path => new FileInfo(path).Length)
+            .Aggregate(0L, (total, length) => total + length);
+        var estimatedSizeInKilobytes = (int)Math.Clamp((estimatedSize + 1023L) / 1024L, 1L, int.MaxValue);
+
+        using var uninstallKey = Registry.CurrentUser.CreateSubKey(UninstallRegistryPath, writable: true)
+            ?? throw new InvalidOperationException(text.UninstallRegistrationFailed);
+        uninstallKey.SetValue("DisplayName", "Lumina Reader");
+        uninstallKey.SetValue("DisplayVersion", InstallerProductVersion);
+        uninstallKey.SetValue("Publisher", "Lumina Reader Project");
+        uninstallKey.SetValue("InstallLocation", installRoot);
+        uninstallKey.SetValue("DisplayIcon", $"{executablePath},0");
+        uninstallKey.SetValue("UninstallString", $"\"{uninstallerPath}\"");
+        uninstallKey.SetValue("QuietUninstallString", $"\"{uninstallerPath}\" --quiet");
+        uninstallKey.SetValue("EstimatedSize", estimatedSizeInKilobytes, RegistryValueKind.DWord);
+        uninstallKey.SetValue("InstallDate", DateTime.Now.ToString("yyyyMMdd", CultureInfo.InvariantCulture));
+        uninstallKey.SetValue("URLInfoAbout", "https://github.com/Caetas123/lumina-reader");
+        uninstallKey.SetValue("NoModify", 1, RegistryValueKind.DWord);
+        uninstallKey.SetValue("NoRepair", 1, RegistryValueKind.DWord);
     }
 
     private string GetSafeDestinationPath(string entryName)
@@ -645,6 +707,7 @@ internal sealed class InstallerForm : Form
         progressStatus = null;
         progressPercent = null;
         installPathTextBox = null;
+        startMenuShortcutCheckBox = null;
         desktopShortcutCheckBox = null;
     }
 
@@ -703,7 +766,7 @@ internal sealed class InstallerForm : Form
         var panel = new Panel
         {
             Width = contentPanel.ClientSize.Width - contentPanel.Padding.Horizontal,
-            Height = 138,
+            Height = 164,
             BackColor = Color.White,
             Margin = new Padding(0, 0, 0, 14),
             Padding = new Padding(16, 12, 16, 10)
@@ -750,10 +813,22 @@ internal sealed class InstallerForm : Form
         browseButton.Click += (_, _) => ChooseInstallFolder();
         panel.Controls.Add(browseButton);
 
-        desktopShortcutCheckBox = new CheckBox
+        startMenuShortcutCheckBox = new CheckBox
         {
             AutoSize = true,
             Location = new Point(16, 82),
+            Text = text.StartMenuShortcut,
+            Checked = true,
+            ForeColor = TextPrimary,
+            Font = new Font("Segoe UI", 9.5F, FontStyle.Regular, GraphicsUnit.Point),
+            BackColor = Color.White
+        };
+        panel.Controls.Add(startMenuShortcutCheckBox);
+
+        desktopShortcutCheckBox = new CheckBox
+        {
+            AutoSize = true,
+            Location = new Point(16, 108),
             Text = text.DesktopShortcut,
             Checked = true,
             ForeColor = TextPrimary,
@@ -845,7 +920,7 @@ internal sealed class InstallerForm : Form
 
     private Button CreateButton(string text, bool isPrimary, bool enabled = true)
     {
-        var button = new Button
+        var button = new RoundedButton
         {
             AutoSize = true,
             Height = 36,
@@ -863,8 +938,167 @@ internal sealed class InstallerForm : Form
         button.FlatAppearance.BorderSize = isPrimary ? 0 : 1;
         button.FlatAppearance.MouseOverBackColor = isPrimary ? AccentDark : SurfaceMuted;
         button.FlatAppearance.MouseDownBackColor = isPrimary ? AccentDark : Border;
-        ApplyRoundedCorners(button, 9);
         return button;
+    }
+
+    private sealed class RoundedButton : Button
+    {
+        private bool isHovered;
+        private bool isPressed;
+
+        private const float CornerRadius = 9F;
+
+        public RoundedButton()
+        {
+            SetStyle(
+                ControlStyles.UserPaint |
+                ControlStyles.AllPaintingInWmPaint |
+                ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.ResizeRedraw,
+                true);
+            FlatStyle = FlatStyle.Flat;
+        }
+
+        protected override void OnMouseEnter(EventArgs eventArgs)
+        {
+            base.OnMouseEnter(eventArgs);
+            isHovered = true;
+            Invalidate();
+        }
+
+        protected override void OnMouseLeave(EventArgs eventArgs)
+        {
+            base.OnMouseLeave(eventArgs);
+            isHovered = false;
+            isPressed = false;
+            Invalidate();
+        }
+
+        protected override void OnMouseDown(MouseEventArgs eventArgs)
+        {
+            base.OnMouseDown(eventArgs);
+            if (eventArgs.Button == MouseButtons.Left)
+            {
+                isPressed = true;
+                Invalidate();
+            }
+        }
+
+        protected override void OnMouseUp(MouseEventArgs eventArgs)
+        {
+            base.OnMouseUp(eventArgs);
+            if (eventArgs.Button == MouseButtons.Left)
+            {
+                isPressed = false;
+                Invalidate();
+            }
+        }
+
+        protected override void OnEnabledChanged(EventArgs eventArgs)
+        {
+            base.OnEnabledChanged(eventArgs);
+            Invalidate();
+        }
+
+        protected override void OnPaintBackground(PaintEventArgs eventArgs)
+        {
+            // The anti-aliased rounded surface is painted in OnPaint. Painting a
+            // rectangular background here would reintroduce square corners.
+        }
+
+        protected override void OnPaint(PaintEventArgs eventArgs)
+        {
+            if (ClientSize.Width <= 0 || ClientSize.Height <= 0)
+            {
+                return;
+            }
+
+            var graphics = eventArgs.Graphics;
+            graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            graphics.CompositingQuality = CompositingQuality.HighQuality;
+            graphics.Clear(FindSurfaceColor());
+
+            var borderSize = Math.Max(0, FlatAppearance.BorderSize);
+            var inset = Math.Max(0.5F, borderSize / 2F);
+            var bounds = new RectangleF(
+                inset,
+                inset,
+                Math.Max(1F, ClientSize.Width - (inset * 2F)),
+                Math.Max(1F, ClientSize.Height - (inset * 2F)));
+            var radius = Math.Min(CornerRadius, Math.Min(bounds.Width, bounds.Height) / 2F);
+
+            using var path = CreateRoundedPath(bounds, radius);
+            using var fillBrush = new SolidBrush(GetFillColor());
+            graphics.FillPath(fillBrush, path);
+
+            if (borderSize > 0)
+            {
+                using var borderPen = new Pen(FlatAppearance.BorderColor, borderSize)
+                {
+                    Alignment = PenAlignment.Center
+                };
+                graphics.DrawPath(borderPen, path);
+            }
+
+            var textColor = Enabled ? ForeColor : Color.FromArgb(160, 164, 174);
+            TextRenderer.DrawText(
+                graphics,
+                Text,
+                Font,
+                ClientRectangle,
+                textColor,
+                TextFormatFlags.HorizontalCenter |
+                TextFormatFlags.VerticalCenter |
+                TextFormatFlags.NoPadding |
+                TextFormatFlags.NoPrefix);
+
+        }
+
+        private Color GetFillColor()
+        {
+            if (!Enabled)
+            {
+                return Color.FromArgb(235, 236, 241);
+            }
+
+            if (isPressed)
+            {
+                return FlatAppearance.MouseDownBackColor;
+            }
+
+            if (isHovered)
+            {
+                return FlatAppearance.MouseOverBackColor;
+            }
+
+            return BackColor;
+        }
+
+        private Color FindSurfaceColor()
+        {
+            for (Control? parent = Parent; parent is not null; parent = parent.Parent)
+            {
+                if (parent.BackColor.A > 0)
+                {
+                    return parent.BackColor;
+                }
+            }
+
+            return SystemColors.Control;
+        }
+
+        private static GraphicsPath CreateRoundedPath(RectangleF bounds, float radius)
+        {
+            var diameter = Math.Max(1F, radius * 2F);
+            var path = new GraphicsPath();
+            path.AddArc(bounds.X, bounds.Y, diameter, diameter, 180F, 90F);
+            path.AddArc(bounds.Right - diameter, bounds.Y, diameter, diameter, 270F, 90F);
+            path.AddArc(bounds.Right - diameter, bounds.Bottom - diameter, diameter, diameter, 0F, 90F);
+            path.AddArc(bounds.X, bounds.Bottom - diameter, diameter, diameter, 90F, 90F);
+            path.CloseFigure();
+            return path;
+        }
     }
 
     private static void ApplyRoundedCorners(Control control, int radius)
@@ -903,6 +1137,7 @@ internal sealed class InstallerForm : Form
         public string InstallationLocationHeading { get; init; } = string.Empty;
         public string Browse { get; init; } = string.Empty;
         public string SelectInstallFolder { get; init; } = string.Empty;
+        public string StartMenuShortcut { get; init; } = string.Empty;
         public string DesktopShortcut { get; init; } = string.Empty;
         public string ConfirmNote { get; init; } = string.Empty;
         public string Back { get; init; } = string.Empty;
@@ -917,12 +1152,15 @@ internal sealed class InstallerForm : Form
         public string InstallationCompleteNote { get; init; } = string.Empty;
         public string Launch { get; init; } = string.Empty;
         public string InstallingFileTemplate { get; init; } = string.Empty;
-        public string CreatingShortcut { get; init; } = string.Empty;
+        public string RegisteringApplication { get; init; } = string.Empty;
+        public string CreatingShortcuts { get; init; } = string.Empty;
         public string InstallationCompleteStatus { get; init; } = string.Empty;
         public string InstallationError { get; init; } = string.Empty;
         public string LaunchError { get; init; } = string.Empty;
         public string PackageMissing { get; init; } = string.Empty;
         public string ExecutableMissing { get; init; } = string.Empty;
+        public string UninstallerMissing { get; init; } = string.Empty;
+        public string UninstallRegistrationFailed { get; init; } = string.Empty;
         public string InvalidPackagePath { get; init; } = string.Empty;
 
         public static InstallerStrings ForSystemLanguage()
@@ -948,10 +1186,11 @@ internal sealed class InstallerForm : Form
                 Close = "Close",
                 Continue = "Continue",
                 ReadyToInstallHeading = "Ready to install?",
-                ReadyToInstallBody = "Choose where Lumina Reader should be installed and whether you would like a shortcut on your desktop.",
+                ReadyToInstallBody = "Choose where Lumina Reader should be installed and which shortcuts you would like to create.",
                 InstallationLocationHeading = "Installation location",
                 Browse = "Browse...",
                 SelectInstallFolder = "Choose where to install Lumina Reader",
+                StartMenuShortcut = "Create a shortcut in the Start menu",
                 DesktopShortcut = "Create a shortcut on the desktop",
                 ConfirmNote = "Choose Install to continue, or Close to leave without making changes.",
                 Back = "Back",
@@ -961,17 +1200,20 @@ internal sealed class InstallerForm : Form
                 PreparingInstallation = "Preparing installation...",
                 InstallingButton = "Installing...",
                 InstallationCompleteHeading = "Installation complete",
-                InstallationCompleteBody = "Lumina Reader is ready to use. A shortcut was added to the Start menu.",
+                InstallationCompleteBody = "Lumina Reader is ready to use. Your selected shortcuts were created.",
                 InstalledToHeading = "Installed to",
                 InstallationCompleteNote = "Click Launch to open Lumina Reader now, or Close to finish.",
                 Launch = "Launch Lumina Reader",
                 InstallingFileTemplate = "Installing {0}...",
-                CreatingShortcut = "Creating Start menu shortcut...",
+                RegisteringApplication = "Registering Lumina Reader in Windows...",
+                CreatingShortcuts = "Creating shortcuts...",
                 InstallationCompleteStatus = "Installation complete.",
                 InstallationError = "Lumina Reader could not be installed.\n\n{0}",
                 LaunchError = "Lumina Reader could not be opened.\n\n{0}",
                 PackageMissing = "The application package is missing.",
                 ExecutableMissing = "The application executable was not found after installation.",
+                UninstallerMissing = "The uninstaller component is missing.",
+                UninstallRegistrationFailed = "Lumina Reader could not be registered for Windows uninstall.",
                 InvalidPackagePath = "The application package contains an invalid path."
             };
         }
@@ -991,10 +1233,11 @@ internal sealed class InstallerForm : Form
                 Close = "Fechar",
                 Continue = "Continuar",
                 ReadyToInstallHeading = "Pronto para instalar?",
-                ReadyToInstallBody = "Escolha onde o Lumina Reader será instalado e se deseja criar um atalho na área de trabalho.",
+                ReadyToInstallBody = "Escolha onde o Lumina Reader será instalado e quais atalhos deseja criar.",
                 InstallationLocationHeading = "Local da instalação",
                 Browse = "Procurar...",
                 SelectInstallFolder = "Escolha onde instalar o Lumina Reader",
+                StartMenuShortcut = "Criar um atalho no menu Iniciar",
                 DesktopShortcut = "Criar um atalho na área de trabalho",
                 ConfirmNote = "Escolha Instalar para continuar ou Fechar para sair sem fazer alterações.",
                 Back = "Voltar",
@@ -1004,17 +1247,20 @@ internal sealed class InstallerForm : Form
                 PreparingInstallation = "Preparando a instalação...",
                 InstallingButton = "Instalando...",
                 InstallationCompleteHeading = "Instalação concluída",
-                InstallationCompleteBody = "O Lumina Reader está pronto para uso. Um atalho foi adicionado ao menu Iniciar.",
+                InstallationCompleteBody = "O Lumina Reader está pronto para uso. Os atalhos escolhidos foram criados.",
                 InstalledToHeading = "Instalado em",
                 InstallationCompleteNote = "Clique em Abrir para iniciar o Lumina Reader agora ou em Fechar para concluir.",
                 Launch = "Abrir Lumina Reader",
                 InstallingFileTemplate = "Instalando {0}...",
-                CreatingShortcut = "Criando atalho no menu Iniciar...",
+                RegisteringApplication = "Registrando o Lumina Reader no Windows...",
+                CreatingShortcuts = "Criando atalhos...",
                 InstallationCompleteStatus = "Instalação concluída.",
                 InstallationError = "Não foi possível instalar o Lumina Reader.\n\n{0}",
                 LaunchError = "Não foi possível abrir o Lumina Reader.\n\n{0}",
                 PackageMissing = "O pacote do aplicativo não foi encontrado.",
                 ExecutableMissing = "O executável do aplicativo não foi encontrado após a instalação.",
+                UninstallerMissing = "O componente de desinstalação não foi encontrado.",
+                UninstallRegistrationFailed = "Não foi possível registrar o Lumina Reader para desinstalação no Windows.",
                 InvalidPackagePath = "O pacote do aplicativo contém um caminho inválido."
             };
         }
