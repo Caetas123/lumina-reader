@@ -42,7 +42,7 @@ jobs:
           host: ${{ matrix.qt-host }}
           target: desktop
           arch: ${{ matrix.qt-arch }}
-          modules: qtshadertools
+          modules: qtshadertools qtpdf
           install-deps: true
           cache: true
           set-env: true

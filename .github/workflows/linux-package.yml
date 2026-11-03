@@ -25,7 +25,7 @@ jobs:
           host: linux
           target: desktop
           arch: linux_gcc_64
-          modules: qtshadertools
+          modules: qtshadertools qtpdf
           install-deps: true
           cache: true
           set-env: true

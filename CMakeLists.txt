@@ -21,6 +21,8 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS
     Test
 )
 
+find_package(Qt6 6.5 QUIET COMPONENTS Pdf)
+
 qt_standard_project_setup(REQUIRES 6.5)
 
 if(Qt6_VERSION VERSION_GREATER_EQUAL "6.8")
@@ -58,6 +60,11 @@ target_link_libraries(lumina_core
         Qt6::Gui
         Qt6::Sql
 )
+
+if(TARGET Qt6::Pdf)
+    target_compile_definitions(lumina_core PUBLIC LUMINA_HAS_QT_PDF=1)
+    target_link_libraries(lumina_core PUBLIC Qt6::Pdf)
+endif()
 
 qt_add_executable(lumina_reader
     src/main.cpp

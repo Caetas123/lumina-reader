@@ -4,7 +4,13 @@
 
 #include <QFile>
 #include <QFileInfo>
+#include <QBuffer>
+#include <QImage>
 #include <QUrl>
+
+#ifdef LUMINA_HAS_QT_PDF
+#include <QPdfDocument>
+#endif
 
 #include <algorithm>
 
@@ -33,6 +39,8 @@ ReaderController::ReaderController(Lumina::Infrastructure::LibraryStore *library
     , library_(library)
 {
 }
+
+ReaderController::~ReaderController() = default;
 
 bool ReaderController::isOpen() const
 {
@@ -76,7 +84,7 @@ QString ReaderController::imageSource() const
 
 bool ReaderController::isImageDocument() const
 {
-    return isImageFormat(format_);
+    return isImageFormat(format_) || format_ == QStringLiteral("pdf");
 }
 
 bool ReaderController::isTextDocument() const
@@ -106,6 +114,9 @@ int ReaderController::currentPage() const
 
 void ReaderController::clearState()
 {
+#ifdef LUMINA_HAS_QT_PDF
+    pdfDocument_.reset();
+#endif
     open_ = false;
     documentId_.clear();
     title_.clear();
@@ -134,6 +145,29 @@ QString ReaderController::loadText(const QString &path) const
         return {};
     }
     return QString::fromUtf8(file.readAll());
+}
+
+bool ReaderController::renderPdfPage()
+{
+#ifdef LUMINA_HAS_QT_PDF
+    if (pdfDocument_ == nullptr || currentPage_ < 0 || currentPage_ >= pageCount_) {
+        return false;
+    }
+    const QImage rendered = pdfDocument_->render(currentPage_, QSize(1500, 2100));
+    if (rendered.isNull()) {
+        return false;
+    }
+    QByteArray encoded;
+    QBuffer buffer(&encoded);
+    if (!buffer.open(QIODevice::WriteOnly) || !rendered.save(&buffer, "PNG")) {
+        return false;
+    }
+    imageSource_ = QStringLiteral("data:image/png;base64,")
+        + QString::fromLatin1(encoded.toBase64());
+    return true;
+#else
+    return false;
+#endif
 }
 
 bool ReaderController::openDocument(const QString &documentId)
@@ -169,6 +203,25 @@ bool ReaderController::openDocument(const QString &documentId)
         pageCount_ = 1;
         currentPage_ = 0;
         engineName_ = QStringLiteral("Image engine");
+    } else if (format == QStringLiteral("pdf")) {
+#ifdef LUMINA_HAS_QT_PDF
+        pdfDocument_ = std::make_unique<QPdfDocument>();
+        const QPdfDocument::Error error = pdfDocument_->load(path);
+        if (error != QPdfDocument::Error::None || pdfDocument_->pageCount() <= 0) {
+            fail(QStringLiteral("The PDF could not be opened. It may be damaged, encrypted, or unsupported."));
+            return false;
+        }
+        pageCount_ = pdfDocument_->pageCount();
+        currentPage_ = std::clamp(currentPage_, 0, pageCount_ - 1);
+        if (!renderPdfPage()) {
+            fail(QStringLiteral("The first PDF page could not be rendered."));
+            return false;
+        }
+        engineName_ = QStringLiteral("Qt PDF engine");
+#else
+        fail(QStringLiteral("PDF support is not included in this build."));
+        return false;
+#endif
     } else if (isTextFormat(format)) {
         textContent_ = loadText(path);
         if (textContent_.isEmpty() && QFileInfo(path).size() > 0) {
@@ -222,6 +275,11 @@ bool ReaderController::goToPage(int page)
         return true;
     }
     currentPage_ = page;
+#ifdef LUMINA_HAS_QT_PDF
+    if (format_ == QStringLiteral("pdf") && !renderPdfPage()) {
+        return false;
+    }
+#endif
     persistProgress();
     emit stateChanged();
     return true;

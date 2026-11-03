@@ -1,6 +1,5 @@
 #pragma once
 
-#include "application/ReaderController.h"
 #include "infrastructure/library/LibraryStore.h"
 
 #include <QObject>
@@ -14,6 +13,8 @@ class Database;
 
 namespace Lumina::Application {
 
+class ReaderController;
+
 class AppController final : public QObject {
     Q_OBJECT
     Q_PROPERTY(QString applicationName READ applicationName CONSTANT)
@@ -21,7 +22,7 @@ class AppController final : public QObject {
     Q_PROPERTY(bool databaseReady READ databaseReady NOTIFY databaseStateChanged)
     Q_PROPERTY(QString startupError READ startupError NOTIFY databaseStateChanged)
     Q_PROPERTY(Lumina::Infrastructure::LibraryStore *library READ library CONSTANT)
-    Q_PROPERTY(ReaderController *reader READ reader CONSTANT)
+    Q_PROPERTY(QObject *reader READ reader CONSTANT)
 
 public:
     explicit AppController(QObject *parent = nullptr);
@@ -32,7 +33,7 @@ public:
     [[nodiscard]] bool databaseReady() const;
     [[nodiscard]] QString startupError() const;
     [[nodiscard]] Lumina::Infrastructure::LibraryStore *library() const;
-    [[nodiscard]] ReaderController *reader() const;
+    [[nodiscard]] QObject *reader() const;
 
     Q_INVOKABLE void retryInitialization();
 

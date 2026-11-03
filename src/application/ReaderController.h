@@ -5,6 +5,10 @@
 
 #include <memory>
 
+#ifdef LUMINA_HAS_QT_PDF
+class QPdfDocument;
+#endif
+
 namespace Lumina::Infrastructure {
 class LibraryStore;
 }
@@ -31,6 +35,7 @@ class ReaderController final : public QObject {
 public:
     explicit ReaderController(Lumina::Infrastructure::LibraryStore *library,
                               QObject *parent = nullptr);
+    ~ReaderController() override;
 
     [[nodiscard]] bool isOpen() const;
     [[nodiscard]] QString documentId() const;
@@ -62,6 +67,7 @@ private:
     void fail(const QString &message);
     [[nodiscard]] QString loadText(const QString &path) const;
     void persistProgress();
+    [[nodiscard]] bool renderPdfPage();
 
     Lumina::Infrastructure::LibraryStore *library_ = nullptr;
     bool open_ = false;
@@ -76,6 +82,10 @@ private:
     QString errorMessage_;
     int pageCount_ = 0;
     int currentPage_ = 0;
+
+#ifdef LUMINA_HAS_QT_PDF
+    std::unique_ptr<QPdfDocument> pdfDocument_;
+#endif
 };
 
 } // namespace Lumina::Application

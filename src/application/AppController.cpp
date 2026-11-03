@@ -91,7 +91,7 @@ Lumina::Infrastructure::LibraryStore *AppController::library() const
     return library_.get();
 }
 
-ReaderController *AppController::reader() const
+QObject *AppController::reader() const
 {
     return reader_.get();
 }
