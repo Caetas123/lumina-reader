@@ -61,6 +61,6 @@ private slots:
     }
 };
 
-QTEST_APPLESS_MAIN(DatabaseTest)
+QTEST_GUILESS_MAIN(DatabaseTest)
 
 #include "database_test.moc"
