@@ -27,6 +27,22 @@ curl --fail --location --retry 3 --silent --show-error \
     "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
 chmod +x "${linuxdeployqt_path}"
 
+# Qt ships optional SQL drivers that are not needed by Lumina Reader. The Mimer
+# driver depends on a proprietary library that is not part of the Qt package,
+# and linuxdeployqt aborts when ldd cannot resolve it. Temporarily hide only
+# that optional plugin; SQLite remains available for the application.
+optional_mimer_plugin="${QT_ROOT_DIR:-}/plugins/sqldrivers/libqsqlmimer.so"
+optional_mimer_backup="${optional_mimer_plugin}.lumina-disabled"
+restore_optional_plugin() {
+    if [[ -n "${optional_mimer_plugin}" && -f "${optional_mimer_backup}" ]]; then
+        mv "${optional_mimer_backup}" "${optional_mimer_plugin}"
+    fi
+}
+trap restore_optional_plugin EXIT
+if [[ -f "${optional_mimer_plugin}" ]]; then
+    mv "${optional_mimer_plugin}" "${optional_mimer_backup}"
+fi
+
 "${linuxdeployqt_path}" --appimage-extract-and-run \
     "${app_directory}/usr/share/applications/lumina-reader.desktop" \
     -appimage \
