@@ -286,6 +286,23 @@ QList<Migration> migrations()
                     "ON documents(genre COLLATE NOCASE)"),
             },
         },
+        {
+            10,
+            {
+                QStringLiteral(
+                    "ALTER TABLE dictionary_history ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0 "
+                    "CHECK (is_favorite IN (0, 1))"),
+                QStringLiteral(
+                    "ALTER TABLE translation_history ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0 "
+                    "CHECK (is_favorite IN (0, 1))"),
+                QStringLiteral(
+                    "CREATE INDEX IF NOT EXISTS dictionary_history_favorite_idx "
+                    "ON dictionary_history(is_favorite, created_at DESC)"),
+                QStringLiteral(
+                    "CREATE INDEX IF NOT EXISTS translation_history_favorite_idx "
+                    "ON translation_history(is_favorite, created_at DESC)"),
+            },
+        },
     };
 }
 

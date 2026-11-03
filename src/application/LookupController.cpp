@@ -209,9 +209,84 @@ QString LookupController::resultSource() const
     return resultSource_;
 }
 
+bool LookupController::resultDictionaryHistoryAvailable() const
+{
+    return resultDictionaryHistoryId_ > 0;
+}
+
+bool LookupController::resultDictionaryFavorite() const
+{
+    return resultDictionaryFavorite_;
+}
+
+bool LookupController::resultTranslationHistoryAvailable() const
+{
+    return resultTranslationHistoryId_ > 0;
+}
+
+bool LookupController::resultTranslationFavorite() const
+{
+    return resultTranslationFavorite_;
+}
+
+QVariantList LookupController::dictionaryHistory() const
+{
+    QVariantList results;
+    if (database_ == nullptr || !database_->isOpen()) {
+        return results;
+    }
+    QSqlQuery query(database_->connection());
+    if (!query.exec(QStringLiteral(
+            "SELECT id, term, language, provider, result_json, is_favorite, created_at "
+            "FROM dictionary_history ORDER BY id DESC LIMIT 100"))) {
+        return results;
+    }
+    while (query.next()) {
+        results.append(QVariantMap{
+            {QStringLiteral("id"), query.value(0)},
+            {QStringLiteral("term"), query.value(1)},
+            {QStringLiteral("language"), query.value(2)},
+            {QStringLiteral("provider"), query.value(3)},
+            {QStringLiteral("resultJson"), query.value(4)},
+            {QStringLiteral("favorite"), query.value(5).toBool()},
+            {QStringLiteral("createdAt"), query.value(6)},
+        });
+    }
+    return results;
+}
+
+QVariantList LookupController::translationHistory() const
+{
+    QVariantList results;
+    if (database_ == nullptr || !database_->isOpen()) {
+        return results;
+    }
+    QSqlQuery query(database_->connection());
+    if (!query.exec(QStringLiteral(
+            "SELECT id, source_text, source_language, target_language, provider, "
+            "translated_text, is_favorite, created_at FROM translation_history "
+            "ORDER BY id DESC LIMIT 100"))) {
+        return results;
+    }
+    while (query.next()) {
+        results.append(QVariantMap{
+            {QStringLiteral("id"), query.value(0)},
+            {QStringLiteral("sourceText"), query.value(1)},
+            {QStringLiteral("sourceLanguage"), query.value(2)},
+            {QStringLiteral("targetLanguage"), query.value(3)},
+            {QStringLiteral("provider"), query.value(4)},
+            {QStringLiteral("translatedText"), query.value(5)},
+            {QStringLiteral("favorite"), query.value(6).toBool()},
+            {QStringLiteral("createdAt"), query.value(7)},
+        });
+    }
+    return results;
+}
+
 void LookupController::setDatabase(Lumina::Infrastructure::Database *database)
 {
     database_ = database;
+    emit stateChanged();
 }
 
 void LookupController::clearResult()
@@ -220,6 +295,10 @@ void LookupController::clearResult()
     resultBody_.clear();
     resultPronunciation_.clear();
     resultSource_.clear();
+    resultDictionaryHistoryId_ = 0;
+    resultDictionaryFavorite_ = false;
+    resultTranslationHistoryId_ = 0;
+    resultTranslationFavorite_ = false;
 }
 
 void LookupController::fail(const QString &message)
@@ -247,9 +326,13 @@ bool LookupController::openUrl(const QUrl &url)
 bool LookupController::recordDictionaryLookup(const QString &term,
                                               const QString &language,
                                               const QString &provider,
-                                              const QString &resultJson)
+                                              const QString &resultJson,
+                                              qint64 *historyId)
 {
     if (database_ == nullptr || !database_->isOpen()) {
+        if (historyId != nullptr) {
+            *historyId = 0;
+        }
         return true;
     }
     QSqlQuery query(database_->connection());
@@ -260,26 +343,130 @@ bool LookupController::recordDictionaryLookup(const QString &term,
     query.bindValue(QStringLiteral(":language"), language);
     query.bindValue(QStringLiteral(":provider"), provider);
     query.bindValue(QStringLiteral(":result"), resultJson);
-    return query.exec();
+    if (!query.exec()) {
+        return false;
+    }
+    resultDictionaryHistoryId_ = query.lastInsertId().toLongLong();
+    resultDictionaryFavorite_ = false;
+    if (historyId != nullptr) {
+        *historyId = resultDictionaryHistoryId_;
+    }
+    return true;
 }
 
 bool LookupController::recordTranslationLookup(const QString &text,
                                                const QString &sourceLanguage,
                                                const QString &targetLanguage,
-                                               const QString &provider)
+                                               const QString &provider,
+                                               const QString &translatedText,
+                                               qint64 *historyId)
 {
     if (database_ == nullptr || !database_->isOpen()) {
+        if (historyId != nullptr) {
+            *historyId = 0;
+        }
         return true;
     }
     QSqlQuery query(database_->connection());
     query.prepare(QStringLiteral(
-        "INSERT INTO translation_history (source_text, source_language, target_language, provider) "
-        "VALUES (:text, :source, :target, :provider)"));
+        "INSERT INTO translation_history "
+        "(source_text, source_language, target_language, provider, translated_text) "
+        "VALUES (:text, :source, :target, :provider, :translated)"));
     query.bindValue(QStringLiteral(":text"), text);
     query.bindValue(QStringLiteral(":source"), sourceLanguage);
     query.bindValue(QStringLiteral(":target"), targetLanguage);
     query.bindValue(QStringLiteral(":provider"), provider);
+    query.bindValue(QStringLiteral(":translated"), translatedText);
+    if (!query.exec()) {
+        return false;
+    }
+    resultTranslationHistoryId_ = query.lastInsertId().toLongLong();
+    resultTranslationFavorite_ = false;
+    if (historyId != nullptr) {
+        *historyId = resultTranslationHistoryId_;
+    }
+    return true;
+}
+
+bool LookupController::setHistoryFavorite(const QString &tableName,
+                                          qint64 historyId,
+                                          bool favorite)
+{
+    if (database_ == nullptr || !database_->isOpen() || historyId <= 0
+        || (tableName != QStringLiteral("dictionary_history")
+            && tableName != QStringLiteral("translation_history"))) {
+        return false;
+    }
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral("UPDATE %1 SET is_favorite = :favorite WHERE id = :id")
+                      .arg(tableName));
+    query.bindValue(QStringLiteral(":favorite"), favorite ? 1 : 0);
+    query.bindValue(QStringLiteral(":id"), historyId);
     return query.exec();
+}
+
+bool LookupController::setDictionaryFavorite(qint64 historyId, bool favorite)
+{
+    if (!setHistoryFavorite(QStringLiteral("dictionary_history"), historyId, favorite)) {
+        return false;
+    }
+    if (historyId == resultDictionaryHistoryId_) {
+        resultDictionaryFavorite_ = favorite;
+    }
+    emit stateChanged();
+    return true;
+}
+
+bool LookupController::setCurrentDictionaryFavorite(bool favorite)
+{
+    return setDictionaryFavorite(resultDictionaryHistoryId_, favorite);
+}
+
+bool LookupController::setTranslationFavorite(qint64 historyId, bool favorite)
+{
+    if (!setHistoryFavorite(QStringLiteral("translation_history"), historyId, favorite)) {
+        return false;
+    }
+    if (historyId == resultTranslationHistoryId_) {
+        resultTranslationFavorite_ = favorite;
+    }
+    emit stateChanged();
+    return true;
+}
+
+bool LookupController::setCurrentTranslationFavorite(bool favorite)
+{
+    return setTranslationFavorite(resultTranslationHistoryId_, favorite);
+}
+
+bool LookupController::clearDictionaryHistory()
+{
+    if (database_ == nullptr || !database_->isOpen()) {
+        return false;
+    }
+    QSqlQuery query(database_->connection());
+    if (!query.exec(QStringLiteral("DELETE FROM dictionary_history"))) {
+        return false;
+    }
+    resultDictionaryHistoryId_ = 0;
+    resultDictionaryFavorite_ = false;
+    emit stateChanged();
+    return true;
+}
+
+bool LookupController::clearTranslationHistory()
+{
+    if (database_ == nullptr || !database_->isOpen()) {
+        return false;
+    }
+    QSqlQuery query(database_->connection());
+    if (!query.exec(QStringLiteral("DELETE FROM translation_history"))) {
+        return false;
+    }
+    resultTranslationHistoryId_ = 0;
+    resultTranslationFavorite_ = false;
+    emit stateChanged();
+    return true;
 }
 
 bool LookupController::openGoogle(const QString &text)
@@ -476,7 +663,8 @@ bool LookupController::translateText(const QString &text,
         if (!recordTranslationLookup(normalizedText,
                                      normalizedSource,
                                      normalizedTarget,
-                                     provider.id())) {
+                                     provider.id(),
+                                     translatedText)) {
             fail(QStringLiteral("The translation result could not be saved locally."));
             return;
         }

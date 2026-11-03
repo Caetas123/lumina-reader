@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Optional libarchive-backed, read-only comic archive engines for CBR, CB7, CBT, RAR, and 7Z when the dependency is available at configure time.
 - macOS x86_64 DMG packaging with Qt deployment and a self-contained application bundle.
 - Integrated optional dictionary and translation dialogs using explicit, bounded online requests; results can be copied and lookup history remains local.
+- Dictionary and translation history can now be reviewed, reopened, cleared, and marked as favorites from the lookup dialog.
 - Editable document genres with case-insensitive library filters and backup/restore support.
 - Optional DjVuLibre-backed DJVU/DJV reading with page rendering and hidden-text extraction.
 

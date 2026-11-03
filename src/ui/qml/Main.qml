@@ -864,10 +864,44 @@ ApplicationWindow {
         id: lookupDialog
         property string mode: "dictionary"
         property string queryText: ""
+        property bool showHistory: false
+        property bool historyFavoritesOnly: false
         modal: true
         title: mode === "dictionary" ? qsTr("Dictionary") : qsTr("Translation")
         width: Math.min(window.width - 80, 680)
         standardButtons: Dialog.Close
+
+        onOpened: {
+            showHistory = false
+            historyFavoritesOnly = false
+        }
+
+        function historyEntries() {
+            var entries = mode === "dictionary"
+                ? appController.lookup.dictionaryHistory
+                : appController.lookup.translationHistory
+            if (!historyFavoritesOnly) {
+                return entries
+            }
+            var favorites = []
+            for (var index = 0; index < entries.length; ++index) {
+                if (entries[index].favorite) {
+                    favorites.push(entries[index])
+                }
+            }
+            return favorites
+        }
+
+        function openHistoryEntry(entry) {
+            showHistory = false
+            if (mode === "dictionary") {
+                appController.lookup.lookupDictionary(entry.term, entry.language)
+            } else {
+                appController.lookup.translateText(entry.sourceText,
+                                                   entry.sourceLanguage,
+                                                   entry.targetLanguage)
+            }
+        }
 
         contentItem: ColumnLayout {
             spacing: 12
@@ -880,15 +914,111 @@ ApplicationWindow {
                 color: Theme.textSecondary
                 Layout.fillWidth: true
             }
+            RowLayout {
+                Layout.fillWidth: true
+                Button {
+                    text: lookupDialog.showHistory ? qsTr("Back to result") : qsTr("History")
+                    onClicked: lookupDialog.showHistory = !lookupDialog.showHistory
+                }
+                Button {
+                    visible: lookupDialog.showHistory
+                    checkable: true
+                    checked: lookupDialog.historyFavoritesOnly
+                    text: qsTr("Favorites")
+                    onClicked: lookupDialog.historyFavoritesOnly = checked
+                }
+                Button {
+                    visible: lookupDialog.showHistory
+                    text: qsTr("Clear history")
+                    onClicked: {
+                        if (lookupDialog.mode === "dictionary") {
+                            appController.lookup.clearDictionaryHistory()
+                        } else {
+                            appController.lookup.clearTranslationHistory()
+                        }
+                    }
+                }
+                Item { Layout.fillWidth: true }
+            }
             Label {
-                visible: !appController.lookup.busy && appController.lookup.lastError.length > 0
+                visible: lookupDialog.showHistory && lookupDialog.historyEntries().length === 0
+                text: qsTr("No saved lookups yet.")
+                color: Theme.textSecondary
+                Layout.fillWidth: true
+            }
+            ListView {
+                id: lookupHistoryList
+                visible: lookupDialog.showHistory
+                Layout.fillWidth: true
+                Layout.preferredHeight: lookupDialog.showHistory ? 360 : 0
+                Layout.minimumHeight: 0
+                clip: true
+                model: lookupDialog.historyEntries()
+                delegate: Rectangle {
+                    required property var modelData
+                    property var entry: modelData
+                    width: lookupHistoryList.width
+                    height: 72
+                    radius: 10
+                    color: Theme.surfaceMuted
+                    border.color: Theme.border
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        spacing: 8
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+                            Label {
+                                Layout.fillWidth: true
+                                text: lookupDialog.mode === "dictionary"
+                                    ? entry.term
+                                    : entry.sourceText
+                                color: Theme.textPrimary
+                                elide: Text.ElideRight
+                                font.weight: Font.DemiBold
+                            }
+                            Label {
+                                Layout.fillWidth: true
+                                text: lookupDialog.mode === "dictionary"
+                                    ? qsTr("%1 · %2").arg(entry.language || qsTr("Auto")).arg(entry.provider)
+                                    : qsTr("%1 → %2 · %3").arg(entry.sourceLanguage || qsTr("Auto"))
+                                        .arg(entry.targetLanguage).arg(entry.provider)
+                                color: Theme.textSecondary
+                                font.pixelSize: 11
+                                elide: Text.ElideRight
+                            }
+                        }
+                        Button {
+                            text: entry.favorite ? "★" : "☆"
+                            Accessible.name: entry.favorite ? qsTr("Remove favorite") : qsTr("Save favorite")
+                            onClicked: {
+                                if (lookupDialog.mode === "dictionary") {
+                                    appController.lookup.setDictionaryFavorite(entry.id, !entry.favorite)
+                                } else {
+                                    appController.lookup.setTranslationFavorite(entry.id, !entry.favorite)
+                                }
+                            }
+                        }
+                        Button {
+                            text: qsTr("Open")
+                            onClicked: lookupDialog.openHistoryEntry(entry)
+                        }
+                    }
+                }
+            }
+            Label {
+                visible: !lookupDialog.showHistory
+                    && !appController.lookup.busy && appController.lookup.lastError.length > 0
                 text: appController.lookup.lastError
                 color: Theme.warning
                 wrapMode: Text.WordWrap
                 Layout.fillWidth: true
             }
             Label {
-                visible: !appController.lookup.busy && appController.lookup.resultTitle.length > 0
+                visible: !lookupDialog.showHistory
+                    && !appController.lookup.busy && appController.lookup.resultTitle.length > 0
                 text: appController.lookup.resultTitle
                 color: Theme.textPrimary
                 font.pixelSize: 20
@@ -896,7 +1026,7 @@ ApplicationWindow {
                 Layout.fillWidth: true
             }
             Label {
-                visible: lookupDialog.mode === "dictionary"
+                visible: !lookupDialog.showHistory && lookupDialog.mode === "dictionary"
                     && !appController.lookup.busy
                     && appController.lookup.resultPronunciation.length > 0
                 text: appController.lookup.resultPronunciation
@@ -904,7 +1034,8 @@ ApplicationWindow {
                 Layout.fillWidth: true
             }
             ScrollView {
-                visible: !appController.lookup.busy && appController.lookup.resultBody.length > 0
+                visible: !lookupDialog.showHistory
+                    && !appController.lookup.busy && appController.lookup.resultBody.length > 0
                 Layout.fillWidth: true
                 Layout.preferredHeight: Math.min(420, Math.max(100, lookupResultText.implicitHeight + 20))
                 TextArea {
@@ -921,7 +1052,8 @@ ApplicationWindow {
                 }
             }
             Label {
-                visible: !appController.lookup.busy && appController.lookup.resultSource.length > 0
+                visible: !lookupDialog.showHistory
+                    && !appController.lookup.busy && appController.lookup.resultSource.length > 0
                 text: qsTr("Source: %1. The selected text was sent only because you requested this lookup.")
                     .arg(appController.lookup.resultSource)
                 color: Theme.textSecondary
@@ -930,7 +1062,28 @@ ApplicationWindow {
                 Layout.fillWidth: true
             }
             Button {
-                visible: !appController.lookup.busy && appController.lookup.resultBody.length > 0
+                visible: !lookupDialog.showHistory && !appController.lookup.busy
+                    && (lookupDialog.mode === "dictionary"
+                        ? appController.lookup.resultDictionaryHistoryAvailable
+                        : appController.lookup.resultTranslationHistoryAvailable)
+                text: lookupDialog.mode === "dictionary"
+                    ? (appController.lookup.resultDictionaryFavorite
+                        ? qsTr("Remove from favorites") : qsTr("Save to favorites"))
+                    : (appController.lookup.resultTranslationFavorite
+                        ? qsTr("Remove from favorites") : qsTr("Save to favorites"))
+                onClicked: {
+                    if (lookupDialog.mode === "dictionary") {
+                        appController.lookup.setCurrentDictionaryFavorite(
+                            !appController.lookup.resultDictionaryFavorite)
+                    } else {
+                        appController.lookup.setCurrentTranslationFavorite(
+                            !appController.lookup.resultTranslationFavorite)
+                    }
+                }
+            }
+            Button {
+                visible: !lookupDialog.showHistory
+                    && !appController.lookup.busy && appController.lookup.resultBody.length > 0
                 text: qsTr("Copy result")
                 onClicked: {
                     lookupResultText.selectAll()

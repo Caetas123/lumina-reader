@@ -53,7 +53,7 @@ The current application provides:
 - in-document search for text pages and EPUB chapters;
 - persistent highlights, annotations, bookmarks, and a global FTS5 Knowledge center;
 - contextual copy, Google, integrated dictionary, translation, and highlight actions for selected text;
-- optional explicit online dictionary and translation results shown inside the app, with local lookup history and copy actions;
+- optional explicit online dictionary and translation results shown inside the app, with local lookup history, reopen/clear actions, lookup favorites, and copy actions;
 - optional system text-to-speech through Qt Speech;
 - Markdown, JSON, and plain-text knowledge export, library metadata export, database backup, and metadata restoration;
 - SQLite migrations, safe read-only archive handling, Zip Slip checks, archive entry limits, and Qt Test coverage;

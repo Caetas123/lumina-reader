@@ -32,7 +32,7 @@ Contains product concepts and rules independent of Qt Quick, SQLite, and operati
 
 Provides persistence, migrations, filesystem access, caches, indexing, OCR, dictionary providers, text-to-speech adapters, backup, and export. Infrastructure implementations are replaceable behind interfaces where external behavior is involved.
 
-The current concrete services include `Database`, `LibraryStore`, `ArchiveReader`, `TextDecoder`, `DocumentEngineFactory`, the optional libarchive and DjVuLibre adapters, `TesseractOcrProvider`, `BackupController`, `SettingsController`, `LookupController`, and the optional `SpeechController`. `LibraryStore` owns the C++ model exposed to QML; it also owns import validation, duplicate detection, cover generation, FTS5 updates, collections, tags, favorites, annotations, bookmarks, OCR page text, page rotation, reading time, and reading history. `LookupController` keeps online dictionary and translation requests explicit, parses bounded JSON responses, and records only local lookup history.
+The current concrete services include `Database`, `LibraryStore`, `ArchiveReader`, `TextDecoder`, `DocumentEngineFactory`, the optional libarchive and DjVuLibre adapters, `TesseractOcrProvider`, `BackupController`, `SettingsController`, `LookupController`, and the optional `SpeechController`. `LibraryStore` owns the C++ model exposed to QML; it also owns import validation, duplicate detection, cover generation, FTS5 updates, collections, tags, favorites, annotations, bookmarks, OCR page text, page rotation, reading time, and reading history. `LookupController` keeps online dictionary and translation requests explicit, parses bounded JSON responses, records only local lookup history, and exposes history reopening, clearing, and favorites to the lookup dialog.
 
 ### `reader engines`
 
@@ -50,7 +50,7 @@ Contains integrations that differ across Windows, macOS, and Linux, such as file
 
 - `AppController` is the initial QML-facing application coordinator.
 - `Database` owns one SQLite connection and applies versioned migrations in transactions.
-- Migration versions 1–9 create application settings, documents, reading state, annotations, bookmarks, OCR/provider history tables, FTS5 indexes, favorites, ratings, OCR knowledge entries, persisted page rotation, accumulated reading time, and document genres.
+- Migration versions 1–10 create application settings, documents, reading state, annotations, bookmarks, OCR/provider history tables, FTS5 indexes, favorites, ratings, OCR knowledge entries, persisted page rotation, accumulated reading time, document genres, and dictionary/translation history favorites.
 - `LibraryStore` is a `QAbstractListModel`; its view filter is applied in SQL, and its FTS5 queries have a safe LIKE fallback for unusual input.
 - `ArchiveReader` reads EPUB and image archives in-process without extracting untrusted paths. It rejects parent/absolute paths, symbolic links, oversized entries, and archives over the configured entry/size limits.
 - `TextDecoder` converts TXT, RTF, FB2, and unencrypted PalmDOC-compatible MOBI/AZW/AZW3 files into safe reader text without executing document content. DRM and unsupported KF8/Huffman variants are rejected.
