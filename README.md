@@ -51,7 +51,8 @@ The current application provides:
 - optional asynchronous page OCR through Tesseract when it is installed on the system;
 - in-document search for text pages and EPUB chapters;
 - persistent highlights, annotations, bookmarks, and a global FTS5 Knowledge center;
-- contextual copy, Google, dictionary, translation, and highlight actions for selected text;
+- contextual copy, Google, integrated dictionary, translation, and highlight actions for selected text;
+- optional explicit online dictionary and translation results shown inside the app, with local lookup history and copy actions;
 - optional system text-to-speech through Qt Speech;
 - Markdown, JSON, and plain-text knowledge export, library metadata export, database backup, and metadata restoration;
 - SQLite migrations, safe read-only archive handling, Zip Slip checks, archive entry limits, and Qt Test coverage;
@@ -63,7 +64,7 @@ The exact capability set depends on the Qt modules present in the build. See [th
 
 - C++20 compiler;
 - CMake 3.24 or newer;
-- Qt 6.5 or newer with `Core`, `Gui`, `Qml`, `Quick`, `QuickControls2`, `Sql`, and `Test`;
+- Qt 6.5 or newer with `Core`, `Gui`, `Network`, `Qml`, `Quick`, `QuickControls2`, `Sql`, and `Test`;
 - optional `Pdf`, `TextToSpeech`, and `CorePrivate` modules enable PDF rendering, system speech, and EPUB/CBZ/ZIP reading respectively;
 - optional libarchive headers and library enable CBR/CB7/CBT/RAR/7Z reading;
 - Tesseract OCR is optional at runtime; when available on `PATH`, image-based pages can be recognized without uploading documents;

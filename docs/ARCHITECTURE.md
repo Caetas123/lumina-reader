@@ -32,7 +32,7 @@ Contains product concepts and rules independent of Qt Quick, SQLite, and operati
 
 Provides persistence, migrations, filesystem access, caches, indexing, OCR, dictionary providers, text-to-speech adapters, backup, and export. Infrastructure implementations are replaceable behind interfaces where external behavior is involved.
 
-The current concrete services include `Database`, `LibraryStore`, `ArchiveReader`, `TextDecoder`, `DocumentEngineFactory`, the optional libarchive adapter, `TesseractOcrProvider`, `BackupController`, `SettingsController`, and the optional `SpeechController`. `LibraryStore` owns the C++ model exposed to QML; it also owns import validation, duplicate detection, cover generation, FTS5 updates, collections, tags, favorites, annotations, bookmarks, OCR page text, page rotation, reading time, and reading history.
+The current concrete services include `Database`, `LibraryStore`, `ArchiveReader`, `TextDecoder`, `DocumentEngineFactory`, the optional libarchive adapter, `TesseractOcrProvider`, `BackupController`, `SettingsController`, `LookupController`, and the optional `SpeechController`. `LibraryStore` owns the C++ model exposed to QML; it also owns import validation, duplicate detection, cover generation, FTS5 updates, collections, tags, favorites, annotations, bookmarks, OCR page text, page rotation, reading time, and reading history. `LookupController` keeps online dictionary and translation requests explicit, parses bounded JSON responses, and records only local lookup history.
 
 ### `reader engines`
 
@@ -64,7 +64,7 @@ Contains integrations that differ across Windows, macOS, and Linux, such as file
 - Original PDFs are read-only unless a later, explicit export operation is confirmed by the user.
 - Original documents are not copied, moved, or deleted by a normal library import or removal.
 - No network provider is required for the local reading flow.
-- Browser lookups are explicit user actions and receive only the selected text.
+- Browser and integrated online lookups are explicit user actions and receive only the selected text.
 - New long-running work must not run on the GUI thread; the current import path remains synchronous and is intentionally bounded by format and archive-size limits.
 - Database schema changes are additive migrations; historical migration files are not rewritten.
 - Technical error details remain in diagnostics; UI messages stay actionable and safe.

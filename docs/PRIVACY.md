@@ -7,12 +7,12 @@ Lumina Reader follows a local-first privacy model.
 - PDFs remain on the user's device.
 - Reading progress, annotations, settings, and search indexes are local.
 - There is no telemetry in the foundation.
-- No online dictionary, OCR, synchronization, or sharing provider is required.
+- No online dictionary, translation, OCR, synchronization, or sharing provider is required for local reading.
 - Original PDFs are not modified by the application unless an explicit export flow is implemented and confirmed.
 
 ## Optional online features
 
-Future online providers must be opt-in, clearly identified, independently disableable, and documented with the exact data sent. A dictionary provider may receive only the selected word or expression when the user explicitly chooses an online provider; it must not receive the PDF or unrelated reading history.
+Online dictionary and translation buttons are explicit user actions. The integrated providers are `dictionaryapi.dev` and `mymemory.translated.net`; they receive only the selected word or passage and the requested language pair. The result is displayed in a local dialog and the lookup history is stored locally. The original document, file path, and unrelated reading history are not sent. Browser fallback actions use only the selected text as well.
 
 ## Diagnostics
 
