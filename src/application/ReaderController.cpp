@@ -452,6 +452,15 @@ void ReaderController::rebuildSearchMatches()
         searchStarts_.append(static_cast<int>(match));
         offset = match + 1;
     }
+
+    // Page navigation rebuilds the matches while keeping the query visible in
+    // the toolbar. Select the first result immediately so the counter and the
+    // highlight never remain at an invalid 0/N state after returning to a
+    // matching page.
+    if (!searchStarts_.isEmpty()) {
+        const bool selected = selectSearchMatch(0);
+        Q_UNUSED(selected)
+    }
 }
 
 bool ReaderController::selectSearchMatch(int index)
@@ -1189,7 +1198,19 @@ bool ReaderController::findInDocument(const QString &query)
 {
     const QString normalized = query.trimmed();
     if (normalized == searchQuery_) {
-        return !searchStarts_.isEmpty();
+        if (searchStarts_.isEmpty()) {
+            return false;
+        }
+        // Refreshing the page rebuilds the matches and intentionally clears the
+        // selected match. Keep the same query usable after page navigation by
+        // selecting its first match again instead of returning a stale
+        // success with searchCurrent() still at -1.
+        if (searchCurrent_ < 0) {
+            const bool found = selectSearchMatch(0);
+            emit stateChanged();
+            return found;
+        }
+        return true;
     }
     searchQuery_ = normalized;
     rebuildSearchMatches();

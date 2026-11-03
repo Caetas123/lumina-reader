@@ -68,7 +68,12 @@ private slots:
         QVERIFY(reader.textContent().contains(QStringLiteral("PAGE TWO")));
         QVERIFY(reader.findInDocument(QStringLiteral("page two")));
         QCOMPARE(reader.searchMatches(), 1);
+        QCOMPARE(reader.searchCurrent(), 0);
         QVERIFY(reader.searchStart() >= 0);
+        QVERIFY(reader.previousPage());
+        QVERIFY(reader.nextPage());
+        QCOMPARE(reader.searchCurrent(), 0);
+        QVERIFY(reader.findInDocument(QStringLiteral("page two")));
         QCOMPARE(library.documentDetails(documentId).value(QStringLiteral("currentPage")).toInt(), 1);
     }
 
