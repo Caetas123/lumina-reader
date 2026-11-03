@@ -67,6 +67,10 @@ The graphical executable also stayed alive for more than ten seconds with `QT_QP
 
 ## Recent thematic commits
 
+- `3d0acbb` — add document-wide OCR with progress and cancellation.
+- `06acb2a` — unify cross-platform release versions and tag validation.
+- `c5a1698` — export selectable document text safely.
+- `db73f7d` — add the implementation audit.
 - `6badc8f` — preserve text selection offsets in locators.
 - `feae2be` — add Knowledge highlight/annotation undo and redo.
 - `ba304f7` — add selected-passage notes.
