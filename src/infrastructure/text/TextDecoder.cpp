@@ -4,6 +4,8 @@
 #include <QRegularExpression>
 #include <QXmlStreamReader>
 
+#include <algorithm>
+
 namespace {
 
 QString decodeRtf(const QString &source)
@@ -122,6 +124,135 @@ QString decodeFb2(const QByteArray &data)
     return text.trimmed();
 }
 
+quint16 readBigEndian16(const QByteArray &data, qsizetype offset)
+{
+    return offset + 1 < data.size()
+        ? (static_cast<quint16>(static_cast<uchar>(data.at(offset))) << 8)
+              | static_cast<quint16>(static_cast<uchar>(data.at(offset + 1)))
+        : 0;
+}
+
+quint32 readBigEndian32(const QByteArray &data, qsizetype offset)
+{
+    if (offset + 3 >= data.size()) {
+        return 0;
+    }
+    return (static_cast<quint32>(static_cast<uchar>(data.at(offset))) << 24)
+        | (static_cast<quint32>(static_cast<uchar>(data.at(offset + 1))) << 16)
+        | (static_cast<quint32>(static_cast<uchar>(data.at(offset + 2))) << 8)
+        | static_cast<quint32>(static_cast<uchar>(data.at(offset + 3)));
+}
+
+QByteArray decompressPalmDoc(const QByteArray &compressed)
+{
+    QByteArray output;
+    output.reserve(compressed.size());
+    for (qsizetype index = 0; index < compressed.size(); ++index) {
+        const uchar value = static_cast<uchar>(compressed.at(index));
+        if (value >= 0xC0) {
+            output.append(' ');
+            output.append(static_cast<char>(value ^ 0x80));
+        } else if (value >= 0x80) {
+            if (index + 1 >= compressed.size()) {
+                return {};
+            }
+            const uchar next = static_cast<uchar>(compressed.at(++index));
+            const int distance = ((value & 0x3F) << 5) | (next >> 3);
+            const int length = (next & 0x07) + 3;
+            if (distance <= 0 || distance > output.size()) {
+                return {};
+            }
+            for (int copy = 0; copy < length; ++copy) {
+                output.append(output.at(output.size() - distance));
+            }
+        } else {
+            output.append(static_cast<char>(value));
+        }
+    }
+    return output;
+}
+
+QString decodePalmDocument(const QByteArray &data)
+{
+    constexpr qsizetype minimumHeaderSize = 86;
+    if (data.size() < minimumHeaderSize) {
+        return {};
+    }
+
+    const quint16 recordCount = readBigEndian16(data, 76);
+    const quint32 firstRecordOffset = readBigEndian32(data, 78);
+    if (recordCount == 0 || firstRecordOffset < minimumHeaderSize
+        || firstRecordOffset >= static_cast<quint32>(data.size())) {
+        return {};
+    }
+
+    QList<quint32> offsets;
+    offsets.reserve(recordCount);
+    for (quint16 index = 0; index < recordCount; ++index) {
+        const qsizetype recordInfoOffset = 78 + static_cast<qsizetype>(index) * 8;
+        if (recordInfoOffset + 3 >= data.size()) {
+            return {};
+        }
+        offsets.append(readBigEndian32(data, recordInfoOffset));
+    }
+    offsets.append(static_cast<quint32>(data.size()));
+
+    const QByteArray firstRecord = data.mid(offsets.at(0), offsets.at(1) - offsets.at(0));
+    if (firstRecord.size() < 16) {
+        return {};
+    }
+    const quint16 compression = readBigEndian16(firstRecord, 0);
+    const quint16 textRecordCount = readBigEndian16(firstRecord, 8);
+    const quint16 encryption = readBigEndian16(firstRecord, 12);
+    if (encryption != 0 || (compression != 1 && compression != 2) || textRecordCount == 0) {
+        return {};
+    }
+
+    qsizetype textOffset = 16;
+    if (firstRecord.size() >= textOffset + 24
+        && firstRecord.mid(textOffset, 4) == QByteArrayLiteral("MOBI")) {
+        const quint32 mobiHeaderLength = readBigEndian32(firstRecord, textOffset + 4);
+        if (mobiHeaderLength < 16 || textOffset + mobiHeaderLength > firstRecord.size()) {
+            return {};
+        }
+        const quint32 exthFlags = firstRecord.size() >= textOffset + 132
+            ? readBigEndian32(firstRecord, textOffset + 128)
+            : 0;
+        textOffset += mobiHeaderLength;
+        if ((exthFlags & 0x40U) != 0 && firstRecord.size() >= textOffset + 8
+            && firstRecord.mid(textOffset, 4) == QByteArrayLiteral("EXTH")) {
+            const quint32 exthLength = readBigEndian32(firstRecord, textOffset + 4);
+            if (exthLength < 12 || textOffset + exthLength > firstRecord.size()) {
+                return {};
+            }
+            textOffset += exthLength;
+        }
+    }
+
+    QByteArray text;
+    const int recordsToRead = std::min<int>(textRecordCount, offsets.size() - 1);
+    for (int index = 0; index < recordsToRead; ++index) {
+        const qsizetype start = offsets.at(index);
+        const qsizetype end = offsets.at(index + 1);
+        if (start < 0 || end < start || end > data.size()) {
+            return {};
+        }
+        QByteArray record = data.mid(start, end - start);
+        if (index == 0) {
+            if (textOffset > record.size()) {
+                return {};
+            }
+            record = record.mid(textOffset);
+        }
+        const QByteArray decoded = compression == 2 ? decompressPalmDoc(record) : record;
+        if (decoded.isEmpty() && !record.isEmpty()) {
+            return {};
+        }
+        text.append(decoded);
+    }
+    return QString::fromUtf8(text).trimmed();
+}
+
 } // namespace
 
 namespace Lumina::Infrastructure {
@@ -133,6 +264,11 @@ QString TextDecoder::readFile(const QString &path, const QString &format)
         return {};
     }
     const QByteArray data = file.readAll();
+    if (format.compare(QStringLiteral("mobi"), Qt::CaseInsensitive) == 0
+        || format.compare(QStringLiteral("azw"), Qt::CaseInsensitive) == 0
+        || format.compare(QStringLiteral("azw3"), Qt::CaseInsensitive) == 0) {
+        return decodePalmDocument(data);
+    }
     if (format.compare(QStringLiteral("rtf"), Qt::CaseInsensitive) == 0) {
         return decodeRtf(QString::fromUtf8(data));
     }

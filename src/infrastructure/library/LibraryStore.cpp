@@ -41,6 +41,7 @@ QString formatForPath(const QString &path)
 QStringList supportedFormats()
 {
     QStringList formats{
+        QStringLiteral("mobi"), QStringLiteral("azw"), QStringLiteral("azw3"),
         QStringLiteral("fb2"), QStringLiteral("txt"), QStringLiteral("rtf"),
         QStringLiteral("jpg"), QStringLiteral("jpeg"), QStringLiteral("png"),
         QStringLiteral("webp"), QStringLiteral("avif"), QStringLiteral("gif"),
@@ -107,6 +108,23 @@ bool hasExpectedSignature(const QString &path, const QString &format)
     }
     if (format == QStringLiteral("pdf")) {
         return header.startsWith("%PDF-");
+    }
+    if (format == QStringLiteral("mobi") || format == QStringLiteral("azw")
+        || format == QStringLiteral("azw3")) {
+        if (file.size() < 86 || !file.seek(76)) {
+            return false;
+        }
+        const QByteArray palm = file.read(10);
+        if (palm.size() < 8) {
+            return false;
+        }
+        const quint16 records = (static_cast<quint16>(static_cast<uchar>(palm.at(0))) << 8)
+            | static_cast<quint16>(static_cast<uchar>(palm.at(1)));
+        const quint32 firstRecord = (static_cast<quint32>(static_cast<uchar>(palm.at(2))) << 24)
+            | (static_cast<quint32>(static_cast<uchar>(palm.at(3))) << 16)
+            | (static_cast<quint32>(static_cast<uchar>(palm.at(4))) << 8)
+            | static_cast<quint32>(static_cast<uchar>(palm.at(5)));
+        return records > 0 && firstRecord >= 86 && firstRecord < static_cast<quint32>(file.size());
     }
     if (format == QStringLiteral("rar")) {
         return header.startsWith("Rar!\x1A\x07");
@@ -176,7 +194,8 @@ QString searchableText(const QString &path, const QString &format)
     }
 
     if (format != QStringLiteral("txt") && format != QStringLiteral("rtf")
-        && format != QStringLiteral("fb2")) {
+        && format != QStringLiteral("fb2") && format != QStringLiteral("mobi")
+        && format != QStringLiteral("azw") && format != QStringLiteral("azw3")) {
         return {};
     }
 

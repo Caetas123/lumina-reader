@@ -71,6 +71,36 @@ private slots:
         QVERIFY(Lumina::Infrastructure::TextDecoder::readFile(fb2Path, QStringLiteral("fb2"))
                     .contains(QStringLiteral("Text from FB2.")));
     }
+
+    void decodesUnencryptedPalmDoc()
+    {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const QString path = directory.filePath(QStringLiteral("book.mobi"));
+        QByteArray record(16, '\0');
+        record[1] = 1;
+        record[8] = 0;
+        record[9] = 1;
+        record[10] = 0x10;
+        record[11] = 0;
+        record.append("PalmDOC text");
+
+        QByteArray data(86, '\0');
+        data[76] = 0;
+        data[77] = 1;
+        data[78] = 0;
+        data[79] = 0;
+        data[80] = 0;
+        data[81] = 86;
+        data.append(record);
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        QVERIFY(file.write(data) == data.size());
+        file.close();
+
+        QCOMPARE(Lumina::Infrastructure::TextDecoder::readFile(path, QStringLiteral("mobi")),
+                 QStringLiteral("PalmDOC text"));
+    }
 };
 
 QTEST_GUILESS_MAIN(ReaderTest)

@@ -23,7 +23,8 @@ constexpr int kTextCharactersPerPage = 5000;
 bool isTextFormat(const QString &format)
 {
     return format == QStringLiteral("txt") || format == QStringLiteral("rtf")
-        || format == QStringLiteral("fb2");
+        || format == QStringLiteral("fb2") || format == QStringLiteral("mobi")
+        || format == QStringLiteral("azw") || format == QStringLiteral("azw3");
 }
 
 bool isImageFormat(const QString &format)
