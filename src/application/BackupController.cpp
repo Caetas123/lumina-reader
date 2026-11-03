@@ -13,6 +13,18 @@
 #include <QSqlQuery>
 #include <QTextStream>
 
+#include <algorithm>
+
+namespace {
+
+bool isValidStatus(const QString &status)
+{
+    return status == QStringLiteral("to_read") || status == QStringLiteral("reading")
+        || status == QStringLiteral("read") || status == QStringLiteral("abandoned");
+}
+
+} // namespace
+
 namespace Lumina::Application {
 
 BackupController::BackupController(QObject *parent)
@@ -50,6 +62,21 @@ bool BackupController::validatePath(const QString &path)
     const QFileInfo info(path);
     if (!info.absoluteDir().exists()) {
         fail(QStringLiteral("The destination folder does not exist."));
+        return false;
+    }
+    return true;
+}
+
+bool BackupController::validateSourcePath(const QString &path)
+{
+    lastError_.clear();
+    if (database_ == nullptr || !database_->isOpen()) {
+        fail(QStringLiteral("The local library is not ready yet."));
+        return false;
+    }
+    const QFileInfo info(path);
+    if (path.trimmed().isEmpty() || !info.exists() || !info.isFile() || !info.isReadable()) {
+        fail(QStringLiteral("Choose a readable Lumina library export first."));
         return false;
     }
     return true;
@@ -160,7 +187,8 @@ bool BackupController::exportLibrary(const QString &path)
     QSqlQuery query(database_->connection());
     if (!query.exec(QStringLiteral(
             "SELECT id, title, author, file_path, file_hash, file_size, format, content_type, "
-            "status, progress, current_page, page_count, added_at, COALESCE(last_opened_at, '') "
+            "status, progress, current_page, page_count, added_at, COALESCE(last_opened_at, ''), "
+            "description, language, is_favorite, rating "
             "FROM documents ORDER BY title COLLATE NOCASE"))) {
         fail(QStringLiteral("The library could not be read for export."));
         return false;
@@ -183,6 +211,10 @@ bool BackupController::exportLibrary(const QString &path)
             {QStringLiteral("pageCount"), query.value(11).toInt()},
             {QStringLiteral("addedAt"), query.value(12).toString()},
             {QStringLiteral("lastOpenedAt"), query.value(13).toString()},
+            {QStringLiteral("description"), query.value(14).toString()},
+            {QStringLiteral("language"), query.value(15).toString()},
+            {QStringLiteral("isFavorite"), query.value(16).toInt() != 0},
+            {QStringLiteral("rating"), query.value(17).toInt()},
         });
     }
 
@@ -193,6 +225,124 @@ bool BackupController::exportLibrary(const QString &path)
         {QStringLiteral("documents"), documents},
     };
     return writeFile(path, QJsonDocument(root).toJson(QJsonDocument::Indented));
+}
+
+bool BackupController::restoreLibrary(const QString &path)
+{
+    if (!validateSourcePath(path)) {
+        return false;
+    }
+
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        fail(QStringLiteral("The Lumina library export could not be opened."));
+        return false;
+    }
+    QJsonParseError parseError;
+    const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &parseError);
+    if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
+        fail(QStringLiteral("The selected file is not a valid Lumina library export."));
+        return false;
+    }
+    const QJsonObject root = document.object();
+    if (root.value(QStringLiteral("format")).toString() != QStringLiteral("lumina-library")
+        || !root.value(QStringLiteral("documents")).isArray()) {
+        fail(QStringLiteral("The selected file is not a Lumina library export."));
+        return false;
+    }
+
+    QSqlDatabase connection = database_->connection();
+    if (!connection.transaction()) {
+        fail(QStringLiteral("The library restore could not be started."));
+        return false;
+    }
+
+    int restored = 0;
+    for (const QJsonValue &value : root.value(QStringLiteral("documents")).toArray()) {
+        if (!value.isObject()) {
+            continue;
+        }
+        const QJsonObject item = value.toObject();
+        const QString hash = item.value(QStringLiteral("fileHash")).toString().trimmed();
+        const QString filePath = item.value(QStringLiteral("filePath")).toString().trimmed();
+        if (hash.isEmpty() && filePath.isEmpty()) {
+            continue;
+        }
+
+        QSqlQuery find(connection);
+        if (!hash.isEmpty()) {
+            find.prepare(QStringLiteral(
+                "SELECT id FROM documents WHERE file_hash = :hash "
+                "OR file_path = :path OR canonical_path = :path LIMIT 1"));
+            find.bindValue(QStringLiteral(":hash"), hash);
+        } else {
+            find.prepare(QStringLiteral(
+                "SELECT id FROM documents WHERE file_path = :path OR canonical_path = :path LIMIT 1"));
+        }
+        find.bindValue(QStringLiteral(":path"), filePath);
+        if (!find.exec() || !find.next()) {
+            continue;
+        }
+
+        const QString status = item.value(QStringLiteral("status")).toString();
+        const QString restoredStatus = isValidStatus(status) ? status : QStringLiteral("to_read");
+        const double progress = std::clamp(item.value(QStringLiteral("progress")).toDouble(), 0.0, 1.0);
+        const int page = std::max(0, item.value(QStringLiteral("currentPage")).toInt());
+        const int pageCount = std::max(0, item.value(QStringLiteral("pageCount")).toInt());
+        const int rating = std::clamp(item.value(QStringLiteral("rating")).toInt(), 0, 5);
+
+        QSqlQuery update(connection);
+        update.prepare(QStringLiteral(
+            "UPDATE documents SET title = :title, author = :author, description = :description, "
+            "language = :language, status = :status, progress = :progress, current_page = :page, "
+            "page_count = :page_count, last_opened_at = NULLIF(:last_opened, ''), "
+            "is_favorite = :favorite, rating = :rating, updated_at = CURRENT_TIMESTAMP WHERE id = :id"));
+        update.bindValue(QStringLiteral(":title"), item.value(QStringLiteral("title")).toString());
+        update.bindValue(QStringLiteral(":author"), item.value(QStringLiteral("author")).toString());
+        update.bindValue(QStringLiteral(":description"), item.value(QStringLiteral("description")).toString());
+        update.bindValue(QStringLiteral(":language"), item.value(QStringLiteral("language")).toString());
+        update.bindValue(QStringLiteral(":status"), restoredStatus);
+        update.bindValue(QStringLiteral(":progress"), progress);
+        update.bindValue(QStringLiteral(":page"), page);
+        update.bindValue(QStringLiteral(":page_count"), pageCount);
+        update.bindValue(QStringLiteral(":last_opened"), item.value(QStringLiteral("lastOpenedAt")).toString());
+        update.bindValue(QStringLiteral(":favorite"), item.value(QStringLiteral("isFavorite")).toBool() ? 1 : 0);
+        update.bindValue(QStringLiteral(":rating"), rating);
+        update.bindValue(QStringLiteral(":id"), find.value(0));
+        if (!update.exec()) {
+            connection.rollback();
+            fail(QStringLiteral("The library restore could not be completed."));
+            return false;
+        }
+
+        QSqlQuery search(connection);
+        search.prepare(QStringLiteral(
+            "UPDATE document_search SET title = :title, author = :author, description = :description "
+            "WHERE document_id = :id"));
+        search.bindValue(QStringLiteral(":title"), item.value(QStringLiteral("title")).toString());
+        search.bindValue(QStringLiteral(":author"), item.value(QStringLiteral("author")).toString());
+        search.bindValue(QStringLiteral(":description"), item.value(QStringLiteral("description")).toString());
+        search.bindValue(QStringLiteral(":id"), find.value(0));
+        if (!search.exec()) {
+            connection.rollback();
+            fail(QStringLiteral("The library search index could not be restored."));
+            return false;
+        }
+        ++restored;
+    }
+
+    if (!connection.commit()) {
+        connection.rollback();
+        fail(QStringLiteral("The library restore could not be saved."));
+        return false;
+    }
+    if (restored == 0) {
+        fail(QStringLiteral("No documents from this export matched the current library."));
+        return false;
+    }
+    lastError_.clear();
+    emit stateChanged();
+    return true;
 }
 
 bool BackupController::backupDatabase(const QString &path)

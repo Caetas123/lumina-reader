@@ -37,6 +37,13 @@ private slots:
                                      0,
                                      QStringLiteral("#f6c945"),
                                      QStringLiteral("Remember this")));
+        QVERIFY(library.setFavorite(documentId, true));
+        QVERIFY(library.setRating(documentId, 4));
+        QVERIFY(library.updateMetadata(documentId,
+                                       QStringLiteral("Original title"),
+                                       QStringLiteral("Original author"),
+                                       QStringLiteral("A saved description"),
+                                       QStringLiteral("en")));
 
         Lumina::Application::BackupController backup;
         backup.setDatabase(&database);
@@ -46,6 +53,24 @@ private slots:
         QVERIFY(backup.exportKnowledge(markdownPath, QStringLiteral("markdown")));
         QVERIFY(backup.exportKnowledge(jsonPath, QStringLiteral("json")));
         QVERIFY(backup.exportLibrary(libraryPath));
+
+        QVERIFY(library.updateMetadata(documentId,
+                                       QStringLiteral("Changed title"),
+                                       QStringLiteral("Changed author"),
+                                       QStringLiteral("Changed description"),
+                                       QStringLiteral("pt")));
+        QVERIFY(library.updateMetadata(documentId,
+                                       QStringLiteral("Temporary title"),
+                                       QStringLiteral("Temporary author"),
+                                       QStringLiteral("Temporary description"),
+                                       QStringLiteral("es")));
+        QVERIFY(backup.restoreLibrary(libraryPath));
+        QCOMPARE(library.documentDetails(documentId).value(QStringLiteral("title")).toString(),
+                 QStringLiteral("Original title"));
+        QCOMPARE(library.documentDetails(documentId).value(QStringLiteral("language")).toString(),
+                 QStringLiteral("en"));
+        QVERIFY(library.documentDetails(documentId).value(QStringLiteral("isFavorite")).toBool());
+        QCOMPARE(library.documentDetails(documentId).value(QStringLiteral("rating")).toInt(), 4);
 
         QFile markdown(markdownPath);
         QVERIFY(markdown.open(QIODevice::ReadOnly));

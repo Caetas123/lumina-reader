@@ -53,6 +53,7 @@ public:
     [[nodiscard]] int count() const;
 
     void setDatabase(Database *database);
+    Q_INVOKABLE void refresh();
 
     Q_INVOKABLE bool importFiles(const QStringList &filePaths);
     Q_INVOKABLE bool importFolder(const QString &folderPath, bool recursive = true);

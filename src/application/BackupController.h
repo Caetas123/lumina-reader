@@ -21,6 +21,7 @@ public:
 
     Q_INVOKABLE bool exportKnowledge(const QString &path, const QString &format);
     Q_INVOKABLE bool exportLibrary(const QString &path);
+    Q_INVOKABLE bool restoreLibrary(const QString &path);
     Q_INVOKABLE bool backupDatabase(const QString &path);
 
 signals:
@@ -29,6 +30,7 @@ signals:
 private:
     bool writeFile(const QString &path, const QByteArray &data);
     bool validatePath(const QString &path);
+    bool validateSourcePath(const QString &path);
     void fail(const QString &message);
 
     Lumina::Infrastructure::Database *database_ = nullptr;

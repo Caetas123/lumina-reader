@@ -144,6 +144,23 @@ ApplicationWindow {
     }
 
     FileDialog {
+        id: libraryRestoreDialog
+        title: qsTr("Restore a Lumina library export")
+        fileMode: FileDialog.OpenFile
+        nameFilters: [qsTr("Lumina library JSON (*.json)"), qsTr("All files (*)")]
+        onAccepted: {
+            var path = window.localPath(selectedFile)
+            if (appController.backup.restoreLibrary(path)) {
+                appController.library.refresh()
+                window.notification = qsTr("Library metadata restored successfully.")
+            } else {
+                window.notification = appController.backup.lastError
+            }
+            notificationTimer.restart()
+        }
+    }
+
+    FileDialog {
         id: databaseBackupDialog
         title: qsTr("Create database backup")
         fileMode: FileDialog.SaveFile
@@ -1039,6 +1056,10 @@ ApplicationWindow {
                         Button {
                             text: qsTr("Create database backup")
                             onClicked: databaseBackupDialog.open()
+                        }
+                        Button {
+                            text: qsTr("Restore library")
+                            onClicked: libraryRestoreDialog.open()
                         }
                         Item { Layout.fillWidth: true }
                     }

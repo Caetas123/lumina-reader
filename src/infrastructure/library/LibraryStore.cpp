@@ -308,6 +308,11 @@ void LibraryStore::setDatabase(Database *database)
     reload();
 }
 
+void LibraryStore::refresh()
+{
+    reload();
+}
+
 bool LibraryStore::isReady() const
 {
     return database_ != nullptr && database_->isOpen();
