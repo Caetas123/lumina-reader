@@ -611,6 +611,60 @@ bool LibraryStore::unwatchFolder(const QString &folderPath)
     return true;
 }
 
+bool LibraryStore::documentAvailable(const QString &documentId) const
+{
+    const QVariantMap record = documentDetails(documentId);
+    if (record.isEmpty()) {
+        return false;
+    }
+    const QFileInfo info(record.value(QStringLiteral("filePath")).toString());
+    return info.exists() && info.isFile() && info.isReadable();
+}
+
+bool LibraryStore::relinkDocument(const QString &documentId, const QString &filePath)
+{
+    if (!isReady() || documentId.trimmed().isEmpty()) {
+        return false;
+    }
+
+    const QVariantMap record = documentDetails(documentId);
+    const QFileInfo info(filePath);
+    if (record.isEmpty() || !info.exists() || !info.isFile() || !info.isReadable()) {
+        setError(QStringLiteral("The selected file could not be read."));
+        return false;
+    }
+
+    QSqlQuery stored(database_->connection());
+    stored.prepare(QStringLiteral("SELECT file_hash FROM documents WHERE id = :id"));
+    stored.bindValue(QStringLiteral(":id"), documentId);
+    if (!stored.exec() || !stored.next()) {
+        setError(QStringLiteral("The library document could not be inspected."));
+        return false;
+    }
+
+    const QString path = normalizedPath(filePath);
+    const QString hash = calculateHash(path);
+    if (hash.isEmpty() || hash != stored.value(0).toString()) {
+        setError(QStringLiteral("The selected file does not match this library document."));
+        return false;
+    }
+
+    QSqlQuery update(database_->connection());
+    update.prepare(QStringLiteral(
+        "UPDATE documents SET file_path = :path, canonical_path = :canonical, file_size = :size, "
+        "updated_at = CURRENT_TIMESTAMP WHERE id = :id"));
+    update.bindValue(QStringLiteral(":path"), path);
+    update.bindValue(QStringLiteral(":canonical"), path);
+    update.bindValue(QStringLiteral(":size"), info.size());
+    update.bindValue(QStringLiteral(":id"), documentId);
+    if (!update.exec() || update.numRowsAffected() == 0) {
+        setError(QStringLiteral("The document location could not be updated."));
+        return false;
+    }
+    reload();
+    return true;
+}
+
 bool LibraryStore::importSingle(const QString &filePath)
 {
     const QFileInfo info(filePath);

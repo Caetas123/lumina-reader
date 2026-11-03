@@ -31,6 +31,9 @@ private slots:
         store.setDatabase(&database);
         QVERIFY(store.importFiles({filePath}));
         QCOMPARE(store.count(), 1);
+
+        const QString movedPath = directory.filePath(QStringLiteral("moved-notes.txt"));
+        QVERIFY(QFile::copy(filePath, movedPath));
         QVERIFY(store.importFiles({filePath}));
         QCOMPARE(store.count(), 1);
 
@@ -74,6 +77,11 @@ private slots:
         QVERIFY(secondFile.open(QIODevice::WriteOnly | QIODevice::Text));
         QVERIFY(secondFile.write("A second document for the folder import test.\n") > 0);
         secondFile.close();
+        QVERIFY(!store.relinkDocument(documentId, secondPath));
+        QVERIFY(store.relinkDocument(documentId, movedPath));
+        QCOMPARE(store.documentDetails(documentId).value(QStringLiteral("filePath")).toString(),
+                 QFileInfo(movedPath).absoluteFilePath());
+        QVERIFY(store.documentAvailable(documentId));
         QVERIFY(store.importFolder(directory.path(), false));
         QCOMPARE(store.count(), 2);
         store.setViewFilter(QStringLiteral("favorites"));

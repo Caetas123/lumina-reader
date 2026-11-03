@@ -172,6 +172,8 @@ ApplicationWindow {
         }
         metadataDialog.documentId = documentId
         metadataDialog.coverPath = record.coverPath || ""
+        metadataDialog.filePath = record.filePath || ""
+        metadataDialog.fileAvailable = appController.library.documentAvailable(documentId)
         metadataTitle.text = record.title || ""
         metadataAuthor.text = record.author || ""
         metadataLanguage.text = record.language || ""
@@ -219,6 +221,28 @@ ApplicationWindow {
         onAccepted: window.openImportedFiles(selectedFiles)
     }
 
+    FileDialog {
+        id: relinkDialog
+        property string documentId: ""
+        title: qsTr("Locate the original document")
+        fileMode: FileDialog.OpenFile
+        nameFilters: [
+            qsTr("Supported documents (%1)").arg(appController.library.supportedExtensions().join(" ")),
+            qsTr("All files (*)")
+        ]
+        onAccepted: {
+            var path = window.localPath(selectedFile)
+            if (appController.library.relinkDocument(documentId, path)) {
+                metadataDialog.filePath = path
+                metadataDialog.fileAvailable = true
+                window.notification = qsTr("The document location was restored.")
+            } else {
+                window.notification = qsTr("That file does not match the saved document.")
+            }
+            notificationTimer.restart()
+        }
+    }
+
     FolderDialog {
         id: importFolderDialog
         title: qsTr("Add a folder to Lumina Reader")
@@ -251,6 +275,8 @@ ApplicationWindow {
         id: metadataDialog
         property string documentId: ""
         property string coverPath: ""
+        property string filePath: ""
+        property bool fileAvailable: true
         modal: true
         title: qsTr("Edit document details")
         width: Math.min(window.width - 80, 560)
@@ -264,6 +290,24 @@ ApplicationWindow {
                 color: Theme.textSecondary
                 wrapMode: Text.WordWrap
                 Layout.fillWidth: true
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                Label {
+                    Layout.fillWidth: true
+                    text: metadataDialog.fileAvailable
+                        ? metadataDialog.filePath
+                        : qsTr("Original file not found: %1").arg(metadataDialog.filePath)
+                    color: metadataDialog.fileAvailable ? Theme.textSecondary : Theme.warning
+                    elide: Text.ElideMiddle
+                }
+                Button {
+                    text: qsTr("Locate file")
+                    onClicked: {
+                        relinkDialog.documentId = metadataDialog.documentId
+                        relinkDialog.open()
+                    }
+                }
             }
             TextField {
                 id: metadataTitle
@@ -356,6 +400,15 @@ ApplicationWindow {
                 placeholderText: qsTr("Personal description")
                 wrapMode: TextArea.Wrap
             }
+            Button {
+                text: qsTr("Remove from library")
+                Layout.alignment: Qt.AlignLeft
+                onClicked: {
+                    removeDocumentDialog.documentId = metadataDialog.documentId
+                    removeDocumentDialog.documentTitle = metadataTitle.text
+                    removeDocumentDialog.open()
+                }
+            }
         }
 
         onAccepted: {
@@ -372,6 +425,41 @@ ApplicationWindow {
             window.notification = saved ? qsTr("Document details saved.") : qsTr("The document details could not be saved.")
             notificationTimer.restart()
         }
+    }
+
+    Dialog {
+        id: removeDocumentDialog
+        property string documentId: ""
+        property string documentTitle: ""
+        modal: true
+        title: qsTr("Remove document")
+        width: Math.min(window.width - 80, 520)
+        standardButtons: Dialog.Ok | Dialog.Cancel
+
+        contentItem: ColumnLayout {
+            spacing: 12
+            Label {
+                Layout.fillWidth: true
+                text: qsTr("Remove “%1” from your Lumina Reader library? The original file will stay on your device unless you explicitly choose otherwise.").arg(removeDocumentDialog.documentTitle)
+                color: Theme.textSecondary
+                wrapMode: Text.WordWrap
+            }
+            CheckBox {
+                id: deleteOriginalCheck
+                text: qsTr("Also delete the original file from the device")
+            }
+        }
+
+        onAccepted: {
+            var removed = appController.library.removeDocument(documentId, deleteOriginalCheck.checked)
+            metadataDialog.close()
+            window.notification = removed
+                ? qsTr("The document was removed from your library.")
+                : qsTr("The document could not be removed.")
+            notificationTimer.restart()
+            deleteOriginalCheck.checked = false
+        }
+        onRejected: deleteOriginalCheck.checked = false
     }
 
     FileDialog {

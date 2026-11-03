@@ -61,6 +61,8 @@ public:
     Q_INVOKABLE bool importFolder(const QString &folderPath, bool recursive = true);
     Q_INVOKABLE bool watchFolder(const QString &folderPath, bool recursive = true);
     Q_INVOKABLE bool unwatchFolder(const QString &folderPath);
+    Q_INVOKABLE bool documentAvailable(const QString &documentId) const;
+    Q_INVOKABLE bool relinkDocument(const QString &documentId, const QString &filePath);
     Q_INVOKABLE bool removeDocument(const QString &documentId, bool deleteOriginal = false);
     Q_INVOKABLE bool setStatus(const QString &documentId, const QString &status);
     Q_INVOKABLE bool setPageCount(const QString &documentId, int pageCount);
