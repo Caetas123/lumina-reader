@@ -21,6 +21,8 @@ ApplicationWindow {
     property var themeKeys: ["light", "dark", "sepia", "paper", "gray", "high-contrast", "low-light"]
     property bool focusMode: false
     property bool listMode: false
+    property real imageZoom: 1.0
+    property string zoomDocumentId: ""
 
     function applyTheme() {
         Theme.mode = appController.settings.highContrast ? "high-contrast" : appController.settings.theme
@@ -110,6 +112,30 @@ ApplicationWindow {
         onActivated: window.toggleFullScreen()
     }
 
+    Shortcut {
+        sequence: "Ctrl++"
+        enabled: window.currentView === 2 && appController.reader.open && appController.reader.imageDocument
+        onActivated: window.changeImageZoom(0.1)
+    }
+
+    Shortcut {
+        sequence: "Ctrl+="
+        enabled: window.currentView === 2 && appController.reader.open && appController.reader.imageDocument
+        onActivated: window.changeImageZoom(0.1)
+    }
+
+    Shortcut {
+        sequence: "Ctrl+-"
+        enabled: window.currentView === 2 && appController.reader.open && appController.reader.imageDocument
+        onActivated: window.changeImageZoom(-0.1)
+    }
+
+    Shortcut {
+        sequence: "Ctrl+0"
+        enabled: window.currentView === 2 && appController.reader.open && appController.reader.imageDocument
+        onActivated: window.resetImageZoom()
+    }
+
     function localPath(url) {
         var path = decodeURIComponent(String(url).replace(/^file:\/\//, ""))
         if (Qt.platform.os === "windows" && path.startsWith("/") && path.length > 2 && path.charAt(2) === ":") {
@@ -148,6 +174,14 @@ ApplicationWindow {
     function toggleFullScreen() {
         window.visibility = window.visibility === Window.FullScreen
             ? Window.Windowed : Window.FullScreen
+    }
+
+    function changeImageZoom(delta) {
+        imageZoom = Math.max(0.5, Math.min(3.0, imageZoom + delta))
+    }
+
+    function resetImageZoom() {
+        imageZoom = 1.0
     }
 
     function focusDocumentSearch() {
@@ -1372,6 +1406,10 @@ ApplicationWindow {
                 Connections {
                     target: appController.reader
                     function onStateChanged() {
+                        if (appController.reader.documentId !== window.zoomDocumentId) {
+                            window.zoomDocumentId = appController.reader.documentId
+                            window.resetImageZoom()
+                        }
                         if (!appController.reader.open) {
                             documentSearch.text = ""
                             return
@@ -1474,6 +1512,37 @@ ApplicationWindow {
                                 ToolTip.visible: hovered
                                 ToolTip.text: qsTr("Rotate this page clockwise")
                             }
+                            RowLayout {
+                                visible: appController.reader.open && appController.reader.imageDocument
+                                spacing: 2
+                                ToolButton {
+                                    text: "−"
+                                    enabled: window.imageZoom > 0.5
+                                    onClicked: window.changeImageZoom(-0.1)
+                                    ToolTip.visible: hovered
+                                    ToolTip.text: qsTr("Zoom out (Ctrl+-)")
+                                }
+                                Label {
+                                    text: qsTr("%1%").arg(Math.round(window.imageZoom * 100))
+                                    color: Theme.textSecondary
+                                    horizontalAlignment: Text.AlignHCenter
+                                    Layout.preferredWidth: 42
+                                }
+                                ToolButton {
+                                    text: "+"
+                                    enabled: window.imageZoom < 3.0
+                                    onClicked: window.changeImageZoom(0.1)
+                                    ToolTip.visible: hovered
+                                    ToolTip.text: qsTr("Zoom in (Ctrl++)")
+                                }
+                                ToolButton {
+                                    text: "1:1"
+                                    enabled: Math.abs(window.imageZoom - 1.0) > 0.01
+                                    onClicked: window.resetImageZoom()
+                                    ToolTip.visible: hovered
+                                    ToolTip.text: qsTr("Fit page (Ctrl+0)")
+                                }
+                            }
                             Button {
                                 visible: appController.reader.open && appController.reader.imageDocument
                                 text: appController.reader.showOcrText
@@ -1543,6 +1612,7 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         color: Theme.readerBackground
+                        clip: true
 
                         Image {
                             id: readerImage
@@ -1553,6 +1623,9 @@ ApplicationWindow {
                             source: appController.reader.imageSource
                             fillMode: Image.PreserveAspectFit
                             asynchronous: true
+                            scale: window.imageZoom
+                            transformOrigin: Item.Center
+                            smooth: true
                         }
 
                         Item {
@@ -1567,6 +1640,8 @@ ApplicationWindow {
                             property real currentX: 0
                             property real currentY: 0
                             property bool selecting: false
+                            scale: window.imageZoom
+                            transformOrigin: Item.Center
 
                             function clearSelection() {
                                 selecting = false
