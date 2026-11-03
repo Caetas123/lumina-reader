@@ -898,6 +898,74 @@ ApplicationWindow {
         }
     }
 
+    Drawer {
+        id: pageDrawer
+        width: 164
+        height: window.height
+        edge: Qt.LeftEdge
+        modal: true
+
+        contentItem: ColumnLayout {
+            spacing: 10
+            Label {
+                text: qsTr("Pages")
+                color: Theme.textPrimary
+                font.pixelSize: 18
+                font.weight: Font.DemiBold
+                Layout.leftMargin: 12
+                Layout.rightMargin: 12
+            }
+            ListView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                spacing: 8
+                model: appController.reader.pageCount
+
+                delegate: Rectangle {
+                    width: ListView.view.width - 20
+                    height: 144
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    radius: 8
+                    color: Number(index) === appController.reader.currentPage
+                        ? Theme.accentSoft
+                        : Theme.surfaceMuted
+                    border.color: Number(index) === appController.reader.currentPage
+                        ? Theme.accent
+                        : Theme.border
+
+                    Image {
+                        anchors.top: parent.top
+                        anchors.topMargin: 6
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        width: parent.width - 12
+                        height: 108
+                        fillMode: Image.PreserveAspectFit
+                        asynchronous: true
+                        source: appController.reader.thumbnailRevision >= 0
+                            ? appController.reader.thumbnailSource(index)
+                            : ""
+                    }
+                    Label {
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: 5
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: qsTr("Page %1").arg(Number(index) + 1)
+                        color: Theme.textSecondary
+                        font.pixelSize: 11
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            appController.reader.goToPage(Number(index))
+                            pageDrawer.close()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     Dialog {
         id: knowledgeDeleteDialog
         property string pendingId: ""
@@ -2062,6 +2130,14 @@ ApplicationWindow {
                                 onClicked: appController.reader.rotatePage(90)
                                 ToolTip.visible: hovered
                                 ToolTip.text: qsTr("Rotate this page clockwise")
+                            }
+                            Button {
+                                visible: appController.reader.open && appController.reader.imageDocument
+                                    && appController.reader.pageCount > 1
+                                text: qsTr("Pages")
+                                onClicked: pageDrawer.open()
+                                ToolTip.visible: hovered
+                                ToolTip.text: qsTr("Open page thumbnails")
                             }
                             RowLayout {
                                 visible: appController.reader.open && appController.reader.imageDocument

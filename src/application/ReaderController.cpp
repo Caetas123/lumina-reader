@@ -157,6 +157,36 @@ int ReaderController::pageRotation() const
     return pageRotation_;
 }
 
+int ReaderController::thumbnailRevision() const
+{
+    return thumbnailRevision_;
+}
+
+QString ReaderController::thumbnailSource(int page) const
+{
+    if (!open_ || documentEngine_ == nullptr || page < 0 || page >= pageCount_
+        || documentEngine_->pageKind(page) != Lumina::Domain::Reader::PageKind::Image) {
+        return {};
+    }
+    if (thumbnailCache_.contains(page)) {
+        return thumbnailCache_.value(page);
+    }
+
+    Lumina::Domain::Error error;
+    QImage image = documentEngine_->renderPage(page, QSize(180, 240), &error);
+    if (image.isNull()) {
+        return {};
+    }
+    if (pageRotation_ != 0) {
+        image = image.transformed(QTransform().rotate(pageRotation_), Qt::SmoothTransformation);
+    }
+    const QString source = imageDataUrl(image);
+    if (!source.isEmpty()) {
+        thumbnailCache_.insert(page, source);
+    }
+    return source;
+}
+
 QString ReaderController::searchQuery() const
 {
     return searchQuery_;
@@ -214,6 +244,8 @@ void ReaderController::clearState()
     searchCurrent_ = -1;
     searchStart_ = -1;
     searchLength_ = 0;
+    thumbnailCache_.clear();
+    ++thumbnailRevision_;
     readingTimer_.invalidate();
 }
 
@@ -427,6 +459,8 @@ bool ReaderController::rotatePage(int degrees)
         return false;
     }
     pageRotation_ = nextRotation;
+    thumbnailCache_.clear();
+    ++thumbnailRevision_;
     if (!refreshPage()) {
         return false;
     }

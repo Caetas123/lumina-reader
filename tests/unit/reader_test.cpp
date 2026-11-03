@@ -4,6 +4,7 @@
 #include "infrastructure/text/TextDecoder.h"
 
 #include <QFile>
+#include <QImage>
 #include <QTemporaryDir>
 #include <QtTest>
 
@@ -70,6 +71,35 @@ private slots:
                  QStringLiteral("First\nSecond"));
         QVERIFY(Lumina::Infrastructure::TextDecoder::readFile(fb2Path, QStringLiteral("fb2"))
                     .contains(QStringLiteral("Text from FB2.")));
+    }
+
+    void rendersImageThumbnail()
+    {
+        Lumina::Infrastructure::Database database;
+        Lumina::Domain::Error error;
+        QVERIFY2(database.open(QStringLiteral(":memory:"), &error),
+                 qPrintable(error.logMessage()));
+        QVERIFY2(database.migrate(&error), qPrintable(error.logMessage()));
+
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const QString imagePath = directory.filePath(QStringLiteral("page.png"));
+        QImage image(320, 180, QImage::Format_ARGB32);
+        image.fill(Qt::blue);
+        QVERIFY(image.save(imagePath));
+
+        Lumina::Infrastructure::LibraryStore library;
+        library.setDatabase(&database);
+        QVERIFY(library.importFiles({imagePath}));
+        const QString documentId = library.data(
+            library.index(0, 0), Lumina::Infrastructure::LibraryStore::IdRole).toString();
+
+        Lumina::Application::ReaderController reader(&library);
+        QVERIFY(reader.openDocument(documentId));
+        QVERIFY(reader.isImageDocument());
+        const QString thumbnail = reader.thumbnailSource(0);
+        QVERIFY(thumbnail.startsWith(QStringLiteral("data:image/png;base64,")));
+        QVERIFY(reader.thumbnailSource(-1).isEmpty());
     }
 
     void decodesUnencryptedPalmDoc()
