@@ -23,6 +23,11 @@ ApplicationWindow {
     property bool listMode: false
     property bool twoPageMode: false
     property bool speechHighlightActive: false
+    property string customReaderBackground: ""
+    property string customReaderText: ""
+    property string customHighlightColor: ""
+    property var readerScopeKeys: ["global", "format", "type", "document"]
+    property var readerScopeLabels: [qsTr("Everywhere"), qsTr("This format"), qsTr("This content type"), qsTr("This document")]
     property var savedReaderRegions: []
     property var savedReaderOcrHighlights: []
     property real imageZoom: 1.0
@@ -48,10 +53,35 @@ ApplicationWindow {
     ]
 
     function applyTheme() {
-        Theme.mode = appController.settings.highContrast ? "high-contrast" : appController.settings.theme
+        Theme.mode = readerPreferences.highContrast ? "high-contrast" : readerPreferences.theme
+        window.customReaderBackground = /^#[0-9a-fA-F]{6,8}$/.test(readerPreferences.customReaderBackground)
+            ? readerPreferences.customReaderBackground : ""
+        window.customReaderText = /^#[0-9a-fA-F]{6,8}$/.test(readerPreferences.customReaderText)
+            ? readerPreferences.customReaderText : ""
+        window.customHighlightColor = /^#[0-9a-fA-F]{6,8}$/.test(readerPreferences.customHighlightColor)
+            ? readerPreferences.customHighlightColor : ""
+    }
+
+    function readerBackgroundColor() {
+        return window.customReaderBackground.length > 0 ? window.customReaderBackground : Theme.readerBackground
+    }
+
+    function readerPaperColor() {
+        return window.customReaderBackground.length > 0 ? window.customReaderBackground : Theme.readerPaper
+    }
+
+    function readerTextColor() {
+        return window.customReaderText.length > 0 ? window.customReaderText : Theme.readerText
+    }
+
+    function readerHighlightColor() {
+        return window.customHighlightColor.length > 0 ? window.customHighlightColor : Theme.highlight
     }
 
     Component.onCompleted: {
+        readerPreferences.setContext(appController.reader.format,
+                                     appController.reader.contentType,
+                                     appController.reader.documentId)
         applyTheme()
         refreshLibraryBrowseOptions()
     }
@@ -59,6 +89,24 @@ ApplicationWindow {
     Connections {
         target: appController.settings
         function onSettingsChanged() {
+            readerPreferences.refresh()
+            window.applyTheme()
+        }
+    }
+
+    Connections {
+        target: readerPreferences
+        function onPreferencesChanged() {
+            window.applyTheme()
+        }
+    }
+
+    Connections {
+        target: appController.reader
+        function onStateChanged() {
+            readerPreferences.setContext(appController.reader.format,
+                                         appController.reader.contentType,
+                                         appController.reader.documentId)
             window.applyTheme()
         }
     }
@@ -362,9 +410,9 @@ ApplicationWindow {
     }
 
     function cycleTheme() {
-        var current = window.themeKeys.indexOf(appController.settings.theme)
+        var current = window.themeKeys.indexOf(readerPreferences.theme)
         var next = (current + 1) % window.themeKeys.length
-        appController.settings.theme = window.themeKeys[next]
+        readerPreferences.setTheme(window.themeKeys[next])
     }
 
     function openMetadata(documentId) {
@@ -1678,6 +1726,41 @@ ApplicationWindow {
         }
     }
 
+    FileDialog {
+        id: databaseRestoreDialog
+        title: qsTr("Restore a Lumina database backup")
+        fileMode: FileDialog.OpenFile
+        nameFilters: [qsTr("Lumina database backup (*.db)"), qsTr("All files (*)")]
+        onAccepted: {
+            databaseRestoreConfirmation.pendingPath = window.localPath(selectedFile)
+            databaseRestoreConfirmation.open()
+        }
+    }
+
+    Dialog {
+        id: databaseRestoreConfirmation
+        property string pendingPath: ""
+        modal: true
+        title: qsTr("Replace the local library?")
+        width: Math.min(window.width - 80, 560)
+        standardButtons: Dialog.Ok | Dialog.Cancel
+
+        contentItem: Label {
+            text: qsTr("This replaces the current library database with the selected backup. The current database is kept as a recoverable copy next to it. Continue?")
+            color: Theme.textSecondary
+            wrapMode: Text.WordWrap
+        }
+
+        onAccepted: {
+            var restored = appController.backup.restoreDatabase(pendingPath)
+            window.notification = restored
+                ? qsTr("Database restored successfully. The library was reloaded.")
+                : appController.backup.lastError
+            notificationTimer.restart()
+        }
+        onRejected: pendingPath = ""
+    }
+
     header: ToolBar {
         contentHeight: 64
         background: Rectangle {
@@ -2890,7 +2973,7 @@ ApplicationWindow {
                                         var selected = readerText.selectedText.length > 0
                                         var text = selected
                                             ? readerText.selectedText
-                                            : (appController.settings.continuousReading
+                                            : (readerPreferences.continuousReading
                                                && appController.reader.continuousTextContent.length > 0
                                                ? appController.reader.continuousTextContent
                                                : appController.reader.textContent)
@@ -2913,17 +2996,23 @@ ApplicationWindow {
                     Rectangle {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        color: Theme.readerBackground
+                        color: window.readerBackgroundColor()
                         clip: true
 
                         Image {
                             id: readerImage
-                            x: 28
-                            y: 28
-                            width: window.twoPageMode
+                            property real frameWidth: window.twoPageMode
                                 ? Math.max(1, (parent.width - 76) / 2)
                                 : Math.max(1, parent.width - 56)
-                            height: Math.max(1, parent.height - 56)
+                            property real frameHeight: Math.max(1, parent.height - 56)
+                            x: (parent.width - width) / 2
+                            y: (parent.height - height) / 2
+                            width: readerPreferences.imageFit === "actual" && implicitWidth > 0
+                                ? implicitWidth : readerPreferences.imageFit === "height" && implicitHeight > 0
+                                    ? Math.max(1, implicitWidth / implicitHeight * frameHeight) : frameWidth
+                            height: readerPreferences.imageFit === "actual" && implicitHeight > 0
+                                ? implicitHeight : readerPreferences.imageFit === "width" && implicitWidth > 0
+                                    ? Math.max(1, implicitHeight / implicitWidth * frameWidth) : frameHeight
                             visible: appController.reader.open && appController.reader.imageDocument
                                 && !appController.reader.showOcrText
                             source: appController.reader.imageSource
@@ -2936,7 +3025,7 @@ ApplicationWindow {
 
                         Image {
                             id: readerSecondImage
-                            x: readerImage.x + readerImage.width + 20
+                            x: window.twoPageMode ? readerImage.x + readerImage.width + 20 : readerImage.x
                             y: readerImage.y
                             width: readerImage.width
                             height: readerImage.height
@@ -3089,25 +3178,30 @@ ApplicationWindow {
 
                             TextArea {
                                 id: readerText
-                                width: Math.min(parent.width, 860)
+                                width: Math.min(parent.width, readerPreferences.readerWidth)
                                 anchors.horizontalCenter: parent.horizontalCenter
-                                text: appController.settings.continuousReading
+                                text: readerPreferences.continuousReading
                                     && appController.reader.continuousTextContent.length > 0
                                     ? appController.reader.continuousTextContent
                                     : appController.reader.textContent
                                 readOnly: true
                                 selectByMouse: true
                                 wrapMode: TextArea.Wrap
-                                color: Theme.readerText
-                                selectionColor: Theme.highlight
+                                color: window.readerTextColor()
+                                selectionColor: window.readerHighlightColor()
                                 selectedTextColor: Theme.textPrimary
-                                font.pixelSize: appController.settings.fontSize
-                                font.family: Theme.readerFont
-                                font.letterSpacing: (appController.settings.lineSpacing - 100) / 20
-                                padding: 30
+                                font.pixelSize: readerPreferences.fontSize
+                                font.family: readerPreferences.fontFamily
+                                font.letterSpacing: (readerPreferences.lineSpacing - 100) / 20
+                                padding: readerPreferences.readerMargin
+                                horizontalAlignment: readerPreferences.textAlignment === "center"
+                                    ? Text.AlignHCenter : readerPreferences.textAlignment === "right"
+                                        ? Text.AlignRight : readerPreferences.textAlignment === "justify"
+                                            ? Text.AlignJustify : Text.AlignLeft
+                                LayoutMirroring.enabled: readerPreferences.readingDirection === "rtl"
 
                                 background: Rectangle {
-                                    color: Theme.readerPaper
+                                    color: window.readerPaperColor()
                                     radius: 10
                                     border.color: Theme.border
                                 }
@@ -3314,12 +3408,34 @@ ApplicationWindow {
 
                             RowLayout {
                                 Layout.fillWidth: true
+                                Label {
+                                    text: qsTr("Save reading preferences to")
+                                    color: Theme.textPrimary
+                                    Layout.fillWidth: true
+                                }
+                                ComboBox {
+                                    Layout.preferredWidth: 190
+                                    model: window.readerScopeLabels
+                                    currentIndex: Math.max(0, window.readerScopeKeys.indexOf(readerPreferences.scope))
+                                    onActivated: readerPreferences.setScope(window.readerScopeKeys[index])
+                                }
+                            }
+                            Label {
+                                visible: !readerPreferences.contextAvailable
+                                text: qsTr("Open a document to save preferences for a format, content type, or document.")
+                                color: Theme.textSecondary
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
                                 Label { text: qsTr("Theme"); color: Theme.textPrimary; Layout.fillWidth: true }
                                 ComboBox {
                                     Layout.preferredWidth: 190
                                     model: [qsTr("Light"), qsTr("Dark"), qsTr("Sepia"), qsTr("Paper"), qsTr("Gray"), qsTr("High contrast"), qsTr("Low light")]
-                                    currentIndex: Math.max(0, window.themeKeys.indexOf(appController.settings.theme))
-                                    onActivated: appController.settings.theme = window.themeKeys[index]
+                                    currentIndex: Math.max(0, window.themeKeys.indexOf(readerPreferences.theme))
+                                    onActivated: readerPreferences.setTheme(window.themeKeys[index])
                                 }
                             }
 
@@ -3331,10 +3447,10 @@ ApplicationWindow {
                                     from: 12
                                     to: 32
                                     stepSize: 1
-                                    value: appController.settings.fontSize
-                                    onMoved: appController.settings.fontSize = Math.round(value)
+                                    value: readerPreferences.fontSize
+                                    onMoved: readerPreferences.setFontSize(Math.round(value))
                                 }
-                                Label { text: qsTr("%1 px").arg(appController.settings.fontSize); color: Theme.textSecondary; Layout.preferredWidth: 44 }
+                                Label { text: qsTr("%1 px").arg(readerPreferences.fontSize); color: Theme.textSecondary; Layout.preferredWidth: 44 }
                             }
 
                             RowLayout {
@@ -3345,21 +3461,126 @@ ApplicationWindow {
                                     from: 100
                                     to: 180
                                     stepSize: 5
-                                    value: appController.settings.lineSpacing
-                                    onMoved: appController.settings.lineSpacing = Math.round(value)
+                                    value: readerPreferences.lineSpacing
+                                    onMoved: readerPreferences.setLineSpacing(Math.round(value))
                                 }
-                                Label { text: qsTr("%1%").arg(appController.settings.lineSpacing); color: Theme.textSecondary; Layout.preferredWidth: 44 }
+                                Label { text: qsTr("%1%").arg(readerPreferences.lineSpacing); color: Theme.textSecondary; Layout.preferredWidth: 44 }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Label { text: qsTr("Font"); color: Theme.textPrimary; Layout.fillWidth: true }
+                                ComboBox {
+                                    Layout.preferredWidth: 190
+                                    model: ["Segoe UI", "Arial", "Georgia", "Verdana", "Times New Roman", "Consolas"]
+                                    currentIndex: Math.max(0, ["Segoe UI", "Arial", "Georgia", "Verdana", "Times New Roman", "Consolas"].indexOf(readerPreferences.fontFamily))
+                                    onActivated: readerPreferences.setFontFamily(["Segoe UI", "Arial", "Georgia", "Verdana", "Times New Roman", "Consolas"][index])
+                                }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Label { text: qsTr("Text width"); color: Theme.textPrimary; Layout.fillWidth: true }
+                                Slider {
+                                    Layout.preferredWidth: 190
+                                    from: 600
+                                    to: 1400
+                                    stepSize: 20
+                                    value: readerPreferences.readerWidth
+                                    onMoved: readerPreferences.setReaderWidth(Math.round(value / 20) * 20)
+                                }
+                                Label { text: qsTr("%1 px").arg(readerPreferences.readerWidth); color: Theme.textSecondary; Layout.preferredWidth: 58 }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Label { text: qsTr("Page margins"); color: Theme.textPrimary; Layout.fillWidth: true }
+                                Slider {
+                                    Layout.preferredWidth: 190
+                                    from: 12
+                                    to: 80
+                                    stepSize: 2
+                                    value: readerPreferences.readerMargin
+                                    onMoved: readerPreferences.setReaderMargin(Math.round(value / 2) * 2)
+                                }
+                                Label { text: qsTr("%1 px").arg(readerPreferences.readerMargin); color: Theme.textSecondary; Layout.preferredWidth: 58 }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Label { text: qsTr("Alignment"); color: Theme.textPrimary; Layout.fillWidth: true }
+                                ComboBox {
+                                    Layout.preferredWidth: 190
+                                    model: [qsTr("Left"), qsTr("Centered"), qsTr("Right"), qsTr("Justified")]
+                                    currentIndex: Math.max(0, ["left", "center", "right", "justify"].indexOf(readerPreferences.textAlignment))
+                                    onActivated: readerPreferences.setTextAlignment(["left", "center", "right", "justify"][index])
+                                }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Label { text: qsTr("Reading direction"); color: Theme.textPrimary; Layout.fillWidth: true }
+                                ComboBox {
+                                    Layout.preferredWidth: 190
+                                    model: [qsTr("Left to right"), qsTr("Right to left")]
+                                    currentIndex: readerPreferences.readingDirection === "rtl" ? 1 : 0
+                                    onActivated: readerPreferences.setReadingDirection(index === 1 ? "rtl" : "ltr")
+                                }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Label { text: qsTr("Image fit"); color: Theme.textPrimary; Layout.fillWidth: true }
+                                ComboBox {
+                                    Layout.preferredWidth: 190
+                                    model: [qsTr("Fit page"), qsTr("Fit width"), qsTr("Fit height"), qsTr("Actual size")]
+                                    currentIndex: Math.max(0, ["page", "width", "height", "actual"].indexOf(readerPreferences.imageFit))
+                                    onActivated: readerPreferences.setImageFit(["page", "width", "height", "actual"][index])
+                                }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Label { text: qsTr("Reader background"); color: Theme.textPrimary; Layout.fillWidth: true }
+                                TextField {
+                                    Layout.preferredWidth: 190
+                                    placeholderText: qsTr("#RRGGBB (optional)")
+                                    text: readerPreferences.customReaderBackground
+                                    onEditingFinished: readerPreferences.setCustomReaderBackground(text)
+                                }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Label { text: qsTr("Reader text"); color: Theme.textPrimary; Layout.fillWidth: true }
+                                TextField {
+                                    Layout.preferredWidth: 190
+                                    placeholderText: qsTr("#RRGGBB (optional)")
+                                    text: readerPreferences.customReaderText
+                                    onEditingFinished: readerPreferences.setCustomReaderText(text)
+                                }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Label { text: qsTr("Highlight color"); color: Theme.textPrimary; Layout.fillWidth: true }
+                                TextField {
+                                    Layout.preferredWidth: 190
+                                    placeholderText: qsTr("#RRGGBB (optional)")
+                                    text: readerPreferences.customHighlightColor
+                                    onEditingFinished: readerPreferences.setCustomHighlightColor(text)
+                                }
                             }
 
                             CheckBox {
                                 text: qsTr("Use continuous reading when available")
-                                checked: appController.settings.continuousReading
-                                onToggled: appController.settings.continuousReading = checked
+                                checked: readerPreferences.continuousReading
+                                onToggled: readerPreferences.setContinuousReading(checked)
                             }
                             CheckBox {
                                 text: qsTr("High contrast controls")
-                                checked: appController.settings.highContrast
-                                onToggled: appController.settings.highContrast = checked
+                                checked: readerPreferences.highContrast
+                                onToggled: readerPreferences.setHighContrast(checked)
                             }
 
                             Label {
@@ -3413,6 +3634,10 @@ ApplicationWindow {
                         Button {
                             text: qsTr("Create database backup")
                             onClicked: databaseBackupDialog.open()
+                        }
+                        Button {
+                            text: qsTr("Restore database")
+                            onClicked: databaseRestoreDialog.open()
                         }
                         Button {
                             text: qsTr("Restore library")

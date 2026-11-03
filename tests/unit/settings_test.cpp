@@ -27,6 +27,15 @@ private slots:
         settings.setLineSpacing(160);
         settings.setContinuousReading(false);
         settings.setHighContrast(true);
+        settings.setFontFamily(QStringLiteral("Georgia"));
+        settings.setReaderWidth(1040);
+        settings.setReaderMargin(44);
+        settings.setTextAlignment(QStringLiteral("justify"));
+        settings.setImageFit(QStringLiteral("width"));
+        settings.setReadingDirection(QStringLiteral("rtl"));
+        settings.setCustomReaderBackground(QStringLiteral("#112233"));
+        settings.setCustomReaderText(QStringLiteral("#fefefe"));
+        settings.setCustomHighlightColor(QStringLiteral("#aabbcc"));
 
         Lumina::Application::SpeechController speech;
         speech.setDatabase(&database);
@@ -40,6 +49,15 @@ private slots:
         QCOMPARE(reloaded.lineSpacing(), 160);
         QVERIFY(!reloaded.continuousReading());
         QVERIFY(reloaded.highContrast());
+        QCOMPARE(reloaded.fontFamily(), QStringLiteral("Georgia"));
+        QCOMPARE(reloaded.readerWidth(), 1040);
+        QCOMPARE(reloaded.readerMargin(), 44);
+        QCOMPARE(reloaded.textAlignment(), QStringLiteral("justify"));
+        QCOMPARE(reloaded.imageFit(), QStringLiteral("width"));
+        QCOMPARE(reloaded.readingDirection(), QStringLiteral("rtl"));
+        QCOMPARE(reloaded.customReaderBackground(), QStringLiteral("#112233"));
+        QCOMPARE(reloaded.customReaderText(), QStringLiteral("#fefefe"));
+        QCOMPARE(reloaded.customHighlightColor(), QStringLiteral("#aabbcc"));
 
         Lumina::Application::SpeechController reloadedSpeech;
         reloadedSpeech.setDatabase(&database);
@@ -49,7 +67,68 @@ private slots:
         QSqlQuery query(database.connection());
         QVERIFY(query.exec(QStringLiteral("SELECT COUNT(*) FROM app_settings")));
         QVERIFY(query.next());
-        QCOMPARE(query.value(0).toInt(), 7);
+        QCOMPARE(query.value(0).toInt(), 16);
+    }
+
+    void resolvesScopedReaderPreferences()
+    {
+        Lumina::Infrastructure::Database database;
+        Lumina::Domain::Error error;
+        QVERIFY2(database.open(QStringLiteral(":memory:"), &error),
+                 qPrintable(error.logMessage()));
+        QVERIFY2(database.migrate(&error), qPrintable(error.logMessage()));
+
+        Lumina::Application::SettingsController settings;
+        settings.setDatabase(&database);
+        settings.setReaderPreferenceValue(QStringLiteral("font_family"),
+                                          QStringLiteral("global"),
+                                          QStringLiteral("epub"),
+                                          QStringLiteral("book"),
+                                          QStringLiteral("doc-1"),
+                                          QStringLiteral("Georgia"));
+        settings.setReaderPreferenceValue(QStringLiteral("font_family"),
+                                          QStringLiteral("format"),
+                                          QStringLiteral("epub"),
+                                          QStringLiteral("book"),
+                                          QStringLiteral("doc-1"),
+                                          QStringLiteral("Atkinson Hyperlegible"));
+        settings.setReaderPreferenceValue(QStringLiteral("font_family"),
+                                          QStringLiteral("type"),
+                                          QStringLiteral("epub"),
+                                          QStringLiteral("book"),
+                                          QStringLiteral("doc-1"),
+                                          QStringLiteral("Verdana"));
+        settings.setReaderPreferenceValue(QStringLiteral("font_family"),
+                                          QStringLiteral("document"),
+                                          QStringLiteral("epub"),
+                                          QStringLiteral("book"),
+                                          QStringLiteral("doc-1"),
+                                          QStringLiteral("Inter"));
+
+        QCOMPARE(settings.readerPreferenceValue(QStringLiteral("font_family"),
+                                                QStringLiteral("epub"),
+                                                QStringLiteral("book"),
+                                                QStringLiteral("doc-1"),
+                                                QStringLiteral("Segoe UI")),
+                 QStringLiteral("Inter"));
+        QCOMPARE(settings.readerPreferenceValue(QStringLiteral("font_family"),
+                                                QStringLiteral("epub"),
+                                                QStringLiteral("book"),
+                                                QStringLiteral("doc-2"),
+                                                QStringLiteral("Segoe UI")),
+                 QStringLiteral("Verdana"));
+        QCOMPARE(settings.readerPreferenceValue(QStringLiteral("font_family"),
+                                                QStringLiteral("epub"),
+                                                QStringLiteral("magazine"),
+                                                QStringLiteral("doc-3"),
+                                                QStringLiteral("Segoe UI")),
+                 QStringLiteral("Atkinson Hyperlegible"));
+        QCOMPARE(settings.readerPreferenceValue(QStringLiteral("font_family"),
+                                                QStringLiteral("pdf"),
+                                                QStringLiteral("magazine"),
+                                                QStringLiteral("doc-4"),
+                                                QStringLiteral("Segoe UI")),
+                 QStringLiteral("Georgia"));
     }
 };
 

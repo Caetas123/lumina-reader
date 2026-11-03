@@ -1,4 +1,6 @@
 #include "application/AppController.h"
+#include "application/ReaderPreferencesController.h"
+#include "application/SettingsController.h"
 
 #include "infrastructure/logging/Logging.h"
 
@@ -22,7 +24,10 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
     Lumina::Application::AppController appController;
+    Lumina::Application::ReaderPreferencesController readerPreferences(
+        static_cast<Lumina::Application::SettingsController *>(appController.settings()));
     engine.rootContext()->setContextProperty(QStringLiteral("appController"), &appController);
+    engine.rootContext()->setContextProperty(QStringLiteral("readerPreferences"), &readerPreferences);
 
     QObject::connect(
         &engine,

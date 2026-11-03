@@ -56,6 +56,8 @@ add_library(lumina_core STATIC
     src/application/LookupController.h
     src/application/ReaderController.cpp
     src/application/ReaderController.h
+    src/application/ReaderPreferencesController.cpp
+    src/application/ReaderPreferencesController.h
     src/application/SettingsController.cpp
     src/application/SettingsController.h
     src/application/SpeechController.cpp
@@ -290,6 +292,18 @@ if(BUILD_TESTING)
     )
 
     add_test(NAME lumina_ocr_tests COMMAND lumina_ocr_tests)
+
+    qt_add_executable(lumina_performance_tests
+        tests/unit/performance_test.cpp
+    )
+
+    target_link_libraries(lumina_performance_tests
+        PRIVATE
+            lumina_core
+            Qt6::Test
+    )
+
+    add_test(NAME lumina_performance_tests COMMAND lumina_performance_tests)
 endif()
 
 include(GNUInstallDirs)
