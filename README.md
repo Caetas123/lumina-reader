@@ -1,8 +1,24 @@
 # Lumina Reader
 
-Lumina Reader is a native, local-first PDF reader and library for Windows, macOS, and Linux. It is built with C++20, Qt 6, Qt Quick/QML, SQLite, and CMake.
+[![Build](https://github.com/Caetas123/lumina-reader/actions/workflows/ci.yml/badge.svg)](https://github.com/Caetas123/lumina-reader/actions/workflows/ci.yml)
 
-The project is intentionally incremental. The current repository contains the Phase 0 foundation: a functional Qt Quick window, a base theme, a versioned SQLite database with an FTS5 search table, a test target, and a `PdfEngine` abstraction. PDF rendering, library import, annotations, OCR, and dictionary providers are planned for later phases.
+Lumina Reader is a native, local-first PDF reader foundation for Windows, macOS, and Linux. It is built with C++20, Qt 6, Qt Quick/QML, SQLite, and CMake.
+
+The project is intentionally incremental and privacy-focused: documents and reading data are designed to stay on the device by default. The repository is currently in **Phase 0 (early development)**. The public build validates the desktop foundation; PDF rendering, library import, annotations, OCR, and dictionary providers are planned for later phases.
+
+## Download
+
+Ready-to-run builds are published on [GitHub Releases](https://github.com/Caetas123/lumina-reader/releases).
+
+| Platform | Download | Notes |
+| --- | --- | --- |
+| Windows x64 | [Portable ZIP (`v0.1.0`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.1.0/LuminaReader-windows-x64.zip) | Extract the complete ZIP and run `lumina_reader.exe`. |
+| macOS | Not packaged yet | [Build from source](docs/BUILDING.md). |
+| Linux | Not packaged yet | [Build from source](docs/BUILDING.md). |
+
+For Windows, keep the contents of the ZIP together. The package includes the Qt runtime and platform plugins required by the executable; do not copy only the `.exe` to another folder.
+
+See the [release notes](https://github.com/Caetas123/lumina-reader/releases/tag/v0.1.0) for the current package and SHA-256 checksum.
 
 ## Principles
 
@@ -13,7 +29,7 @@ The project is intentionally incremental. The current repository contains the Ph
 - Safe: original PDFs are not modified implicitly, and errors are reported without exposing technical details in the user interface.
 - Open source: third-party licenses remain separate from the project license.
 
-## Current status
+## What it does today
 
 Phase 0 is in progress. The current implementation provides:
 
