@@ -52,6 +52,22 @@ ApplicationWindow {
         }
     }
 
+    function fileUrl(path) {
+        if (!path || path.length === 0) {
+            return ""
+        }
+        if (String(path).startsWith("file:")) {
+            return path
+        }
+        var normalized = String(path).replace(/\\/g, "/")
+        return normalized.startsWith("/") ? "file://" + normalized : "file:///" + normalized
+    }
+
+    function setLibraryFilter(filter) {
+        appController.library.viewFilter = filter
+        window.currentView = 0
+    }
+
     function statusLabel(status) {
         switch (status) {
         case "reading": return qsTr("Reading")
@@ -78,6 +94,20 @@ ApplicationWindow {
             qsTr("All files (*)")
         ]
         onAccepted: window.openImportedFiles(selectedFiles)
+    }
+
+    FolderDialog {
+        id: importFolderDialog
+        title: qsTr("Add a folder to Lumina Reader")
+        onAccepted: {
+            var path = window.localPath(selectedFolder)
+            if (appController.library.importFolder(path, true)) {
+                window.notification = qsTr("The folder was added to your library.")
+            } else {
+                window.notification = qsTr("No supported documents were found in that folder.")
+            }
+            notificationTimer.restart()
+        }
     }
 
     FileDialog {
@@ -215,6 +245,54 @@ ApplicationWindow {
                 Button {
                     Layout.fillWidth: true
                     checkable: true
+                    checked: window.currentView === 0 && appController.library.viewFilter === "favorites"
+                    onClicked: window.setLibraryFilter("favorites")
+                    contentItem: RowLayout {
+                        spacing: 10
+                        Label { text: "★"; color: parent.parent.checked ? Theme.accent : Theme.textSecondary; font.pixelSize: 18 }
+                        Label { text: qsTr("Favorites"); color: Theme.textPrimary; Layout.fillWidth: true }
+                    }
+                }
+
+                Button {
+                    Layout.fillWidth: true
+                    checkable: true
+                    checked: window.currentView === 0 && appController.library.viewFilter === "to_read"
+                    onClicked: window.setLibraryFilter("to_read")
+                    contentItem: RowLayout {
+                        spacing: 10
+                        Label { text: "○"; color: parent.parent.checked ? Theme.accent : Theme.textSecondary; font.pixelSize: 18 }
+                        Label { text: qsTr("To read"); color: Theme.textPrimary; Layout.fillWidth: true }
+                    }
+                }
+
+                Button {
+                    Layout.fillWidth: true
+                    checkable: true
+                    checked: window.currentView === 0 && appController.library.viewFilter === "reading"
+                    onClicked: window.setLibraryFilter("reading")
+                    contentItem: RowLayout {
+                        spacing: 10
+                        Label { text: "◐"; color: parent.parent.checked ? Theme.accent : Theme.textSecondary; font.pixelSize: 18 }
+                        Label { text: qsTr("Reading"); color: Theme.textPrimary; Layout.fillWidth: true }
+                    }
+                }
+
+                Button {
+                    Layout.fillWidth: true
+                    checkable: true
+                    checked: window.currentView === 0 && appController.library.viewFilter === "read"
+                    onClicked: window.setLibraryFilter("read")
+                    contentItem: RowLayout {
+                        spacing: 10
+                        Label { text: "✓"; color: parent.parent.checked ? Theme.accent : Theme.textSecondary; font.pixelSize: 18 }
+                        Label { text: qsTr("Finished"); color: Theme.textPrimary; Layout.fillWidth: true }
+                    }
+                }
+
+                Button {
+                    Layout.fillWidth: true
+                    checkable: true
                     checked: window.currentView === 1
                     onClicked: window.currentView = 1
                     contentItem: RowLayout {
@@ -325,6 +403,10 @@ ApplicationWindow {
                             highlighted: true
                             onClicked: importDialog.open()
                         }
+                        Button {
+                            text: qsTr("Add folder")
+                            onClicked: importFolderDialog.open()
+                        }
                     }
 
                     RowLayout {
@@ -384,7 +466,9 @@ ApplicationWindow {
 
                                             Image {
                                                 anchors.centerIn: parent
-                                                source: "qrc:/qt/qml/LuminaReader/assets/lumina-logo.png"
+                                                source: model.coverPath && String(model.coverPath).length > 0
+                                                    ? window.fileUrl(model.coverPath)
+                                                    : "qrc:/qt/qml/LuminaReader/assets/lumina-logo.png"
                                                 sourceSize.width: 70
                                                 sourceSize.height: 70
                                                 opacity: 0.78
