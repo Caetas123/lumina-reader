@@ -6,24 +6,24 @@
 
 [![Build](https://github.com/Caetas123/lumina-reader/actions/workflows/ci.yml/badge.svg)](https://github.com/Caetas123/lumina-reader/actions/workflows/ci.yml)
 
-Lumina Reader is a native, local-first PDF reader foundation for Windows, macOS, and Linux. It is built with C++20, Qt 6, Qt Quick/QML, SQLite, and CMake.
+Lumina Reader is a native, local-first reading library for Windows, macOS, and Linux. It helps you import documents, keep your reading progress, save passages and notes, and find that knowledge again across your library. It is built with C++20, Qt 6, Qt Quick/QML, SQLite, and CMake.
 
-The project is intentionally incremental and privacy-focused: documents and reading data are designed to stay on the device by default. The repository is currently in **Phase 0 (early development)**. The public build validates the desktop foundation; PDF rendering, library import, annotations, OCR, and dictionary providers are planned for later phases.
+The project is privacy-focused: documents, reading data, and search indexes stay on the device by default. The repository is actively developed; the public release links below point to the latest tagged build, while the current branch may contain newer features that have not been published yet.
 
 ## Download
 
-Ready-to-run builds are published on [GitHub Releases](https://github.com/Caetas123/lumina-reader/releases).
+Ready-to-run builds are published on [GitHub Releases](https://github.com/Caetas123/lumina-reader/releases). The links below are direct executable downloads; Lumina Reader does not require a portable ZIP for end users.
 
 | Platform | Download | Notes |
 | --- | --- | --- |
-| Windows x64 | [Download installer EXE (`v0.1.6`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.1.6/LuminaReader-Setup-windows-x64.exe) | Recommended. Run it to install the application and its Qt dependencies. |
+| Windows x64 | [Download installer EXE (`v0.1.6`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.1.6/LuminaReader-Setup-windows-x64.exe) | Recommended. Run the `.exe` to install the application and its Qt dependencies. |
 | macOS | Not packaged yet | [Build from source](docs/BUILDING.md). |
 | Linux x86_64 | [Download AppImage (`v0.1.6`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.1.6/LuminaReader-linux-x86_64.AppImage) | Make it executable with `chmod +x`, then run it. No installation or Qt setup is required. |
 
 The Windows installer is a self-contained `.exe` that installs the Qt runtime and platform plugins before launching Lumina Reader.
 The Linux AppImage is a self-contained executable for 64-bit Linux systems and includes the Qt runtime required by Lumina Reader.
 
-See the [v0.1.6 release notes](https://github.com/Caetas123/lumina-reader/releases/tag/v0.1.6) for the current Windows and Linux packages and their SHA-256 checksums.
+See the [v0.1.6 release notes](https://github.com/Caetas123/lumina-reader/releases/tag/v0.1.6) for the currently published Windows and Linux packages and their SHA-256 checksums. New builds are added to Releases when a version tag is published; this branch does not push or publish automatically.
 
 ## Principles
 
@@ -36,28 +36,30 @@ See the [v0.1.6 release notes](https://github.com/Caetas123/lumina-reader/releas
 
 ## What it does today
 
-Phase 0 is in progress. The current implementation provides:
+The current application provides:
 
-- CMake 3.24+ project configuration with C++20;
-- Qt Quick/QML application bootstrap;
-- base QML design tokens;
-- local application data directory initialization;
-- SQLite connection handling and versioned migrations;
-- SQLite FTS5 search-table foundation;
-- categorized Qt logging without file-based document logging;
-- typed domain errors with separate user and diagnostic messages;
-- initial Qt Test coverage;
-- a replaceable `PdfEngine` interface;
-- GitHub Actions build/test workflow for Windows, macOS, and Linux;
-- open-source contribution and security documentation.
+- a native Qt Quick desktop interface with light, dark, sepia, paper, gray, low-light, and high-contrast themes;
+- individual and multiple-file import, drag and drop, folder import, SHA-256 duplicate detection, and optional folder watching through the library model;
+- library filters for favorites, to-read, reading, and finished documents;
+- reading progress, last position, status, favorites, ratings, descriptions, language, collections, tags, and reading history;
+- TXT, RTF, FB2, raster-image, EPUB, CBZ, and ZIP reading when the matching Qt capabilities are present;
+- optional PDF rendering through Qt PDF in the CI/release build;
+- in-document search for text pages and EPUB chapters;
+- persistent highlights, annotations, bookmarks, and a global FTS5 Knowledge center;
+- contextual copy, Google, dictionary, translation, and highlight actions for selected text;
+- optional system text-to-speech through Qt Speech;
+- Markdown, JSON, and plain-text knowledge export, library metadata export, database backup, and metadata restoration;
+- SQLite migrations, safe read-only archive handling, Zip Slip checks, archive entry limits, and Qt Test coverage;
+- GitHub Actions validation for Linux, macOS, and Windows.
 
-The PDF adapter is not implemented yet. Defining the boundary first keeps future Qt PDF/PDFium work isolated from the UI and domain layers.
+The exact capability set depends on the Qt modules present in the build. See [the format and feature matrix](docs/FORMAT_SUPPORT.md) before relying on a format such as MOBI, RAR, 7Z, DJVU, or OCR. An extension in a file picker is never treated as proof that a reader exists.
 
 ## Build prerequisites
 
 - C++20 compiler;
 - CMake 3.24 or newer;
 - Qt 6.5 or newer with `Core`, `Gui`, `Qml`, `Quick`, `QuickControls2`, `Sql`, and `Test`;
+- optional `Pdf`, `TextToSpeech`, and `CorePrivate` modules enable PDF rendering, system speech, and EPUB/CBZ/ZIP reading respectively;
 - Ninja, or another generator configured through a user preset.
 
 See [docs/BUILDING.md](docs/BUILDING.md) for platform-specific notes.
@@ -87,10 +89,11 @@ src/
   application/       Application services and UI-facing orchestration
   domain/            Business types and rules
   infrastructure/    SQLite, logging, filesystem, and external adapters
+  infrastructure/text/ Text and lightweight RTF/FB2 decoding
   pdf/               PdfEngine abstraction and future PDF adapters
   ui/qml/            Qt Quick views and design tokens
 tests/unit/           Qt Test suites
-docs/                 Architecture, build, privacy, and contribution notes
+docs/                 Architecture, build, privacy, release, and format notes
 .github/              CI and issue/pull-request templates
 ```
 

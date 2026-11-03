@@ -1,0 +1,54 @@
+# Format support and feature parity
+
+This document describes the behavior of the code that is currently shipped. A file extension is not treated as support by itself: Lumina Reader validates the file signature and only exposes a format when the corresponding reader is available in the build.
+
+## Status legend
+
+- **Available**: the format can be imported and opened in the tested build.
+- **Conditional**: the feature is available when the optional Qt module or platform provider is included.
+- **Partial**: the document opens, but one or more format-specific capabilities are not available yet.
+- **Unavailable**: the extension is intentionally not advertised because there is no safe reader in this build.
+
+## Current format matrix
+
+| Format | Import | Open and navigate | Text/search | Highlights, notes, bookmarks, progress | Current limitation or alternative |
+| --- | --- | --- | --- | --- | --- |
+| EPUB | Available with Qt archive support | Available, following the EPUB spine | Available for XHTML chapters | Available for text locations and the global Knowledge center | CSS layout, embedded fonts, media, and a visual table of contents are not yet reproduced by the native text view |
+| PDF | Conditional on `Qt6::Pdf` | Available when the module is present | Page rendering is available; text extraction/selection is not yet wired to the reader | Progress and bookmarks are available; text highlights require extracted text | Release builds request Qt PDF. A build without it reports a clear capability message |
+| MOBI | Unavailable | — | — | — | Requires a dedicated, license-compatible MOBI/PalmDB reader; DRM removal is never attempted |
+| AZW | Unavailable | — | — | — | Requires a dedicated Kindle format reader; DRM-protected content is not supported |
+| AZW3 | Unavailable | — | — | — | Requires a dedicated KF8 reader; DRM-protected content is not supported |
+| FB2 | Available | Available as paginated text | Available after XML text extraction | Available for text locations | Rich FB2 styling and embedded images are not represented in the current reflow view |
+| TXT | Available | Available as paginated text | Available | Available for text locations | Encoding detection is UTF-8 first |
+| RTF | Available | Available as paginated text | Available after safe plain-text conversion | Available for text locations | Advanced layout, fields, embedded objects, and tracked changes are intentionally not executed |
+| CBZ | Available with Qt archive support | Available as ordered image pages | Not available without OCR | Progress and page bookmarks are available; manual page annotations are stored | OCR and selection overlays are not included in the current build |
+| ZIP comics | Available with Qt archive support | Available when the archive contains supported images | Not available without OCR | Progress and page bookmarks are available | ZIP archives are read-only and never extracted to user-selected paths |
+| CBR | Unavailable | — | — | — | Requires a RAR decoder; no external extractor is invoked automatically |
+| CB7 | Unavailable | — | — | — | Requires a 7z decoder |
+| CBT | Unavailable | — | — | — | Requires a tar reader integration |
+| RAR | Unavailable | — | — | — | Requires a RAR decoder |
+| 7Z | Unavailable | — | — | — | Requires a 7z decoder |
+| DJVU/DJV | Unavailable | — | — | — | Requires DjVuLibre or another compatible decoder and OCR integration |
+| JPG/JPEG | Available | Available as a single image | Not available without OCR | Progress and page bookmarks are available | OCR and text selection are not included in the current build |
+| PNG | Available | Available as a single image | Not available without OCR | Progress and page bookmarks are available | OCR and text selection are not included in the current build |
+| WEBP | Available when the Qt image plugin is present | Available as a single image | Not available without OCR | Progress and page bookmarks are available | Depends on the Qt image plugin shipped with the package |
+| AVIF | Available when the Qt image plugin is present | Available as a single image | Not available without OCR | Progress and page bookmarks are available | Depends on the Qt image plugin shipped with the package |
+| GIF | Available when the Qt image plugin is present | Available as a single image | Not available without OCR | Progress and page bookmarks are available | Animated content is shown through the Qt image pipeline |
+
+## Shared capabilities
+
+The following capabilities are format-independent when the underlying content provides text or a stable page location:
+
+- local library import, duplicate detection by SHA-256, folder import, drag and drop, status, progress, favorites, ratings, descriptions, language, collections, and tags;
+- SQLite migrations and FTS5 search for library metadata and saved knowledge;
+- persistent highlights, annotations, bookmarks, reading history, and the global Knowledge center;
+- Markdown, JSON, and plain-text knowledge export;
+- library metadata export and metadata restoration by file hash or saved path;
+- local themes, font size, line spacing, high contrast, keyboard-friendly navigation, and optional system text-to-speech;
+- explicit browser actions for Google, dictionary lookup, and translation. The document itself is never uploaded automatically.
+
+## Optional capabilities and honest limitations
+
+Qt PDF, Qt Speech, and Qt's private ZIP helper are optional build capabilities. The CI and release workflows request the public Qt PDF and Speech modules. The ZIP helper is used only for in-process, read-only archive access; it is not a general-purpose extraction service.
+
+OCR, local dictionaries, online translation providers, PDF text extraction, and dedicated MOBI/AZW, RAR/7z, and DJVU engines are not silently emulated. Until a compatible provider is bundled and tested on each target platform, the application keeps those capabilities unavailable and explains the limitation instead of claiming support.

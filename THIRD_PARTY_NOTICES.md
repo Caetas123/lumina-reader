@@ -12,6 +12,14 @@ Consult the official [Qt licensing page](https://www.qt.io/licensing/) and the l
 
 SQLite is used through Qt's SQL integration. SQLite is public domain; distribution and build notices must still follow the exact Qt and platform packaging requirements.
 
+## Optional Qt modules
+
+- `Qt6::Pdf` supplies PDF document loading and page rendering in CI/release builds.
+- `Qt6::TextToSpeech` supplies the system text-to-speech adapter when the platform has a compatible voice backend.
+- `Qt6::CorePrivate` supplies Qt's read-only `QZipReader` helper for EPUB, CBZ, and ZIP packages. It is a private Qt API and may change between Qt versions; builds without it disable those archive readers rather than silently substituting an extractor.
+
+No RAR, 7z, DjVu, OCR, online dictionary, translation, or telemetry dependency is bundled by the current repository. Browser lookup actions are initiated by the user and do not create a project-owned network service.
+
 ## Inventory rule
 
 Before adding a dependency:

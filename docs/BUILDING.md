@@ -5,9 +5,10 @@
 - C++20 compiler;
 - CMake 3.24 or newer;
 - Qt 6.5 or newer with `Core`, `Gui`, `Qml`, `Quick`, `QuickControls2`, `Sql`, and `Test`;
+- `Pdf` for PDF rendering, `TextToSpeech` for system speech, and `CorePrivate` for the in-process EPUB/CBZ/ZIP reader. These are optional at configure time.
 - Ninja for the checked-in default preset.
 
-The project does not require a server, browser runtime, JavaScript engine, or network service to configure and test the foundation.
+The project does not require a server, browser runtime, JavaScript engine, or network service to configure and test the local reader.
 
 ## Standard build
 
@@ -36,9 +37,16 @@ For Windows, use a Developer Command Prompt that provides the MSVC environment b
 The current tests are Qt Test executables registered with CTest:
 
 - `lumina_smoke_tests` checks that the application version is defined;
-- `lumina_database_tests` checks SQLite migration, FTS5 table creation, idempotence, and invalid input handling.
+- `lumina_database_tests` checks SQLite migration, FTS5 table creation, idempotence, and invalid input handling;
+- `lumina_library_tests` covers import, duplicate detection, metadata, favorites, ratings, collections, tags, smart views, progress, highlights, annotations, and bookmarks;
+- `lumina_reader_tests` covers pagination, position persistence, document search, RTF conversion, and FB2 text extraction;
+- `lumina_archive_tests` covers EPUB/CBZ navigation and archive path-safety behavior when Qt Core private archive support is present;
+- `lumina_settings_tests` covers persisted reading preferences;
+- `lumina_backup_tests` covers knowledge/library export, metadata fields, and metadata restoration.
 
 Tests use an in-memory SQLite database and do not use the internet or user documents.
+
+For a headless QML startup check on a desktop kit, set `QT_QPA_PLATFORM=offscreen` and launch the built `lumina_reader` executable. The application should remain running instead of exiting during QML creation.
 
 ## Local development data
 

@@ -14,6 +14,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Typed domain errors and categorized diagnostic logging.
 - Replaceable `PdfEngine` abstraction.
 - Initial unit tests, cross-platform CI configuration, and open-source project documentation.
+- Local document library import with duplicate detection, folder import, smart views, favorites, ratings, metadata, collections, tags, and progress history.
+- Text, RTF, FB2, image, EPUB, CBZ, and ZIP reader paths, with optional Qt PDF and Qt Speech capabilities.
+- Persistent highlights, annotations, bookmarks, global Knowledge center search, contextual browser lookup actions, and library/knowledge exports.
+- Metadata restoration from a library JSON export, archive resource limits, Zip Slip checks, and a documented format-parity matrix.
+
+### Changed
+
+- The file picker now advertises only readers enabled in the current Qt build instead of treating every planned extension as supported.
+- The README and architecture/building documents now describe the real current behavior and optional dependencies.
 
 ## [0.1.6] - 2026-11-02
 
