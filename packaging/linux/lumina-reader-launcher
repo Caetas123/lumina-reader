@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /opt/lumina-reader/usr/bin/lumina_reader "$@"

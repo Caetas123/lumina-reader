@@ -13,21 +13,22 @@ Every public release gets a new Git tag in the form `vMAJOR.MINOR.PATCH`. Existi
 1. Choose the next version and update only `project-version.txt`. CMake and the Windows installer read that value; do not duplicate the version in platform-specific files.
 2. Update `CHANGELOG.md` with the release date and user-visible changes.
 3. Build and test the application on the supported platforms.
-4. Build the Windows installer with `packaging/windows/build-installer.ps1` when Windows artifacts are part of the release. The Linux AppImage and macOS DMG are built by GitHub Actions from the release tag.
+4. Build the Windows installer with `packaging/windows/build-installer.ps1` when Windows artifacts are part of the release. The Linux AppImage, Debian package, and macOS DMG are built by GitHub Actions from the release tag.
 5. Update the platform-specific download links in `README.md` to the new tag.
-6. Commit the versioned changes and push a tag whose value is exactly `v` plus the contents of `project-version.txt`. Each packaging workflow validates this before building, then publishes the Linux AppImage, macOS DMG, and Windows installer to that same GitHub Release.
+6. Commit the versioned changes and push a tag whose value is exactly `v` plus the contents of `project-version.txt`. Each packaging workflow validates this before building, then publishes the Linux AppImage, Debian package, macOS DMG, and Windows installer to that same GitHub Release.
 
 ## Linux package
 
 Pushing a tag matching `v*` starts `.github/workflows/linux-package.yml`, `.github/workflows/macos-package.yml`, and `.github/workflows/windows-package.yml`. The workflows install the pinned Qt kit, build and test the application, and publish direct executable assets to the matching GitHub Release:
 
 - `LuminaReader-linux-x86_64.AppImage` for Linux;
+- `LuminaReader-linux-x86_64.deb` for Debian/Ubuntu-compatible Linux;
 - `LuminaReader-macos-x86_64.dmg` for macOS;
 - `LuminaReader-Setup-windows-x64.exe` for Windows.
 
 The Windows ZIP is only an internal input to the graphical installer and is not listed as an end-user download. The installer embeds the application, Qt runtime, and platform plugins, then launches the installed executable.
 
-The AppImage targets x86_64 Linux systems. Users can download it, run `chmod +x LuminaReader-linux-x86_64.AppImage`, and launch it without installing Qt separately.
+The AppImage targets x86_64 Linux systems. Users can download it, run `chmod +x LuminaReader-linux-x86_64.AppImage`, and launch it without installing Qt separately. The `.deb` package targets Debian/Ubuntu-compatible x86_64 systems and bundles the deployed Qt application under `/opt/lumina-reader`, with a desktop launcher at `/usr/bin/lumina-reader`.
 
 The macOS package targets Intel x86_64 Macs and contains a self-contained `.app` bundle inside the DMG. Apple Silicon users can run it through Rosetta 2; a native ARM64 package is not published yet.
 

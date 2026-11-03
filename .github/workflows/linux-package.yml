@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   package:
-    name: Linux x86_64 AppImage
+    name: Linux x86_64 packages
     runs-on: ubuntu-22.04
 
     steps:
@@ -61,18 +61,29 @@ jobs:
         shell: bash
         run: bash packaging/linux/build-appimage.sh "${GITHUB_REF_NAME#v}" build/release dist/linux
 
+      - name: Build Debian package
+        shell: bash
+        run: bash packaging/linux/build-deb.sh "${GITHUB_REF_NAME#v}" dist/linux/LuminaReader.AppDir dist/linux
+
       - name: Validate package
         shell: bash
         run: |
           file dist/linux/LuminaReader-linux-x86_64.AppImage
           test -s dist/linux/LuminaReader-linux-x86_64.AppImage
           sha256sum dist/linux/LuminaReader-linux-x86_64.AppImage
+          file dist/linux/LuminaReader-linux-x86_64.deb
+          test -s dist/linux/LuminaReader-linux-x86_64.deb
+          dpkg-deb --info dist/linux/LuminaReader-linux-x86_64.deb
+          dpkg-deb --contents dist/linux/LuminaReader-linux-x86_64.deb | grep -F '/usr/bin/lumina-reader'
+          sha256sum dist/linux/LuminaReader-linux-x86_64.deb
 
       - name: Upload Linux package artifact
         uses: actions/upload-artifact@v4
         with:
           name: LuminaReader-linux-x86_64
-          path: dist/linux/LuminaReader-linux-x86_64.AppImage
+          path: |
+            dist/linux/LuminaReader-linux-x86_64.AppImage
+            dist/linux/LuminaReader-linux-x86_64.deb
           if-no-files-found: error
 
       - name: Publish GitHub Release asset
@@ -86,4 +97,5 @@ jobs:
               --title "Lumina Reader $GITHUB_REF_NAME" --generate-notes
           gh release upload "$GITHUB_REF_NAME" \
             dist/linux/LuminaReader-linux-x86_64.AppImage \
+            dist/linux/LuminaReader-linux-x86_64.deb \
             --repo "$GITHUB_REPOSITORY" --clobber

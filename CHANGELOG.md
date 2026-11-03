@@ -35,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - One `project-version.txt` file now controls the application, installer, and cross-platform release version; packaging workflows reject mismatched Git tags.
 - Document-wide OCR now processes image pages sequentially with progress, cancellation, and local persistence.
 - Basic PDF export and system printing now render the opened document without modifying the original file.
+- Linux release packaging now publishes both an x86_64 AppImage and a Debian/Ubuntu-compatible `.deb` from the same versioned build.
 
 ### Changed
 

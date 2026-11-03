@@ -19,6 +19,7 @@ Ready-to-run builds are published on [GitHub Releases](https://github.com/Caetas
 | Windows x64 | [Download installer EXE (`v0.1.6`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.1.6/LuminaReader-Setup-windows-x64.exe) | Recommended. Run the `.exe` to install the application and its Qt dependencies. |
 | macOS x86_64 | Not included in the currently published `v0.1.6` release | The next tagged release will include a direct `LuminaReader-macos-x86_64.dmg` download. |
 | Linux x86_64 | [Download AppImage (`v0.1.6`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.1.6/LuminaReader-linux-x86_64.AppImage) | Make it executable with `chmod +x`, then run it. No installation or Qt setup is required. |
+| Debian/Ubuntu x86_64 | Not included in the currently published `v0.1.6` release | The next tagged release will include a direct `LuminaReader-linux-x86_64.deb` download. |
 
 The Windows installer is a self-contained `.exe` that installs the Qt runtime and platform plugins before launching Lumina Reader.
 The Linux AppImage is a self-contained executable for 64-bit Linux systems and includes the Qt runtime required by Lumina Reader.
@@ -64,6 +65,8 @@ The current application provides:
 - PDF export and system printing of the opened document when its reader engine is available;
 - SQLite migrations, safe read-only archive handling, Zip Slip checks, archive entry limits, and Qt Test coverage;
 - GitHub Actions validation for Linux, macOS, and Windows.
+
+Linux releases provide a direct x86_64 AppImage and a Debian/Ubuntu-compatible `.deb` package. Both are built from the same release tag and version.
 
 The exact capability set depends on the Qt modules present in the build. See [the format and feature matrix](docs/FORMAT_SUPPORT.md) before relying on a format such as MOBI, RAR, 7Z, DJVU, or OCR. An extension in a file picker is never treated as proof that a reader exists.
 

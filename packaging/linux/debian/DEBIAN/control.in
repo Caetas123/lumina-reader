@@ -1,0 +1,10 @@
+Package: lumina-reader
+Version: @VERSION@
+Section: utils
+Priority: optional
+Architecture: amd64
+Maintainer: Lumina Reader contributors
+Description: Lumina Reader desktop reading and knowledge library
+ A local-first desktop application for reading documents and organizing
+ personal notes, highlights, and study material.
+Depends: libc6 (>= 2.35), libgcc-s1, libstdc++6

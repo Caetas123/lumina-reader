@@ -53,7 +53,7 @@ The graphical executable also stayed alive for more than ten seconds with `QT_QP
 | OCR | Provider tests; runtime availability is machine-dependent | Same | Tesseract executable and language data |
 | Text-to-speech | Conditional | Conditional | Qt TextToSpeech and a system voice backend |
 | Windows installer | Existing packaging workflow | Not applicable | Windows/.NET packaging toolchain |
-| Linux AppImage | Existing packaging workflow | Existing packaging workflow | linuxdeployqt and Linux runner |
+| Linux AppImage and `.deb` | Existing packaging workflow | Existing packaging workflow | linuxdeployqt, dpkg-deb, and Linux runner |
 | macOS DMG | Not run in this Windows workspace | Existing packaging workflow | macOS runner and Qt deployment |
 
 ## Intentional limitations
