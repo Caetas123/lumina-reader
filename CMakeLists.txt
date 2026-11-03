@@ -13,6 +13,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(Qt6 6.5 REQUIRED COMPONENTS
     Core
     Gui
+    Network
     Qml
     Quick
     QuickControls2
@@ -81,6 +82,7 @@ target_link_libraries(lumina_core
     PUBLIC
         Qt6::Core
         Qt6::Gui
+        Qt6::Network
         Qt6::Sql
 )
 
@@ -180,6 +182,18 @@ if(BUILD_TESTING)
     )
 
     add_test(NAME lumina_database_tests COMMAND lumina_database_tests)
+
+    qt_add_executable(lumina_lookup_tests
+        tests/unit/lookup_test.cpp
+    )
+
+    target_link_libraries(lumina_lookup_tests
+        PRIVATE
+            lumina_core
+            Qt6::Test
+    )
+
+    add_test(NAME lumina_lookup_tests COMMAND lumina_lookup_tests)
 
     qt_add_executable(lumina_library_tests
         tests/unit/library_test.cpp

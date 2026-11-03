@@ -29,6 +29,8 @@ ApplicationWindow {
     property var contentTypeLabels: [qsTr("Book"), qsTr("Manga"), qsTr("Manhwa"), qsTr("Webtoon"), qsTr("Newspaper"), qsTr("Magazine"), qsTr("Article"), qsTr("Academic paper"), qsTr("Handout"), qsTr("Comic"), qsTr("Document"), qsTr("Image"), qsTr("Text"), qsTr("Other")]
     property var annotationKindKeys: ["note", "region"]
     property var annotationKindLabels: [qsTr("Note"), qsTr("Image region")]
+    property var translationLanguageKeys: ["en", "pt", "es", "fr", "de", "ja", "ko", "zh"]
+    property var translationLanguageLabels: [qsTr("English"), qsTr("Portuguese"), qsTr("Spanish"), qsTr("French"), qsTr("German"), qsTr("Japanese"), qsTr("Korean"), qsTr("Chinese")]
     property var libraryBrowseOptions: []
 
     function applyTheme() {
@@ -810,6 +812,89 @@ ApplicationWindow {
         onRejected: {
             editingId = ""
             annotationEditText.clear()
+        }
+    }
+
+    Dialog {
+        id: lookupDialog
+        property string mode: "dictionary"
+        property string queryText: ""
+        modal: true
+        title: mode === "dictionary" ? qsTr("Dictionary") : qsTr("Translation")
+        width: Math.min(window.width - 80, 680)
+        standardButtons: Dialog.Close
+
+        contentItem: ColumnLayout {
+            spacing: 12
+
+            Label {
+                visible: appController.lookup.busy
+                text: lookupDialog.mode === "dictionary"
+                    ? qsTr("Looking up the selected word…")
+                    : qsTr("Translating the selected text…")
+                color: Theme.textSecondary
+                Layout.fillWidth: true
+            }
+            Label {
+                visible: !appController.lookup.busy && appController.lookup.lastError.length > 0
+                text: appController.lookup.lastError
+                color: Theme.warning
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+            Label {
+                visible: !appController.lookup.busy && appController.lookup.resultTitle.length > 0
+                text: appController.lookup.resultTitle
+                color: Theme.textPrimary
+                font.pixelSize: 20
+                font.weight: Font.DemiBold
+                Layout.fillWidth: true
+            }
+            Label {
+                visible: lookupDialog.mode === "dictionary"
+                    && !appController.lookup.busy
+                    && appController.lookup.resultPronunciation.length > 0
+                text: appController.lookup.resultPronunciation
+                color: Theme.textSecondary
+                Layout.fillWidth: true
+            }
+            ScrollView {
+                visible: !appController.lookup.busy && appController.lookup.resultBody.length > 0
+                Layout.fillWidth: true
+                Layout.preferredHeight: Math.min(420, Math.max(100, lookupResultText.implicitHeight + 20))
+                TextArea {
+                    id: lookupResultText
+                    text: appController.lookup.resultBody
+                    readOnly: true
+                    wrapMode: TextArea.Wrap
+                    color: Theme.textPrimary
+                    background: Rectangle {
+                        color: Theme.surfaceMuted
+                        radius: 10
+                        border.color: Theme.border
+                    }
+                }
+            }
+            Label {
+                visible: !appController.lookup.busy && appController.lookup.resultSource.length > 0
+                text: qsTr("Source: %1. The selected text was sent only because you requested this lookup.")
+                    .arg(appController.lookup.resultSource)
+                color: Theme.textSecondary
+                font.pixelSize: 11
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+            Button {
+                visible: !appController.lookup.busy && appController.lookup.resultBody.length > 0
+                text: qsTr("Copy result")
+                onClicked: {
+                    lookupResultText.selectAll()
+                    lookupResultText.copy()
+                    lookupResultText.deselect()
+                    window.notification = qsTr("Result copied.")
+                    notificationTimer.restart()
+                }
+            }
         }
     }
 
@@ -2279,19 +2364,37 @@ ApplicationWindow {
                                      Button {
                                          text: qsTr("Dictionary")
                                          onClicked: {
-                                             window.notification = appController.lookup.openDictionary(readerText.selectedText)
-                                                 ? qsTr("Opening the online dictionary in your browser.")
-                                                 : appController.lookup.lastError
-                                             notificationTimer.restart()
+                                              lookupDialog.mode = "dictionary"
+                                              lookupDialog.queryText = readerText.selectedText
+                                              if (appController.lookup.lookupDictionary(readerText.selectedText)) {
+                                                  lookupDialog.open()
+                                              } else {
+                                                  window.notification = appController.lookup.lastError
+                                                  notificationTimer.restart()
+                                              }
                                          }
                                      }
+                                      ComboBox {
+                                          id: selectionTranslationLanguage
+                                          Layout.preferredWidth: 110
+                                          model: window.translationLanguageLabels
+                                          ToolTip.visible: hovered
+                                          ToolTip.text: qsTr("Translation target language")
+                                      }
                                      Button {
                                          text: qsTr("Translate")
                                          onClicked: {
-                                             window.notification = appController.lookup.openTranslation(readerText.selectedText)
-                                                 ? qsTr("Opening the online translator in your browser.")
-                                                 : appController.lookup.lastError
-                                             notificationTimer.restart()
+                                              lookupDialog.mode = "translation"
+                                              lookupDialog.queryText = readerText.selectedText
+                                              if (appController.lookup.translateText(
+                                                      readerText.selectedText,
+                                                      "",
+                                                      window.translationLanguageKeys[selectionTranslationLanguage.currentIndex])) {
+                                                  lookupDialog.open()
+                                              } else {
+                                                  window.notification = appController.lookup.lastError
+                                                  notificationTimer.restart()
+                                              }
                                          }
                                      }
                                     Item { Layout.fillWidth: true }
