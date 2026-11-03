@@ -19,7 +19,7 @@ private slots:
 
         Lumina::Application::SettingsController settings;
         settings.setDatabase(&database);
-        QCOMPARE(settings.theme(), QStringLiteral("light"));
+        QCOMPARE(settings.theme(), QStringLiteral("dark"));
         QCOMPARE(settings.fontSize(), 18);
 
         settings.setTheme(QStringLiteral("sepia"));
