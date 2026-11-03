@@ -1,4 +1,5 @@
 #include "application/AppController.h"
+#include "application/ReaderController.h"
 
 #include "domain/core/Error.h"
 #include "infrastructure/database/Database.h"
@@ -16,6 +17,7 @@ AppController::AppController(QObject *parent)
     : QObject(parent)
     , database_(std::make_unique<Lumina::Infrastructure::Database>())
     , library_(std::make_unique<Lumina::Infrastructure::LibraryStore>())
+    , reader_(std::make_unique<ReaderController>(library_.get()))
 {
     initializeDatabase();
 }
@@ -87,6 +89,11 @@ QString AppController::startupError() const
 Lumina::Infrastructure::LibraryStore *AppController::library() const
 {
     return library_.get();
+}
+
+ReaderController *AppController::reader() const
+{
+    return reader_.get();
 }
 
 void AppController::retryInitialization()

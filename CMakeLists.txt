@@ -16,6 +16,7 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS
     Qml
     Quick
     QuickControls2
+    QuickDialogs2
     Sql
     Test
 )
@@ -29,6 +30,8 @@ endif()
 add_library(lumina_core STATIC
     src/application/AppController.cpp
     src/application/AppController.h
+    src/application/ReaderController.cpp
+    src/application/ReaderController.h
     src/domain/core/Error.h
     src/infrastructure/database/Database.cpp
     src/infrastructure/database/Database.h
@@ -93,6 +96,7 @@ target_link_libraries(lumina_reader
         Qt6::Qml
         Qt6::Quick
         Qt6::QuickControls2
+        Qt6::QuickDialogs2
 )
 
 set_target_properties(lumina_reader PROPERTIES

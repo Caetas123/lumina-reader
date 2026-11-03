@@ -1,5 +1,6 @@
 #pragma once
 
+#include "application/ReaderController.h"
 #include "infrastructure/library/LibraryStore.h"
 
 #include <QObject>
@@ -20,6 +21,7 @@ class AppController final : public QObject {
     Q_PROPERTY(bool databaseReady READ databaseReady NOTIFY databaseStateChanged)
     Q_PROPERTY(QString startupError READ startupError NOTIFY databaseStateChanged)
     Q_PROPERTY(Lumina::Infrastructure::LibraryStore *library READ library CONSTANT)
+    Q_PROPERTY(ReaderController *reader READ reader CONSTANT)
 
 public:
     explicit AppController(QObject *parent = nullptr);
@@ -30,6 +32,7 @@ public:
     [[nodiscard]] bool databaseReady() const;
     [[nodiscard]] QString startupError() const;
     [[nodiscard]] Lumina::Infrastructure::LibraryStore *library() const;
+    [[nodiscard]] ReaderController *reader() const;
 
     Q_INVOKABLE void retryInitialization();
 
@@ -41,6 +44,7 @@ private:
 
     std::unique_ptr<Lumina::Infrastructure::Database> database_;
     std::unique_ptr<Lumina::Infrastructure::LibraryStore> library_;
+    std::unique_ptr<ReaderController> reader_;
     bool databaseReady_ = false;
     QString startupError_;
 };

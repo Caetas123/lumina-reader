@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Dialogs
 import QtQuick.Layouts
 
 import LuminaReader 1.0
@@ -8,16 +9,65 @@ ApplicationWindow {
     id: window
 
     visible: true
-    width: 1100
-    height: 720
-    minimumWidth: 720
-    minimumHeight: 480
+    width: 1280
+    height: 800
+    minimumWidth: 980
+    minimumHeight: 620
     title: appController.applicationName
-    icon: "qrc:/qt/qml/LuminaReader/assets/lumina-logo.png"
     color: Theme.windowBackground
 
+    property int currentView: 0
+    property string notification: ""
+
+    function localPath(url) {
+        var path = decodeURIComponent(String(url).replace(/^file:\/\//, ""))
+        if (Qt.platform.os === "windows" && path.startsWith("/") && path.length > 2 && path.charAt(2) === ":") {
+            path = path.substring(1)
+        }
+        return path
+    }
+
+    function openImportedFiles(urls) {
+        var paths = []
+        for (var index = 0; index < urls.length; ++index) {
+            paths.push(localPath(urls[index]))
+        }
+        if (paths.length > 0 && appController.library.importFiles(paths)) {
+            notification = qsTr("Added %1 document(s) to your library.").arg(paths.length)
+            notificationTimer.restart()
+        }
+    }
+
+    function statusLabel(status) {
+        switch (status) {
+        case "reading": return qsTr("Reading")
+        case "read": return qsTr("Finished")
+        case "abandoned": return qsTr("Abandoned")
+        default: return qsTr("To read")
+        }
+    }
+
+    Timer {
+        id: notificationTimer
+        interval: 3600
+        onTriggered: window.notification = ""
+    }
+
+    FileDialog {
+        id: importDialog
+        title: qsTr("Add documents to Lumina Reader")
+        fileMode: FileDialog.OpenFiles
+        nameFilters: [
+            qsTr("Supported documents (*.pdf *.epub *.mobi *.azw *.azw3 *.fb2 *.txt *.rtf *.djvu *.djv)"),
+            qsTr("Books and comics (*.epub *.mobi *.azw *.azw3 *.fb2 *.cbz *.cbr *.cb7 *.cbt *.zip *.rar *.7z)"),
+            qsTr("Images (*.jpg *.jpeg *.png *.webp *.avif *.gif)"),
+            qsTr("All files (*)")
+        ]
+        onAccepted: window.openImportedFiles(selectedFiles)
+    }
+
     header: ToolBar {
-        contentHeight: 56
+        contentHeight: 64
         background: Rectangle {
             color: Theme.surface
             border.color: Theme.border
@@ -26,32 +76,35 @@ ApplicationWindow {
         RowLayout {
             anchors.fill: parent
             anchors.leftMargin: 24
-            anchors.rightMargin: 24
+            anchors.rightMargin: 28
             spacing: 12
 
             Image {
                 source: "qrc:/qt/qml/LuminaReader/assets/lumina-logo.png"
-                sourceSize.width: 36
-                sourceSize.height: 36
+                sourceSize.width: 40
+                sourceSize.height: 40
                 fillMode: Image.PreserveAspectFit
                 smooth: true
-                Layout.preferredWidth: 36
-                Layout.preferredHeight: 36
+                Layout.preferredWidth: 40
+                Layout.preferredHeight: 40
             }
 
-            Label {
-                text: qsTr("Lumina Reader")
-                color: Theme.textPrimary
-                font.pixelSize: 20
-                font.weight: Font.DemiBold
+            ColumnLayout {
+                spacing: 0
+                Label {
+                    text: qsTr("Lumina Reader")
+                    color: Theme.textPrimary
+                    font.pixelSize: 20
+                    font.weight: Font.DemiBold
+                }
+                Label {
+                    text: qsTr("Your personal reading space")
+                    color: Theme.textSecondary
+                    font.pixelSize: 12
+                }
             }
 
-            Label {
-                text: qsTr("Foundation")
-                color: Theme.textSecondary
-                font.pixelSize: 14
-                Layout.fillWidth: true
-            }
+            Item { Layout.fillWidth: true }
 
             Label {
                 text: qsTr("v%1").arg(appController.applicationVersion)
@@ -61,83 +114,594 @@ ApplicationWindow {
         }
     }
 
-    ColumnLayout {
-        anchors.centerIn: parent
-        width: Math.min(parent.width - 64, 620)
-        spacing: 18
-
-        Label {
-            Layout.alignment: Qt.AlignHCenter
-            text: qsTr("A calm, local-first PDF reading experience")
-            color: Theme.textPrimary
-            font.pixelSize: 30
-            font.weight: Font.DemiBold
-            horizontalAlignment: Text.AlignHCenter
-            wrapMode: Text.WordWrap
-        }
-
-        Label {
-            Layout.fillWidth: true
-            text: qsTr("The project foundation is ready. Library and reader modules will be added incrementally.")
-            color: Theme.textSecondary
-            font.pixelSize: 16
-            horizontalAlignment: Text.AlignHCenter
-            wrapMode: Text.WordWrap
-        }
+    RowLayout {
+        anchors.fill: parent
+        spacing: 0
 
         Rectangle {
-            Layout.fillWidth: true
-            implicitHeight: appController.databaseReady || appController.startupError.length === 0 ? 92 : 132
-            radius: 12
-            color: appController.databaseReady ? "#ecfdf5" : Theme.surface
-            border.color: appController.databaseReady ? "#a7f3d0" : Theme.border
+            Layout.preferredWidth: 232
+            Layout.fillHeight: true
+            color: Theme.sidebar
+            border.color: Theme.border
+            border.width: 1
 
             ColumnLayout {
                 anchors.fill: parent
-                anchors.margins: 18
-                spacing: 6
+                anchors.margins: 16
+                spacing: 8
 
                 Label {
-                    text: appController.databaseReady
-                        ? qsTr("Local database ready")
-                        : qsTr("Phase 0 — Foundation")
-                    color: appController.databaseReady ? Theme.success : Theme.textPrimary
-                    font.pixelSize: 15
-                    font.weight: Font.DemiBold
-                }
-
-                Label {
-                    Layout.fillWidth: true
-                    text: appController.databaseReady
-                        ? qsTr("Your application data stays on this device by default.")
-                        : qsTr("Qt Quick, CMake, a base theme, and a test target are configured.")
+                    text: qsTr("Library")
                     color: Theme.textSecondary
-                    font.pixelSize: 14
-                    wrapMode: Text.WordWrap
+                    font.pixelSize: 12
+                    font.weight: Font.DemiBold
+                    Layout.leftMargin: 12
+                    Layout.topMargin: 8
+                }
+
+                Button {
+                    Layout.fillWidth: true
+                    checkable: true
+                    checked: window.currentView === 0
+                    onClicked: window.currentView = 0
+                    contentItem: RowLayout {
+                        spacing: 10
+                        Label { text: "▦"; color: parent.parent.checked ? Theme.accent : Theme.textSecondary; font.pixelSize: 18 }
+                        Label { text: qsTr("My library"); color: Theme.textPrimary; Layout.fillWidth: true }
+                    }
+                }
+
+                Button {
+                    Layout.fillWidth: true
+                    checkable: true
+                    checked: window.currentView === 1
+                    onClicked: window.currentView = 1
+                    contentItem: RowLayout {
+                        spacing: 10
+                        Label { text: "✦"; color: parent.parent.checked ? Theme.accent : Theme.textSecondary; font.pixelSize: 18 }
+                        Label { text: qsTr("Knowledge center"); color: Theme.textPrimary; Layout.fillWidth: true }
+                    }
                 }
 
                 Label {
+                    text: qsTr("Workspace")
+                    color: Theme.textSecondary
+                    font.pixelSize: 12
+                    font.weight: Font.DemiBold
+                    Layout.leftMargin: 12
+                    Layout.topMargin: 18
+                }
+
+                Button {
                     Layout.fillWidth: true
-                    visible: !appController.databaseReady && appController.startupError.length > 0
-                    text: appController.startupError
-                    color: Theme.warning
-                    font.pixelSize: 13
-                    wrapMode: Text.WordWrap
+                    checkable: true
+                    checked: window.currentView === 3
+                    onClicked: window.currentView = 3
+                    contentItem: RowLayout {
+                        spacing: 10
+                        Label { text: "⚙"; color: parent.parent.checked ? Theme.accent : Theme.textSecondary; font.pixelSize: 18 }
+                        Label { text: qsTr("Settings"); color: Theme.textPrimary; Layout.fillWidth: true }
+                    }
+                }
+
+                Item { Layout.fillHeight: true }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: 86
+                    radius: 12
+                    color: Theme.surfaceMuted
+                    border.color: Theme.border
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: 12
+                        spacing: 4
+                        Label {
+                            text: qsTr("Private by design")
+                            color: Theme.textPrimary
+                            font.pixelSize: 13
+                            font.weight: Font.DemiBold
+                        }
+                        Label {
+                            text: qsTr("Your library stays on this device.")
+                            color: Theme.textSecondary
+                            font.pixelSize: 12
+                            wrapMode: Text.WordWrap
+                            Layout.fillWidth: true
+                        }
+                    }
                 }
             }
         }
 
-        Button {
-            Layout.alignment: Qt.AlignHCenter
-            visible: !appController.databaseReady && appController.startupError.length > 0
-            text: qsTr("Retry database initialization")
-            onClicked: appController.retryInitialization()
-        }
+        StackLayout {
+            id: pages
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            currentIndex: window.currentView
 
-        Button {
-            Layout.alignment: Qt.AlignHCenter
-            text: qsTr("Quit")
-            onClicked: Qt.quit()
+            Item {
+                id: libraryPage
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+
+                DropArea {
+                    anchors.fill: parent
+                    keys: ["text/uri-list"]
+                    onDropped: {
+                        if (drop.hasUrls) {
+                            window.openImportedFiles(drop.urls)
+                        }
+                    }
+                }
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 32
+                    spacing: 20
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 14
+                        ColumnLayout {
+                            spacing: 2
+                            Label {
+                                text: qsTr("Welcome back")
+                                color: Theme.textSecondary
+                                font.pixelSize: 14
+                            }
+                            Label {
+                                text: qsTr("Your library")
+                                color: Theme.textPrimary
+                                font.pixelSize: 30
+                                font.weight: Font.DemiBold
+                            }
+                        }
+                        Item { Layout.fillWidth: true }
+                        Button {
+                            text: qsTr("Add documents")
+                            highlighted: true
+                            onClicked: importDialog.open()
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 10
+                        TextField {
+                            id: librarySearch
+                            Layout.fillWidth: true
+                            placeholderText: qsTr("Search your library by title, author, or text")
+                            onTextChanged: appController.library.query = text
+                        }
+                        Label {
+                            text: qsTr("%1 item(s)").arg(appController.library.count)
+                            color: Theme.textSecondary
+                            font.pixelSize: 13
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        radius: 16
+                        color: Theme.surface
+                        border.color: Theme.border
+
+                        GridView {
+                            id: libraryGrid
+                            anchors.fill: parent
+                            anchors.margins: 18
+                            clip: true
+                            cellWidth: 238
+                            cellHeight: 246
+                            model: appController.library
+
+                            delegate: Item {
+                                width: libraryGrid.cellWidth - 12
+                                height: libraryGrid.cellHeight - 12
+                                property string documentId: model.id
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 14
+                                    color: cardMouse.containsMouse ? Theme.surfaceRaised : Theme.surface
+                                    border.color: cardMouse.containsMouse ? Theme.accentSoft : Theme.border
+
+                                    ColumnLayout {
+                                        anchors.fill: parent
+                                        anchors.margins: 14
+                                        spacing: 8
+
+                                        Rectangle {
+                                            Layout.fillWidth: true
+                                            Layout.preferredHeight: 118
+                                            radius: 10
+                                            color: Theme.coverBackground
+                                            clip: true
+
+                                            Image {
+                                                anchors.centerIn: parent
+                                                source: "qrc:/qt/qml/LuminaReader/assets/lumina-logo.png"
+                                                sourceSize.width: 70
+                                                sourceSize.height: 70
+                                                opacity: 0.78
+                                            }
+
+                                            Label {
+                                                anchors.left: parent.left
+                                                anchors.top: parent.top
+                                                anchors.margins: 8
+                                                text: String(model.format).toUpperCase()
+                                                color: Theme.accent
+                                                font.pixelSize: 10
+                                                font.weight: Font.DemiBold
+                                            }
+                                        }
+
+                                        Label {
+                                            Layout.fillWidth: true
+                                            text: model.title
+                                            color: Theme.textPrimary
+                                            font.pixelSize: 15
+                                            font.weight: Font.DemiBold
+                                            elide: Text.ElideRight
+                                        }
+                                        Label {
+                                            Layout.fillWidth: true
+                                            text: window.statusLabel(model.status)
+                                            color: Theme.textSecondary
+                                            font.pixelSize: 12
+                                        }
+                                        ProgressBar {
+                                            Layout.fillWidth: true
+                                            value: model.progress
+                                        }
+                                    }
+
+                                    MouseArea {
+                                        id: cardMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        onClicked: {
+                                            if (appController.reader.openDocument(documentId)) {
+                                                window.currentView = 2
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Label {
+                                anchors.centerIn: parent
+                                visible: appController.library.count === 0
+                                text: librarySearch.text.length > 0
+                                    ? qsTr("No documents match your search.")
+                                    : qsTr("Your library is empty. Drop documents here or choose Add documents.")
+                                color: Theme.textSecondary
+                                font.pixelSize: 15
+                                horizontalAlignment: Text.AlignHCenter
+                                wrapMode: Text.WordWrap
+                                width: Math.min(parent.width - 80, 420)
+                            }
+                        }
+                    }
+                }
+            }
+
+            Item {
+                id: knowledgePage
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                property var results: []
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 32
+                    spacing: 18
+
+                    Label {
+                        text: qsTr("Knowledge center")
+                        color: Theme.textPrimary
+                        font.pixelSize: 30
+                        font.weight: Font.DemiBold
+                    }
+                    Label {
+                        text: qsTr("Find the ideas, passages, and notes you saved across your library.")
+                        color: Theme.textSecondary
+                        font.pixelSize: 15
+                    }
+                    TextField {
+                        id: knowledgeSearch
+                        Layout.fillWidth: true
+                        placeholderText: qsTr("Search highlights and notes")
+                        onTextChanged: knowledgePage.results = appController.library.knowledgeSearch(text)
+                    }
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        radius: 16
+                        color: Theme.surface
+                        border.color: Theme.border
+
+                        ListView {
+                            anchors.fill: parent
+                            anchors.margins: 18
+                            clip: true
+                            spacing: 10
+                            model: knowledgePage.results
+
+                            delegate: Rectangle {
+                                width: ListView.view.width
+                                implicitHeight: resultColumn.implicitHeight + 26
+                                radius: 12
+                                color: Theme.surfaceMuted
+                                border.color: Theme.border
+
+                                ColumnLayout {
+                                    id: resultColumn
+                                    anchors.left: parent.left
+                                    anchors.right: parent.right
+                                    anchors.top: parent.top
+                                    anchors.margins: 13
+                                    spacing: 4
+                                    Label {
+                                        text: modelData.documentTitle
+                                        color: Theme.textPrimary
+                                        font.pixelSize: 13
+                                        font.weight: Font.DemiBold
+                                    }
+                                    Label {
+                                        text: "“%1”".arg(modelData.text)
+                                        color: Theme.textPrimary
+                                        font.pixelSize: 14
+                                        wrapMode: Text.WordWrap
+                                        Layout.fillWidth: true
+                                    }
+                                    Label {
+                                        visible: modelData.note.length > 0
+                                        text: qsTr("Note: %1").arg(modelData.note)
+                                        color: Theme.textSecondary
+                                        font.pixelSize: 12
+                                        wrapMode: Text.WordWrap
+                                        Layout.fillWidth: true
+                                    }
+                                }
+                            }
+
+                            Label {
+                                anchors.centerIn: parent
+                                visible: knowledgePage.results.length === 0
+                                text: knowledgeSearch.text.length === 0
+                                    ? qsTr("Your saved knowledge will appear here.")
+                                    : qsTr("No saved passages match this search.")
+                                color: Theme.textSecondary
+                            }
+                        }
+                    }
+                }
+            }
+
+            Item {
+                id: readerPage
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: 0
+
+                    ToolBar {
+                        Layout.fillWidth: true
+                        background: Rectangle { color: Theme.surface; border.color: Theme.border }
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 18
+                            anchors.rightMargin: 18
+                            spacing: 12
+                            Button {
+                                text: qsTr("Back to library")
+                                onClicked: {
+                                    appController.reader.closeDocument()
+                                    window.currentView = 0
+                                }
+                            }
+                            Label {
+                                text: appController.reader.title
+                                color: Theme.textPrimary
+                                font.pixelSize: 16
+                                font.weight: Font.DemiBold
+                                elide: Text.ElideRight
+                                Layout.fillWidth: true
+                            }
+                            Label {
+                                visible: appController.reader.open
+                                text: appController.reader.engineName
+                                color: Theme.textSecondary
+                                font.pixelSize: 12
+                            }
+                            Button {
+                                text: qsTr("Previous")
+                                enabled: appController.reader.currentPage > 0
+                                onClicked: appController.reader.previousPage()
+                            }
+                            Button {
+                                text: qsTr("Next")
+                                enabled: appController.reader.currentPage + 1 < appController.reader.pageCount
+                                onClicked: appController.reader.nextPage()
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        color: Theme.readerBackground
+
+                        Image {
+                            anchors.fill: parent
+                            anchors.margins: 28
+                            visible: appController.reader.open && appController.reader.imageDocument
+                            source: appController.reader.imageSource
+                            fillMode: Image.PreserveAspectFit
+                            asynchronous: true
+                        }
+
+                        ScrollView {
+                            anchors.fill: parent
+                            anchors.margins: 28
+                            visible: appController.reader.open && appController.reader.textDocument
+                            clip: true
+
+                            TextArea {
+                                id: readerText
+                                width: Math.min(parent.width, 860)
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: appController.reader.textContent
+                                readOnly: true
+                                selectByMouse: true
+                                wrapMode: TextArea.Wrap
+                                color: Theme.readerText
+                                selectionColor: Theme.highlight
+                                selectedTextColor: Theme.textPrimary
+                                font.pixelSize: 18
+                                font.family: Theme.readerFont
+                                padding: 30
+
+                                background: Rectangle {
+                                    color: Theme.readerPaper
+                                    radius: 10
+                                    border.color: Theme.border
+                                }
+                            }
+                        }
+
+                        ColumnLayout {
+                            anchors.centerIn: parent
+                            visible: !appController.reader.open
+                            width: Math.min(parent.width - 64, 520)
+                            spacing: 10
+                            Label {
+                                Layout.fillWidth: true
+                                text: appController.reader.errorMessage.length > 0
+                                    ? appController.reader.errorMessage
+                                    : qsTr("Choose a document from your library to start reading.")
+                                color: Theme.textSecondary
+                                font.pixelSize: 16
+                                horizontalAlignment: Text.AlignHCenter
+                                wrapMode: Text.WordWrap
+                            }
+                        }
+
+                        RowLayout {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            anchors.margins: 18
+                            visible: appController.reader.open && readerText.selectedText.length > 0
+                            spacing: 8
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 48
+                                radius: 12
+                                color: Theme.surface
+                                border.color: Theme.border
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.margins: 8
+                                    Button {
+                                        text: qsTr("Highlight")
+                                        onClicked: {
+                                            appController.library.addHighlight(appController.reader.documentId,
+                                                                               readerText.selectedText,
+                                                                               "text:" + appController.reader.currentPage,
+                                                                               appController.reader.currentPage,
+                                                                               Theme.highlight)
+                                            readerText.deselect()
+                                            notification = qsTr("Passage saved to the Knowledge center.")
+                                            notificationTimer.restart()
+                                        }
+                                    }
+                                    Button {
+                                        text: qsTr("Copy")
+                                        onClicked: readerText.copy()
+                                    }
+                                    Item { Layout.fillWidth: true }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Item {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 40
+                    spacing: 18
+                    Label {
+                        text: qsTr("Settings")
+                        color: Theme.textPrimary
+                        font.pixelSize: 30
+                        font.weight: Font.DemiBold
+                    }
+                    Rectangle {
+                        Layout.fillWidth: true
+                        implicitHeight: 150
+                        radius: 16
+                        color: Theme.surface
+                        border.color: Theme.border
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: 20
+                            spacing: 8
+                            Label {
+                                text: qsTr("Privacy")
+                                color: Theme.textPrimary
+                                font.pixelSize: 16
+                                font.weight: Font.DemiBold
+                            }
+                            Label {
+                                text: qsTr("Lumina Reader keeps your library, progress, and saved passages on this device. Online lookups will always be optional and explicit.")
+                                color: Theme.textSecondary
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                            }
+                        }
+                    }
+                    Label {
+                        text: qsTr("Reading themes and accessibility controls are being connected to the same local preference system as the library.")
+                        color: Theme.textSecondary
+                        wrapMode: Text.WordWrap
+                        Layout.fillWidth: true
+                    }
+                    Item { Layout.fillHeight: true }
+                }
+            }
+        }
+    }
+
+    Rectangle {
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 24
+        visible: window.notification.length > 0
+        radius: 10
+        color: Theme.toast
+        implicitWidth: notificationLabel.implicitWidth + 32
+        implicitHeight: 44
+
+        Label {
+            id: notificationLabel
+            anchors.centerIn: parent
+            text: window.notification
+            color: Theme.toastText
+            font.pixelSize: 13
         }
     }
 }
