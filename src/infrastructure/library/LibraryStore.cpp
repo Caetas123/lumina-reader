@@ -141,11 +141,17 @@ QString searchableText(const QString &path, const QString &format)
     return QString::fromUtf8(file.read(maximumIndexedBytes));
 }
 
-QString escapedFtsPhrase(const QString &value)
+QString ftsPrefixQuery(const QString &value)
 {
-    QString phrase = value;
-    phrase.replace(QStringLiteral("\""), QStringLiteral("\"\""));
-    return QStringLiteral("\"") + phrase + QStringLiteral("\"");
+    QStringList tokens;
+    const QRegularExpression tokenExpression(QStringLiteral(R"([\p{L}\p{N}_]+)"));
+    QRegularExpressionMatchIterator iterator = tokenExpression.globalMatch(value);
+    while (iterator.hasNext()) {
+        QString token = iterator.next().captured(0);
+        token.replace(QStringLiteral("\""), QStringLiteral("\"\""));
+        tokens.append(QStringLiteral("\"") + token + QStringLiteral("\"*"));
+    }
+    return tokens.join(QStringLiteral(" AND "));
 }
 
 void setError(Lumina::Domain::Error *error,
@@ -267,11 +273,11 @@ void LibraryStore::reload()
     } else {
         query.prepare(QStringLiteral(
                           "SELECT %1 FROM documents d "
-                          "JOIN document_search s ON s.document_id = d.id "
+                          "JOIN document_search ON document_search.document_id = d.id "
                           "WHERE document_search MATCH :match "
                           "ORDER BY rank")
                           .arg(columns));
-        query.bindValue(QStringLiteral(":match"), escapedFtsPhrase(query_));
+        query.bindValue(QStringLiteral(":match"), ftsPrefixQuery(query_));
     }
 
     if (!query.exec()) {
@@ -447,25 +453,46 @@ bool LibraryStore::removeDocument(const QString &documentId, bool deleteOriginal
         return false;
     }
 
-    if (deleteOriginal && !QFile::remove(record.value(QStringLiteral("filePath")).toString())) {
-        setError(QStringLiteral("The original file could not be deleted."));
+    QSqlDatabase connection = database_->connection();
+    if (!connection.transaction()) {
+        setError(QStringLiteral("The document could not be removed from the library."));
         return false;
     }
 
-    QSqlQuery search(database_->connection());
+    QSqlQuery knowledgeSearch(connection);
+    knowledgeSearch.prepare(QStringLiteral("DELETE FROM knowledge_search WHERE document_id = :id"));
+    knowledgeSearch.bindValue(QStringLiteral(":id"), documentId);
+    if (!knowledgeSearch.exec()) {
+        connection.rollback();
+        setError(QStringLiteral("The document could not be removed from knowledge search."));
+        return false;
+    }
+
+    QSqlQuery search(connection);
     search.prepare(QStringLiteral("DELETE FROM document_search WHERE document_id = :id"));
     search.bindValue(QStringLiteral(":id"), documentId);
     if (!search.exec()) {
+        connection.rollback();
         setError(QStringLiteral("The document could not be removed from search."));
         return false;
     }
 
-    QSqlQuery query(database_->connection());
+    QSqlQuery query(connection);
     query.prepare(QStringLiteral("DELETE FROM documents WHERE id = :id"));
     query.bindValue(QStringLiteral(":id"), documentId);
     if (!query.exec()) {
+        connection.rollback();
         setError(QStringLiteral("The document could not be removed from the library."));
         return false;
+    }
+    if (!connection.commit()) {
+        connection.rollback();
+        setError(QStringLiteral("The document could not be removed from the library."));
+        return false;
+    }
+
+    if (deleteOriginal && !QFile::remove(record.value(QStringLiteral("filePath")).toString())) {
+        setError(QStringLiteral("The original file could not be deleted."));
     }
     reload();
     return true;
@@ -559,12 +586,18 @@ QVariantList LibraryStore::knowledgeSearch(const QString &term) const
         return results;
     }
 
+    const QString match = ftsPrefixQuery(term);
+    if (match.isEmpty()) {
+        return results;
+    }
+
     QSqlQuery query(database_->connection());
     query.prepare(QStringLiteral(
         "SELECT h.id, h.document_id, d.title, h.text, h.note, h.color, h.page, h.locator, "
         "h.created_at FROM highlights h JOIN documents d ON d.id = h.document_id "
-        "WHERE h.text LIKE :term OR h.note LIKE :term ORDER BY h.created_at DESC"));
-    query.bindValue(QStringLiteral(":term"), QStringLiteral("%") + term + QStringLiteral("%"));
+        "JOIN knowledge_search ON knowledge_search.highlight_id = h.id "
+        "WHERE knowledge_search MATCH :match ORDER BY rank, h.created_at DESC"));
+    query.bindValue(QStringLiteral(":match"), match);
     if (!query.exec()) {
         return results;
     }
@@ -595,18 +628,40 @@ bool LibraryStore::addHighlight(const QString &documentId,
         || locator.trimmed().isEmpty()) {
         return false;
     }
-    QSqlQuery query(database_->connection());
+    const QString id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    QSqlDatabase connection = database_->connection();
+    if (!connection.transaction()) {
+        return false;
+    }
+
+    QSqlQuery query(connection);
     query.prepare(QStringLiteral(
         "INSERT INTO highlights (id, document_id, text, note, color, locator, page) "
         "VALUES (:id, :document, :text, :note, :color, :locator, :page)"));
-    query.bindValue(QStringLiteral(":id"), QUuid::createUuid().toString(QUuid::WithoutBraces));
+    query.bindValue(QStringLiteral(":id"), id);
     query.bindValue(QStringLiteral(":document"), documentId);
     query.bindValue(QStringLiteral(":text"), text);
     query.bindValue(QStringLiteral(":note"), note);
     query.bindValue(QStringLiteral(":color"), color.isEmpty() ? QStringLiteral("#f6c945") : color);
     query.bindValue(QStringLiteral(":locator"), locator);
     query.bindValue(QStringLiteral(":page"), std::max(page, 0));
-    return query.exec();
+    bool success = query.exec();
+    if (success) {
+        QSqlQuery search(connection);
+        search.prepare(QStringLiteral(
+            "INSERT INTO knowledge_search (highlight_id, document_id, text, note) "
+            "VALUES (:highlight, :document, :text, :note)"));
+        search.bindValue(QStringLiteral(":highlight"), id);
+        search.bindValue(QStringLiteral(":document"), documentId);
+        search.bindValue(QStringLiteral(":text"), text);
+        search.bindValue(QStringLiteral(":note"), note);
+        success = search.exec();
+    }
+    if (!success || !connection.commit()) {
+        connection.rollback();
+        return false;
+    }
+    return true;
 }
 
 QStringList LibraryStore::supportedExtensions() const
