@@ -68,6 +68,20 @@ ApplicationWindow {
         window.currentView = 0
     }
 
+    function openMetadata(documentId) {
+        var record = appController.library.documentDetails(documentId)
+        if (!record || !record.id) {
+            return
+        }
+        metadataDialog.documentId = documentId
+        metadataTitle.text = record.title || ""
+        metadataAuthor.text = record.author || ""
+        metadataLanguage.text = record.language || ""
+        metadataDescription.text = record.description || ""
+        metadataTags.text = appController.library.tagsForDocument(documentId).join(", ")
+        metadataDialog.open()
+    }
+
     function statusLabel(status) {
         switch (status) {
         case "reading": return qsTr("Reading")
@@ -104,6 +118,71 @@ ApplicationWindow {
             } else {
                 window.notification = qsTr("No supported documents were found in that folder.")
             }
+            notificationTimer.restart()
+        }
+    }
+
+    Dialog {
+        id: metadataDialog
+        property string documentId: ""
+        modal: true
+        title: qsTr("Edit document details")
+        width: Math.min(window.width - 80, 560)
+        standardButtons: Dialog.Ok | Dialog.Cancel
+
+        contentItem: ColumnLayout {
+            spacing: 12
+
+            Label {
+                text: qsTr("These details are stored in your local library and do not change the original file.")
+                color: Theme.textSecondary
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+            TextField {
+                id: metadataTitle
+                Layout.fillWidth: true
+                placeholderText: qsTr("Title")
+            }
+            TextField {
+                id: metadataAuthor
+                Layout.fillWidth: true
+                placeholderText: qsTr("Author")
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                TextField {
+                    id: metadataLanguage
+                    Layout.fillWidth: true
+                    placeholderText: qsTr("Language")
+                }
+                TextField {
+                    id: metadataTags
+                    Layout.fillWidth: true
+                    placeholderText: qsTr("Tags, separated by commas")
+                }
+            }
+            TextArea {
+                id: metadataDescription
+                Layout.fillWidth: true
+                Layout.preferredHeight: 110
+                placeholderText: qsTr("Personal description")
+                wrapMode: TextArea.Wrap
+            }
+        }
+
+        onAccepted: {
+            var saved = appController.library.updateMetadata(documentId,
+                                                              metadataTitle.text,
+                                                              metadataAuthor.text,
+                                                              metadataDescription.text,
+                                                              metadataLanguage.text)
+            if (saved) {
+                var tags = metadataTags.text.split(",")
+                saved = appController.library.setTags(documentId, tags)
+            }
+            appController.library.refresh()
+            window.notification = saved ? qsTr("Document details saved.") : qsTr("The document details could not be saved.")
             notificationTimer.restart()
         }
     }
@@ -460,6 +539,8 @@ ApplicationWindow {
                                 width: libraryGrid.cellWidth - 12
                                 height: libraryGrid.cellHeight - 12
                                 property string documentId: model.id
+                                property bool documentFavorite: model.isFavorite
+                                property int documentRating: model.rating
 
                                 Rectangle {
                                     anchors.fill: parent
@@ -514,6 +595,21 @@ ApplicationWindow {
                                             color: Theme.textSecondary
                                             font.pixelSize: 12
                                         }
+                                        RowLayout {
+                                            Layout.fillWidth: true
+                                            spacing: 0
+                                            Repeater {
+                                                model: 5
+                                                delegate: ToolButton {
+                                                    text: index < documentRating ? "★" : "☆"
+                                                    font.pixelSize: 13
+                                                    padding: 0
+                                                    display: AbstractButton.TextOnly
+                                                    onClicked: appController.library.setRating(documentId, index + 1)
+                                                }
+                                            }
+                                            Item { Layout.fillWidth: true }
+                                        }
                                         ProgressBar {
                                             Layout.fillWidth: true
                                             value: model.progress
@@ -536,10 +632,21 @@ ApplicationWindow {
                                          anchors.right: parent.right
                                          anchors.margins: 6
                                          z: 2
-                                         text: model.isFavorite ? "★" : "☆"
+                                         text: documentFavorite ? "★" : "☆"
                                          font.pixelSize: 20
                                          display: AbstractButton.TextOnly
-                                         onClicked: appController.library.setFavorite(documentId, !model.isFavorite)
+                                         onClicked: appController.library.setFavorite(documentId, !documentFavorite)
+                                     }
+
+                                     ToolButton {
+                                         anchors.top: parent.top
+                                         anchors.left: parent.left
+                                         anchors.margins: 6
+                                         z: 2
+                                         text: "✎"
+                                         font.pixelSize: 17
+                                         display: AbstractButton.TextOnly
+                                         onClicked: window.openMetadata(documentId)
                                      }
                                 }
                             }
