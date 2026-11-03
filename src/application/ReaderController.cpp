@@ -2,6 +2,7 @@
 
 #include "infrastructure/archive/ArchiveReader.h"
 #include "infrastructure/library/LibraryStore.h"
+#include "infrastructure/text/TextDecoder.h"
 
 #include <QFile>
 #include <QFileInfo>
@@ -210,11 +211,7 @@ void ReaderController::fail(const QString &message)
 
 QString ReaderController::loadText(const QString &path) const
 {
-    QFile file(path);
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        return {};
-    }
-    return QString::fromUtf8(file.readAll());
+    return Lumina::Infrastructure::TextDecoder::readFile(path, format_);
 }
 
 void ReaderController::refreshTextPage()

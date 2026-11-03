@@ -1,6 +1,7 @@
 #include "application/ReaderController.h"
 #include "infrastructure/database/Database.h"
 #include "infrastructure/library/LibraryStore.h"
+#include "infrastructure/text/TextDecoder.h"
 
 #include <QFile>
 #include <QTemporaryDir>
@@ -46,6 +47,29 @@ private slots:
         QCOMPARE(reader.searchMatches(), 1);
         QVERIFY(reader.searchStart() >= 0);
         QCOMPARE(library.documentDetails(documentId).value(QStringLiteral("currentPage")).toInt(), 1);
+    }
+
+    void decodesRtfAndFb2Text()
+    {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+
+        const QString rtfPath = directory.filePath(QStringLiteral("note.rtf"));
+        QFile rtf(rtfPath);
+        QVERIFY(rtf.open(QIODevice::WriteOnly | QIODevice::Text));
+        QVERIFY(rtf.write("{\\rtf1\\ansi First\\par Second}") > 0);
+        rtf.close();
+
+        const QString fb2Path = directory.filePath(QStringLiteral("book.fb2"));
+        QFile fb2(fb2Path);
+        QVERIFY(fb2.open(QIODevice::WriteOnly | QIODevice::Text));
+        QVERIFY(fb2.write("<FictionBook><body><section><title>Chapter</title><p>Text from FB2.</p></section></body></FictionBook>") > 0);
+        fb2.close();
+
+        QCOMPARE(Lumina::Infrastructure::TextDecoder::readFile(rtfPath, QStringLiteral("rtf")),
+                 QStringLiteral("First\nSecond"));
+        QVERIFY(Lumina::Infrastructure::TextDecoder::readFile(fb2Path, QStringLiteral("fb2"))
+                    .contains(QStringLiteral("Text from FB2.")));
     }
 };
 

@@ -51,6 +51,8 @@ add_library(lumina_core STATIC
     src/infrastructure/library/LibraryStore.h
     src/infrastructure/logging/Logging.cpp
     src/infrastructure/logging/Logging.h
+    src/infrastructure/text/TextDecoder.cpp
+    src/infrastructure/text/TextDecoder.h
     src/pdf/PdfEngine.h
 )
 

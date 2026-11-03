@@ -88,9 +88,7 @@ ApplicationWindow {
         title: qsTr("Add documents to Lumina Reader")
         fileMode: FileDialog.OpenFiles
         nameFilters: [
-            qsTr("Supported documents (*.pdf *.epub *.mobi *.azw *.azw3 *.fb2 *.txt *.rtf *.djvu *.djv)"),
-            qsTr("Books and comics (*.epub *.mobi *.azw *.azw3 *.fb2 *.cbz *.cbr *.cb7 *.cbt *.zip *.rar *.7z)"),
-            qsTr("Images (*.jpg *.jpeg *.png *.webp *.avif *.gif)"),
+            qsTr("Supported documents (%1)").arg(appController.library.supportedExtensions().join(" ")),
             qsTr("All files (*)")
         ]
         onAccepted: window.openImportedFiles(selectedFiles)

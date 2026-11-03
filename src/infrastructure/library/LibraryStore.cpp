@@ -3,6 +3,7 @@
 #include "infrastructure/database/Database.h"
 #include "infrastructure/archive/ArchiveReader.h"
 #include "infrastructure/logging/Logging.h"
+#include "infrastructure/text/TextDecoder.h"
 
 #include <QCryptographicHash>
 #include <QDir>
@@ -35,16 +36,18 @@ QString formatForPath(const QString &path)
 
 QStringList supportedFormats()
 {
-    return {
-        QStringLiteral("pdf"),   QStringLiteral("epub"), QStringLiteral("mobi"),
-        QStringLiteral("azw"),   QStringLiteral("azw3"), QStringLiteral("fb2"),
-        QStringLiteral("txt"),   QStringLiteral("rtf"),  QStringLiteral("cbz"),
-        QStringLiteral("cbr"),   QStringLiteral("cb7"),  QStringLiteral("cbt"),
-        QStringLiteral("zip"),   QStringLiteral("rar"),  QStringLiteral("7z"),
-        QStringLiteral("jpg"),   QStringLiteral("jpeg"), QStringLiteral("png"),
-        QStringLiteral("webp"),  QStringLiteral("avif"), QStringLiteral("gif"),
-        QStringLiteral("djvu"),  QStringLiteral("djv"),
+    QStringList formats{
+        QStringLiteral("fb2"), QStringLiteral("txt"), QStringLiteral("rtf"),
+        QStringLiteral("jpg"), QStringLiteral("jpeg"), QStringLiteral("png"),
+        QStringLiteral("webp"), QStringLiteral("avif"), QStringLiteral("gif"),
     };
+#ifdef LUMINA_HAS_QT_PDF
+    formats.append(QStringLiteral("pdf"));
+#endif
+#ifdef LUMINA_HAS_QT_ZIP
+    formats << QStringLiteral("epub") << QStringLiteral("cbz") << QStringLiteral("zip");
+#endif
+    return formats;
 }
 
 bool isImageFormat(const QString &format)
@@ -153,13 +156,7 @@ QString searchableText(const QString &path, const QString &format)
         return {};
     }
 
-    QFile file(path);
-    if (!file.open(QIODevice::ReadOnly)) {
-        return {};
-    }
-
-    constexpr qint64 maximumIndexedBytes = 4 * 1024 * 1024;
-    return QString::fromUtf8(file.read(maximumIndexedBytes));
+    return Lumina::Infrastructure::TextDecoder::readFile(path, format).left(4 * 1024 * 1024);
 }
 
 QString ftsPrefixQuery(const QString &value)
