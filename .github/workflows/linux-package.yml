@@ -76,8 +76,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
+          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+              --title "Lumina Reader $GITHUB_REF_NAME" --generate-notes
+          gh release upload "$GITHUB_REF_NAME" \
             dist/linux/LuminaReader-linux-x86_64.AppImage \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "Lumina Reader $GITHUB_REF_NAME" \
-            --generate-notes
+            --repo "$GITHUB_REPOSITORY" --clobber

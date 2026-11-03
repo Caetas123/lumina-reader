@@ -17,7 +17,7 @@ internal static class Program
 
 internal sealed class InstallerForm : Form
 {
-    private const string ApplicationVersion = "0.1.6";
+    private const string ApplicationVersion = "0.2.0";
     private static readonly Color Accent = Color.FromArgb(79, 70, 229);
     private static readonly Color AccentDark = Color.FromArgb(55, 48, 163);
     private static readonly Color TextPrimary = Color.FromArgb(32, 36, 43);
@@ -949,13 +949,13 @@ internal sealed class InstallerForm : Form
             return new InstallerStrings
             {
                 SetupTitle = "Lumina Reader Setup",
-                BrandTagline = "A calm place for your PDF library.",
+                BrandTagline = "A calm place for your reading library.",
                 BrandVersionTemplate = "Windows x64 · Version {0}",
                 WelcomeHeading = "Welcome to Lumina Reader",
-                WelcomeBody = "Lumina Reader gives you a calm, private place to read and organize your PDF files. Your documents stay on your computer by default.",
+                WelcomeBody = "Lumina Reader gives you a calm, private place to read and organize your books and documents. Your files stay on your computer by default.",
                 WhatYouAreInstallingHeading = "What you are installing",
-                WhatYouAreInstallingBody = "• Read and organize your PDF files\n• Keep your documents private on your computer\n• Enjoy a calm, distraction-free reading space\n• Ready to open after installation",
-                PhaseNote = "A simple foundation for a better reading experience. More reading features will arrive in future updates.",
+                WhatYouAreInstallingBody = "• Read and organize your books and documents\n• Save passages, notes, and your reading progress\n• Keep your library private on your computer\n• Ready to open after installation",
+                PhaseNote = "A calm reading space for your personal library. New format and study capabilities can arrive through future updates.",
                 Close = "Close",
                 Continue = "Continue",
                 ReadyToInstallHeading = "Ready to install?",
@@ -992,13 +992,13 @@ internal sealed class InstallerForm : Form
             return new InstallerStrings
             {
                 SetupTitle = "Instalação do Lumina Reader",
-                BrandTagline = "Um espaço tranquilo para sua biblioteca de PDFs.",
+                BrandTagline = "Um espaço tranquilo para sua biblioteca de leitura.",
                 BrandVersionTemplate = "Windows x64 · Versão {0}",
                 WelcomeHeading = "Bem-vindo ao Lumina Reader",
-                WelcomeBody = "O Lumina Reader oferece um espaço tranquilo e privado para ler e organizar seus arquivos PDF. Seus documentos ficam no seu computador por padrão.",
+                WelcomeBody = "O Lumina Reader oferece um espaço tranquilo e privado para ler e organizar seus livros e documentos. Seus arquivos ficam no seu computador por padrão.",
                 WhatYouAreInstallingHeading = "O que será instalado",
-                WhatYouAreInstallingBody = "• Leia e organize seus arquivos PDF\n• Mantenha seus documentos privados no seu computador\n• Aproveite um espaço tranquilo e sem distrações\n• Pronto para abrir após a instalação",
-                PhaseNote = "Uma base simples para uma experiência de leitura melhor. Novos recursos de leitura chegarão nas próximas atualizações.",
+                WhatYouAreInstallingBody = "• Leia e organize seus livros e documentos\n• Salve trechos, notas e seu progresso de leitura\n• Mantenha sua biblioteca privada no seu computador\n• Pronto para abrir após a instalação",
+                PhaseNote = "Um espaço tranquilo para sua biblioteca pessoal. Novos formatos e recursos de estudo podem chegar nas próximas atualizações.",
                 Close = "Fechar",
                 Continue = "Continuar",
                 ReadyToInstallHeading = "Pronto para instalar?",
