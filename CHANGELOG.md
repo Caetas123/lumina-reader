@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Text, RTF, FB2, image, EPUB, CBZ, and ZIP reader paths, with optional Qt PDF and Qt Speech capabilities.
 - Persistent highlights, annotations, bookmarks, global Knowledge center search, contextual browser lookup actions, and library/knowledge exports.
 - Metadata restoration from a library JSON export, archive resource limits, Zip Slip checks, and a documented format-parity matrix.
+- Unencrypted PalmDOC-compatible MOBI/AZW/AZW3 decoding, keyboard navigation shortcuts, focus/full-screen reading controls, and manual region annotations for image-based pages.
 
 ### Changed
 

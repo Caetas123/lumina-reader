@@ -51,7 +51,8 @@ Contains integrations that differ across Windows, macOS, and Linux, such as file
 - Migration versions 1–5 create application settings, documents, reading state, annotations, bookmarks, OCR/provider history tables, FTS5 indexes, favorites, and ratings.
 - `LibraryStore` is a `QAbstractListModel`; its view filter is applied in SQL, and its FTS5 queries have a safe LIKE fallback for unusual input.
 - `ArchiveReader` reads EPUB and image archives in-process without extracting untrusted paths. It rejects parent/absolute paths, symbolic links, oversized entries, and archives over the configured entry/size limits.
-- `TextDecoder` converts TXT, RTF, and FB2 into safe reader text without executing document content.
+- `TextDecoder` converts TXT, RTF, FB2, and unencrypted PalmDOC-compatible MOBI/AZW/AZW3 files into safe reader text without executing document content. DRM and unsupported KF8/Huffman variants are rejected.
+- Image and rendered-PDF pages expose a manual region-annotation fallback when selectable text or OCR is unavailable; region coordinates are stored normalized to the displayed page.
 - `ReaderController` owns the reader state and keeps page locations/progress in the library model. The QML layer never opens files or writes SQL directly.
 - `Logging` configures categorized diagnostics without creating a persistent log file or recording document content.
 - QML design tokens live in `src/ui/qml/Theme.qml`.
@@ -62,6 +63,6 @@ Contains integrations that differ across Windows, macOS, and Linux, such as file
 - Original documents are not copied, moved, or deleted by a normal library import or removal.
 - No network provider is required for the local reading flow.
 - Browser lookups are explicit user actions and receive only the selected text.
-- Long-running work must not run on the GUI thread.
+- New long-running work must not run on the GUI thread; the current import path remains synchronous and is intentionally bounded by format and archive-size limits.
 - Database schema changes are additive migrations; historical migration files are not rewritten.
 - Technical error details remain in diagnostics; UI messages stay actionable and safe.

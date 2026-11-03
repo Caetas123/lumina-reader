@@ -42,7 +42,7 @@ The current application provides:
 - individual and multiple-file import, drag and drop, folder import, SHA-256 duplicate detection, and optional folder watching through the library model;
 - library filters for favorites, to-read, reading, and finished documents;
 - reading progress, last position, status, favorites, ratings, descriptions, language, collections, tags, and reading history;
-- TXT, RTF, FB2, raster-image, EPUB, CBZ, and ZIP reading when the matching Qt capabilities are present;
+- TXT, RTF, FB2, unencrypted PalmDOC-compatible MOBI/AZW/AZW3, raster-image, EPUB, CBZ, and ZIP reading when the matching Qt capabilities are present;
 - optional PDF rendering through Qt PDF in the CI/release build;
 - in-document search for text pages and EPUB chapters;
 - persistent highlights, annotations, bookmarks, and a global FTS5 Knowledge center;

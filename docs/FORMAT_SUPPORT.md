@@ -51,4 +51,4 @@ The following capabilities are format-independent when the underlying content pr
 
 Qt PDF, Qt Speech, and Qt's private ZIP helper are optional build capabilities. The CI and release workflows request the public Qt PDF and Speech modules. The ZIP helper is used only for in-process, read-only archive access; it is not a general-purpose extraction service.
 
-OCR, local dictionaries, online translation providers, PDF text extraction, and dedicated MOBI/AZW, RAR/7z, and DJVU engines are not silently emulated. Until a compatible provider is bundled and tested on each target platform, the application keeps those capabilities unavailable and explains the limitation instead of claiming support.
+OCR, local dictionaries, and dedicated RAR/7z and DJVU engines are not silently emulated. PDF text extraction is available through the optional Qt PDF module, while MOBI/AZW support is limited to unencrypted PalmDOC-compatible text. Until a compatible provider is bundled and tested on each target platform, the application keeps unavailable capabilities out of the picker and explains the limitation instead of claiming support.
