@@ -1,6 +1,7 @@
 #include "infrastructure/library/LibraryStore.h"
 
 #include "infrastructure/database/Database.h"
+#include "infrastructure/archive/ArchiveReader.h"
 #include "infrastructure/logging/Logging.h"
 
 #include <QCryptographicHash>
@@ -127,6 +128,23 @@ QString calculateHash(const QString &path)
 
 QString searchableText(const QString &path, const QString &format)
 {
+    if (format == QStringLiteral("epub")) {
+        Lumina::Infrastructure::ArchiveReader archive;
+        if (!archive.open(path, format)) {
+            return {};
+        }
+
+        QString text;
+        for (int page = 0; page < archive.pageCount(); ++page) {
+            text.append(archive.pageText(page));
+            text.append(QChar('\n'));
+            if (text.size() >= 4 * 1024 * 1024) {
+                break;
+            }
+        }
+        return text.left(4 * 1024 * 1024);
+    }
+
     if (format != QStringLiteral("txt") && format != QStringLiteral("rtf")
         && format != QStringLiteral("fb2")) {
         return {};
@@ -511,6 +529,25 @@ bool LibraryStore::setStatus(const QString &documentId, const QString &status)
     query.prepare(QStringLiteral(
         "UPDATE documents SET status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :id"));
     query.bindValue(QStringLiteral(":status"), status);
+    query.bindValue(QStringLiteral(":id"), documentId);
+    if (!query.exec() || query.numRowsAffected() == 0) {
+        return false;
+    }
+    reload();
+    return true;
+}
+
+bool LibraryStore::setPageCount(const QString &documentId, int pageCount)
+{
+    if (!isReady() || documentId.trimmed().isEmpty() || pageCount <= 0) {
+        return false;
+    }
+
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral(
+        "UPDATE documents SET page_count = :page_count, updated_at = CURRENT_TIMESTAMP "
+        "WHERE id = :id"));
+    query.bindValue(QStringLiteral(":page_count"), pageCount);
     query.bindValue(QStringLiteral(":id"), documentId);
     if (!query.exec() || query.numRowsAffected() == 0) {
         return false;

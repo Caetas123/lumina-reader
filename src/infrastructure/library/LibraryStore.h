@@ -49,6 +49,7 @@ public:
     Q_INVOKABLE bool importFiles(const QStringList &filePaths);
     Q_INVOKABLE bool removeDocument(const QString &documentId, bool deleteOriginal = false);
     Q_INVOKABLE bool setStatus(const QString &documentId, const QString &status);
+    Q_INVOKABLE bool setPageCount(const QString &documentId, int pageCount);
     Q_INVOKABLE bool updateProgress(const QString &documentId, double progress, int currentPage);
     Q_INVOKABLE QVariantMap documentDetails(const QString &documentId) const;
     Q_INVOKABLE QVariantList knowledgeSearch(const QString &term) const;

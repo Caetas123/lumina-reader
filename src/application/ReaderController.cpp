@@ -327,6 +327,7 @@ bool ReaderController::openDocument(const QString &documentId)
 
     open_ = true;
     errorMessage_.clear();
+    library_->setPageCount(documentId_, pageCount_);
     persistProgress();
     emit stateChanged();
     return true;
