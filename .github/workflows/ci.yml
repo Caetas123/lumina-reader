@@ -19,17 +19,17 @@ jobs:
       matrix:
         include:
           - name: Linux
-            os: ubuntu-latest
+            os: ubuntu-22.04
             qt-host: linux
-            qt-arch: gcc_64
+            qt-arch: linux_gcc_64
           - name: macOS
-            os: macos-latest
+            os: macos-13
             qt-host: mac
             qt-arch: clang_64
           - name: Windows
             os: windows-latest
             qt-host: windows
-            qt-arch: win64_msvc2022_64
+            qt-arch: win64_mingw
 
     steps:
       - name: Check out source
