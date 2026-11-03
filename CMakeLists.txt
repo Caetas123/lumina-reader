@@ -36,6 +36,8 @@ add_library(lumina_core STATIC
     src/application/AppController.h
     src/application/BackupController.cpp
     src/application/BackupController.h
+    src/application/LookupController.cpp
+    src/application/LookupController.h
     src/application/ReaderController.cpp
     src/application/ReaderController.h
     src/application/SettingsController.cpp
@@ -43,6 +45,7 @@ add_library(lumina_core STATIC
     src/application/SpeechController.cpp
     src/application/SpeechController.h
     src/domain/core/Error.h
+    src/domain/lookup/LookupProvider.h
     src/infrastructure/database/Database.cpp
     src/infrastructure/database/Database.h
     src/infrastructure/archive/ArchiveReader.cpp

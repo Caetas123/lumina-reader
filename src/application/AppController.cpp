@@ -3,6 +3,7 @@
 #include "application/ReaderController.h"
 #include "application/SettingsController.h"
 #include "application/SpeechController.h"
+#include "application/LookupController.h"
 
 #include "domain/core/Error.h"
 #include "infrastructure/database/Database.h"
@@ -24,6 +25,7 @@ AppController::AppController(QObject *parent)
     , settings_(std::make_unique<SettingsController>())
     , backup_(std::make_unique<BackupController>())
     , speech_(std::make_unique<SpeechController>())
+    , lookup_(std::make_unique<LookupController>())
 {
     initializeDatabase();
 }
@@ -70,6 +72,7 @@ void AppController::initializeDatabase()
     library_->setDatabase(database_.get());
     settings_->setDatabase(database_.get());
     backup_->setDatabase(database_.get());
+    lookup_->setDatabase(database_.get());
     qCInfo(luminaApp) << "Local database initialized";
     emit databaseStateChanged();
 }
@@ -117,6 +120,11 @@ QObject *AppController::backup() const
 QObject *AppController::speech() const
 {
     return speech_.get();
+}
+
+QObject *AppController::lookup() const
+{
+    return lookup_.get();
 }
 
 void AppController::retryInitialization()

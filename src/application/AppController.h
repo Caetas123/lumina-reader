@@ -17,6 +17,7 @@ class ReaderController;
 class SettingsController;
 class BackupController;
 class SpeechController;
+class LookupController;
 
 class AppController final : public QObject {
     Q_OBJECT
@@ -29,6 +30,7 @@ class AppController final : public QObject {
     Q_PROPERTY(QObject *settings READ settings CONSTANT)
     Q_PROPERTY(QObject *backup READ backup CONSTANT)
     Q_PROPERTY(QObject *speech READ speech CONSTANT)
+    Q_PROPERTY(QObject *lookup READ lookup CONSTANT)
 
 public:
     explicit AppController(QObject *parent = nullptr);
@@ -43,6 +45,7 @@ public:
     [[nodiscard]] QObject *settings() const;
     [[nodiscard]] QObject *backup() const;
     [[nodiscard]] QObject *speech() const;
+    [[nodiscard]] QObject *lookup() const;
 
     Q_INVOKABLE void retryInitialization();
 
@@ -58,6 +61,7 @@ private:
     std::unique_ptr<SettingsController> settings_;
     std::unique_ptr<BackupController> backup_;
     std::unique_ptr<SpeechController> speech_;
+    std::unique_ptr<LookupController> lookup_;
     bool databaseReady_ = false;
     QString startupError_;
 };
