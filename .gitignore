@@ -1,0 +1,73 @@
+# CMake and build outputs
+/build/
+/cmake-build-*/
+/out/
+/install/
+compile_commands.json
+CMakeUserPresets.json
+
+# Qt and QML tooling
+/.qtc_clangd/
+/.qmlcache/
+/.qmlls.ini
+*.qmlc
+*.jsc
+
+# Generated Qt artifacts
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+*.moc
+
+# IDEs and editors
+.idea/
+.vscode/
+*.user
+*.user.*
+*.suo
+*.vcxproj.user
+.vs/
+
+# Platform-specific files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Compiled binaries and libraries
+*.dll
+*.dylib
+*.so
+*.so.*
+*.a
+*.lib
+*.obj
+*.o
+*.exe
+*.app/
+
+# Packaging and installers
+*.msi
+*.dmg
+*.deb
+*.rpm
+*.AppImage
+
+# Runtime and test data
+*.log
+/coverage/
+/test-results/
+/data/
+/tmp/
+
+# Local secrets and environment files
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+
+# OS and tool caches
+.cache/
+.clangd/
+/.vsconfig

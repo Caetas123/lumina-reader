@@ -1,0 +1,98 @@
+cmake_minimum_required(VERSION 3.24)
+
+project(LuminaReader VERSION 0.1.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+find_package(Qt6 6.5 REQUIRED COMPONENTS
+    Core
+    Gui
+    Qml
+    Quick
+    QuickControls2
+    Sql
+    Test
+)
+
+qt_standard_project_setup(REQUIRES 6.5)
+
+add_library(lumina_core STATIC
+    src/application/AppController.cpp
+    src/application/AppController.h
+)
+
+target_include_directories(lumina_core
+    PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
+target_compile_definitions(lumina_core
+    PUBLIC
+        LUMINA_VERSION="${PROJECT_VERSION}"
+)
+
+target_link_libraries(lumina_core
+    PUBLIC
+        Qt6::Core
+)
+
+qt_add_executable(lumina_reader
+    src/main.cpp
+)
+
+set_source_files_properties(
+    src/ui/qml/Theme.qml
+    PROPERTIES
+        QT_QML_SINGLETON_TYPE TRUE
+)
+
+qt_add_qml_module(lumina_reader
+    URI LuminaReader
+    VERSION 1.0
+    QML_FILES
+        src/ui/qml/Main.qml
+        src/ui/qml/Theme.qml
+)
+
+target_link_libraries(lumina_reader
+    PRIVATE
+        lumina_core
+        Qt6::Gui
+        Qt6::Qml
+        Qt6::Quick
+        Qt6::QuickControls2
+)
+
+set_target_properties(lumina_reader PROPERTIES
+    MACOSX_BUNDLE TRUE
+    WIN32_EXECUTABLE TRUE
+)
+
+include(CTest)
+
+if(BUILD_TESTING)
+    qt_add_executable(lumina_tests
+        tests/unit/smoke_test.cpp
+    )
+
+    target_link_libraries(lumina_tests
+        PRIVATE
+            lumina_core
+            Qt6::Test
+    )
+
+    add_test(NAME lumina_tests COMMAND lumina_tests)
+endif()
+
+include(GNUInstallDirs)
+
+install(TARGETS lumina_reader
+    BUNDLE DESTINATION .
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+)
