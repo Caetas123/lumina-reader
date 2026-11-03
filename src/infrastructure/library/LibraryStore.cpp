@@ -1739,6 +1739,48 @@ bool LibraryStore::addAnnotation(const QString &documentId,
     return true;
 }
 
+bool LibraryStore::updateAnnotation(const QString &annotationId,
+                                    const QString &text,
+                                    const QString &kind)
+{
+    const QString normalizedId = annotationId.trimmed();
+    const QString normalizedText = text.trimmed();
+    const QString normalizedKind = kind.trimmed().toLower();
+    if (!isReady() || normalizedId.isEmpty() || normalizedText.isEmpty()
+        || normalizedKind.isEmpty()) {
+        return false;
+    }
+
+    QSqlDatabase connection = database_->connection();
+    if (!connection.transaction()) {
+        return false;
+    }
+
+    QSqlQuery query(connection);
+    query.prepare(QStringLiteral(
+        "UPDATE annotations SET text = :text, kind = :kind, updated_at = CURRENT_TIMESTAMP "
+        "WHERE id = :id"));
+    query.bindValue(QStringLiteral(":text"), normalizedText);
+    query.bindValue(QStringLiteral(":kind"), normalizedKind);
+    query.bindValue(QStringLiteral(":id"), normalizedId);
+    bool success = query.exec() && query.numRowsAffected() > 0;
+    if (success) {
+        QSqlQuery search(connection);
+        search.prepare(QStringLiteral(
+            "UPDATE knowledge_items_search SET text = :text, note = :note "
+            "WHERE source_id = :id AND source_kind = 'annotation'"));
+        search.bindValue(QStringLiteral(":text"), normalizedText);
+        search.bindValue(QStringLiteral(":note"), normalizedKind);
+        search.bindValue(QStringLiteral(":id"), normalizedId);
+        success = search.exec();
+    }
+    if (!success || !connection.commit()) {
+        connection.rollback();
+        return false;
+    }
+    return true;
+}
+
 bool LibraryStore::removeAnnotation(const QString &annotationId)
 {
     if (!isReady() || annotationId.trimmed().isEmpty()) {

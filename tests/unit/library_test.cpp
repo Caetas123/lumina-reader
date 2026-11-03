@@ -234,6 +234,20 @@ private slots:
         QCOMPARE(annotationResults.first().toMap().value(QStringLiteral("kind")).toString(),
                  QStringLiteral("annotation"));
         QCOMPARE(store.annotationsForDocument(documentId).size(), 1);
+        const QString annotationId = store.annotationsForDocument(documentId)
+                                         .first().toMap().value(QStringLiteral("id")).toString();
+        QVERIFY(store.updateAnnotation(annotationId,
+                                       QStringLiteral("Revised image region note."),
+                                       QStringLiteral("note")));
+        const QVariantMap updatedAnnotation = store.annotationsForDocument(documentId).first().toMap();
+        QCOMPARE(updatedAnnotation.value(QStringLiteral("text")).toString(),
+                 QStringLiteral("Revised image region note."));
+        QCOMPARE(updatedAnnotation.value(QStringLiteral("kind")).toString(), QStringLiteral("note"));
+        const QVariantList updatedAnnotationResults = store.knowledgeSearch(QStringLiteral("revised"));
+        QCOMPARE(updatedAnnotationResults.size(), 1);
+        QCOMPARE(updatedAnnotationResults.first().toMap().value(QStringLiteral("note")).toString(),
+                 QStringLiteral("note"));
+        QVERIFY(!store.updateAnnotation(annotationId, QStringLiteral(" "), QStringLiteral("note")));
 
         QVERIFY(store.addAnnotation(documentId,
                                      QStringLiteral("A selected image region."),

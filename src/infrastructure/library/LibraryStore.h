@@ -120,6 +120,9 @@ public:
                                    double y = 0.0,
                                    double width = 0.0,
                                    double height = 0.0);
+    Q_INVOKABLE bool updateAnnotation(const QString &annotationId,
+                                      const QString &text,
+                                      const QString &kind);
     Q_INVOKABLE bool removeAnnotation(const QString &annotationId);
     [[nodiscard]] QString ocrTextForPage(const QString &documentId, int page) const;
     bool saveOcrPage(const QString &documentId,

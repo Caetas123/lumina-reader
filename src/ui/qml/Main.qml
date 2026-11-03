@@ -27,6 +27,8 @@ ApplicationWindow {
     property var highlightStyles: ["highlight", "underline", "strike"]
     property var contentTypeKeys: ["book", "manga", "manhwa", "webtoon", "newspaper", "magazine", "article", "academic", "handout", "comic", "document", "image", "text", "other"]
     property var contentTypeLabels: [qsTr("Book"), qsTr("Manga"), qsTr("Manhwa"), qsTr("Webtoon"), qsTr("Newspaper"), qsTr("Magazine"), qsTr("Article"), qsTr("Academic paper"), qsTr("Handout"), qsTr("Comic"), qsTr("Document"), qsTr("Image"), qsTr("Text"), qsTr("Other")]
+    property var annotationKindKeys: ["note", "region"]
+    property var annotationKindLabels: [qsTr("Note"), qsTr("Image region")]
     property var libraryBrowseOptions: []
 
     function applyTheme() {
@@ -755,6 +757,59 @@ ApplicationWindow {
             textHighlightDialog.editingId = ""
             textHighlightNote.clear()
             readerText.deselect()
+        }
+    }
+
+    Dialog {
+        id: annotationEditDialog
+        property string editingId: ""
+        modal: true
+        title: qsTr("Edit saved note")
+        width: Math.min(window.width - 80, 560)
+        standardButtons: Dialog.Ok | Dialog.Cancel
+
+        contentItem: ColumnLayout {
+            spacing: 12
+
+            Label {
+                text: qsTr("Update the note without changing the original document or its saved position.")
+                color: Theme.textSecondary
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+            ComboBox {
+                id: annotationEditKind
+                Layout.fillWidth: true
+                model: window.annotationKindLabels
+            }
+            TextArea {
+                id: annotationEditText
+                Layout.fillWidth: true
+                Layout.preferredHeight: 140
+                placeholderText: qsTr("Write your note")
+                wrapMode: TextArea.Wrap
+            }
+        }
+
+        onOpened: annotationEditText.forceActiveFocus()
+        onAccepted: {
+            var text = annotationEditText.text.trim()
+            var saved = editingId.length > 0 && text.length > 0
+                && appController.library.updateAnnotation(
+                    editingId,
+                    text,
+                    window.annotationKindKeys[annotationEditKind.currentIndex])
+            window.notification = saved
+                ? qsTr("Note updated.")
+                : qsTr("The note could not be updated.")
+            notificationTimer.restart()
+            knowledgePage.refreshResults()
+            editingId = ""
+            annotationEditText.clear()
+        }
+        onRejected: {
+            editingId = ""
+            annotationEditText.clear()
         }
     }
 
@@ -1739,6 +1794,18 @@ ApplicationWindow {
                                             }
                                         }
                                         Button {
+                                             visible: modelData.kind === "annotation"
+                                             text: qsTr("Edit")
+                                             onClicked: {
+                                                 annotationEditDialog.editingId = modelData.id
+                                                 annotationEditText.text = modelData.text || ""
+                                                 annotationEditKind.currentIndex = Math.max(
+                                                     0,
+                                                     window.annotationKindKeys.indexOf(modelData.annotationKind || "note"))
+                                                 annotationEditDialog.open()
+                                             }
+                                         }
+                                         Button {
                                             text: qsTr("Delete")
                                             onClicked: {
                                                 knowledgeDeleteDialog.pendingId = modelData.id
