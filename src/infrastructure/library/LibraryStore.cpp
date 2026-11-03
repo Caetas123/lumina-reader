@@ -2118,6 +2118,7 @@ bool LibraryStore::addHighlight(const QString &documentId,
     }
     const QString id = QUuid::createUuid().toString(QUuid::WithoutBraces);
     const QString normalizedColor = color.isEmpty() ? QStringLiteral("#f6c945") : color;
+    const QString normalizedNote = note.isNull() ? QStringLiteral("") : note;
     const int normalizedPage = std::max(page, 0);
     QSqlDatabase connection = database_->connection();
     if (!connection.transaction()) {
@@ -2131,7 +2132,7 @@ bool LibraryStore::addHighlight(const QString &documentId,
     query.bindValue(QStringLiteral(":id"), id);
     query.bindValue(QStringLiteral(":document"), documentId);
     query.bindValue(QStringLiteral(":text"), text);
-    query.bindValue(QStringLiteral(":note"), note);
+    query.bindValue(QStringLiteral(":note"), normalizedNote);
     query.bindValue(QStringLiteral(":color"), normalizedColor);
     query.bindValue(QStringLiteral(":style"), normalizedStyle);
     query.bindValue(QStringLiteral(":locator"), locator);
@@ -2145,7 +2146,7 @@ bool LibraryStore::addHighlight(const QString &documentId,
         search.bindValue(QStringLiteral(":highlight"), id);
         search.bindValue(QStringLiteral(":document"), documentId);
         search.bindValue(QStringLiteral(":text"), text);
-        search.bindValue(QStringLiteral(":note"), note);
+        search.bindValue(QStringLiteral(":note"), normalizedNote);
         success = search.exec();
     }
     if (success) {
@@ -2157,7 +2158,7 @@ bool LibraryStore::addHighlight(const QString &documentId,
         search.bindValue(QStringLiteral(":source"), id);
         search.bindValue(QStringLiteral(":document"), documentId);
         search.bindValue(QStringLiteral(":text"), text);
-        search.bindValue(QStringLiteral(":note"), note);
+        search.bindValue(QStringLiteral(":note"), normalizedNote);
         search.bindValue(QStringLiteral(":page"), normalizedPage);
         search.bindValue(QStringLiteral(":locator"), locator);
         success = search.exec();
@@ -2174,7 +2175,7 @@ bool LibraryStore::addHighlight(const QString &documentId,
             {QStringLiteral("id"), id},
             {QStringLiteral("documentId"), documentId},
             {QStringLiteral("text"), text},
-            {QStringLiteral("note"), note},
+            {QStringLiteral("note"), normalizedNote},
             {QStringLiteral("color"), normalizedColor},
             {QStringLiteral("style"), normalizedStyle},
             {QStringLiteral("locator"), locator},

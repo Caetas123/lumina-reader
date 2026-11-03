@@ -413,6 +413,84 @@ private slots:
         QVERIFY(store.removeDocument(documentId));
         QCOMPARE(store.count(), 1);
     }
+
+    void searchesKnowledgeAcrossTextAndImageDocuments()
+    {
+        Lumina::Infrastructure::Database database;
+        Lumina::Domain::Error error;
+        QVERIFY2(database.open(QStringLiteral(":memory:"), &error),
+                 qPrintable(error.logMessage()));
+        QVERIFY2(database.migrate(&error), qPrintable(error.logMessage()));
+
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const QString textPath = directory.filePath(QStringLiteral("chapter.txt"));
+        QFile textFile(textPath);
+        QVERIFY(textFile.open(QIODevice::WriteOnly | QIODevice::Text));
+        QVERIFY(textFile.write("Democracy can be studied in every medium.\n") > 0);
+        textFile.close();
+
+        const QString imagePath = directory.filePath(QStringLiteral("scanned-page.png"));
+        QImage image(64, 64, QImage::Format_ARGB32);
+        image.fill(Qt::white);
+        QVERIFY(image.save(imagePath));
+
+        Lumina::Infrastructure::LibraryStore store;
+        store.setDatabase(&database);
+        QVERIFY(store.importFiles({textPath, imagePath}));
+
+        QString textDocumentId;
+        QString imageDocumentId;
+        for (int row = 0; row < store.rowCount(); ++row) {
+            const QModelIndex index = store.index(row, 0);
+            const QString format = store.data(index, Lumina::Infrastructure::LibraryStore::FormatRole)
+                                       .toString();
+            if (format == QStringLiteral("txt")) {
+                textDocumentId = store.data(index, Lumina::Infrastructure::LibraryStore::IdRole)
+                                     .toString();
+            } else if (format == QStringLiteral("png")) {
+                imageDocumentId = store.data(index, Lumina::Infrastructure::LibraryStore::IdRole)
+                                      .toString();
+            }
+        }
+        QVERIFY(!textDocumentId.isEmpty());
+        QVERIFY(!imageDocumentId.isEmpty());
+
+        QVERIFY(store.addHighlight(textDocumentId,
+                                   QStringLiteral("Democracy can be studied"),
+                                   QStringLiteral("text:0:0:27"),
+                                   0,
+                                   QStringLiteral("#f6c945")));
+        QVERIFY(store.addAnnotation(imageDocumentId,
+                                    QStringLiteral("Democracy appears in this scanned region."),
+                                    QStringLiteral("region"),
+                                    QStringLiteral("region:0.1,0.2,0.5,0.4"),
+                                    0,
+                                    0.1,
+                                    0.2,
+                                    0.5,
+                                    0.4));
+
+        const QVariantList results = store.knowledgeSearch(QStringLiteral("democracy"));
+        QCOMPARE(results.size(), 2);
+        bool foundTextHighlight = false;
+        bool foundImageAnnotation = false;
+        for (const QVariant &result : results) {
+            const QVariantMap record = result.toMap();
+            foundTextHighlight = foundTextHighlight
+                || (record.value(QStringLiteral("documentId")).toString() == textDocumentId
+                    && record.value(QStringLiteral("kind")).toString() == QStringLiteral("highlight"));
+            foundImageAnnotation = foundImageAnnotation
+                || (record.value(QStringLiteral("documentId")).toString() == imageDocumentId
+                    && record.value(QStringLiteral("kind")).toString() == QStringLiteral("annotation"));
+        }
+        QVERIFY(foundTextHighlight);
+        QVERIFY(foundImageAnnotation);
+
+        Lumina::Infrastructure::LibraryStore reloadedStore;
+        reloadedStore.setDatabase(&database);
+        QCOMPARE(reloadedStore.knowledgeSearch(QStringLiteral("democracy")).size(), 2);
+    }
 };
 
 QTEST_GUILESS_MAIN(LibraryTest)
