@@ -2,6 +2,8 @@
 #include "infrastructure/library/LibraryStore.h"
 
 #include <QFile>
+#include <QImage>
+#include <QFileInfo>
 #include <QTemporaryDir>
 #include <QtTest>
 
@@ -78,6 +80,33 @@ private slots:
         QCOMPARE(store.count(), 1);
         store.setViewFilter(QStringLiteral("all"));
         QCOMPARE(store.count(), 2);
+        const QString imagePath = directory.filePath(QStringLiteral("cover.png"));
+        QImage image(32, 48, QImage::Format_ARGB32);
+        image.fill(Qt::magenta);
+        QVERIFY(image.save(imagePath));
+        QVERIFY(store.importFiles({imagePath}));
+        QString imageDocumentId;
+        for (int row = 0; row < store.rowCount(); ++row) {
+            const QModelIndex imageIndex = store.index(row, 0);
+            if (store.data(imageIndex, Lumina::Infrastructure::LibraryStore::FormatRole).toString()
+                == QStringLiteral("png")) {
+                imageDocumentId = store.data(imageIndex, Lumina::Infrastructure::LibraryStore::IdRole)
+                                      .toString();
+                break;
+            }
+        }
+        QVERIFY(!imageDocumentId.isEmpty());
+        const QString generatedCover = store.documentDetails(imageDocumentId)
+                                           .value(QStringLiteral("coverPath"))
+                                           .toString();
+        QVERIFY(!generatedCover.isEmpty());
+        QVERIFY(QFileInfo::exists(generatedCover));
+        QVERIFY(store.setCoverPath(imageDocumentId, imagePath));
+        QCOMPARE(store.documentDetails(imageDocumentId).value(QStringLiteral("coverPath")).toString(),
+                 QFileInfo(imagePath).absoluteFilePath());
+        QVERIFY(store.setCoverPath(imageDocumentId, QStringLiteral("")));
+        QVERIFY(store.documentDetails(imageDocumentId).value(QStringLiteral("coverPath")).toString().isEmpty());
+        QVERIFY(store.removeDocument(imageDocumentId));
 
         QVERIFY(store.addHighlight(documentId,
                                    QStringLiteral("Democracy"),

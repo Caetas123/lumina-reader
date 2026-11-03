@@ -12,6 +12,7 @@
 #include <QFileInfo>
 #include <QFileSystemWatcher>
 #include <QImageReader>
+#include <QImage>
 #include <QRegularExpression>
 #include <QSqlError>
 #include <QSqlQuery>
@@ -243,6 +244,48 @@ void setError(Lumina::Domain::Error *error,
     if (error != nullptr) {
         *error = Lumina::Domain::Error::create(code, userMessage, technicalMessage);
     }
+}
+
+QString generatedCoverPath(const QString &path, const QString &format, const QString &hash)
+{
+    QImage image;
+    if (isImageFormat(format)) {
+        image.load(path);
+    }
+#ifdef LUMINA_HAS_QT_PDF
+    else if (format == QStringLiteral("pdf")) {
+        QPdfDocument document;
+        if (document.load(path) == QPdfDocument::Error::None && document.pageCount() > 0) {
+            image = document.render(0, QSize(640, 900));
+        }
+    }
+#endif
+    else if (format == QStringLiteral("cbz") || format == QStringLiteral("zip")) {
+        Lumina::Infrastructure::ArchiveReader archive;
+        if (archive.open(path, format) && archive.pageCount() > 0 && archive.pageIsImage(0)) {
+            image = QImage::fromData(archive.pageData(0));
+        }
+    }
+
+    if (image.isNull() || image.width() <= 0 || image.height() <= 0
+        || image.width() > 20000 || image.height() > 20000) {
+        return QStringLiteral("");
+    }
+
+    const QString cachePath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+    if (cachePath.isEmpty()) {
+        return QStringLiteral("");
+    }
+    QDir cacheDirectory(cachePath);
+    if (!cacheDirectory.mkpath(QStringLiteral("covers"))) {
+        return QStringLiteral("");
+    }
+    const QString outputPath = cacheDirectory.filePath(
+        QStringLiteral("covers/") + hash + QStringLiteral(".png"));
+    const QImage cover = image.scaled(QSize(480, 680),
+                                      Qt::KeepAspectRatio,
+                                      Qt::SmoothTransformation);
+    return cover.save(outputPath, "PNG") ? outputPath : QStringLiteral("");
 }
 
 } // namespace
@@ -604,6 +647,7 @@ bool LibraryStore::importSingle(const QString &filePath)
         : info.completeBaseName();
     const QString contentType = contentTypeForFormat(format);
     const QString text = searchableText(path, format);
+    const QString coverPath = generatedCoverPath(path, format, hash);
 
     if (!connection.transaction()) {
         setError(QStringLiteral("The document could not be added to the library."));
@@ -613,7 +657,8 @@ bool LibraryStore::importSingle(const QString &filePath)
     QSqlQuery insert(connection);
     insert.prepare(QStringLiteral(
         "INSERT INTO documents (id, file_path, canonical_path, file_hash, file_size, format, "
-        "content_type, title) VALUES (:id, :path, :canonical, :hash, :size, :format, :type, :title)"));
+        "content_type, title, cover_path) VALUES (:id, :path, :canonical, :hash, :size, :format, "
+        ":type, :title, :cover)"));
     insert.bindValue(QStringLiteral(":id"), id);
     insert.bindValue(QStringLiteral(":path"), path);
     insert.bindValue(QStringLiteral(":canonical"), path);
@@ -622,6 +667,7 @@ bool LibraryStore::importSingle(const QString &filePath)
     insert.bindValue(QStringLiteral(":format"), format);
     insert.bindValue(QStringLiteral(":type"), contentType);
     insert.bindValue(QStringLiteral(":title"), title);
+    insert.bindValue(QStringLiteral(":cover"), coverPath);
     bool success = insert.exec();
 
     if (success) {
@@ -821,6 +867,37 @@ bool LibraryStore::updateMetadata(const QString &documentId,
     }
     if (!success || !connection.commit()) {
         connection.rollback();
+        return false;
+    }
+    reload();
+    return true;
+}
+
+bool LibraryStore::setCoverPath(const QString &documentId, const QString &coverPath)
+{
+    if (!isReady() || documentId.trimmed().isEmpty() || documentDetails(documentId).isEmpty()) {
+        return false;
+    }
+
+    QString normalizedCoverPath = QStringLiteral("");
+    if (!coverPath.trimmed().isEmpty()) {
+        const QFileInfo coverInfo(coverPath);
+        if (!coverInfo.exists() || !coverInfo.isFile() || !coverInfo.isReadable()) {
+            return false;
+        }
+        QImageReader reader(coverInfo.absoluteFilePath());
+        if (!reader.canRead()) {
+            return false;
+        }
+        normalizedCoverPath = normalizedPath(coverInfo.absoluteFilePath());
+    }
+
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral(
+        "UPDATE documents SET cover_path = :cover, updated_at = CURRENT_TIMESTAMP WHERE id = :id"));
+    query.bindValue(QStringLiteral(":cover"), normalizedCoverPath);
+    query.bindValue(QStringLiteral(":id"), documentId);
+    if (!query.exec() || query.numRowsAffected() == 0) {
         return false;
     }
     reload();

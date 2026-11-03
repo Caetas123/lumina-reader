@@ -171,6 +171,7 @@ ApplicationWindow {
             return
         }
         metadataDialog.documentId = documentId
+        metadataDialog.coverPath = record.coverPath || ""
         metadataTitle.text = record.title || ""
         metadataAuthor.text = record.author || ""
         metadataLanguage.text = record.language || ""
@@ -237,6 +238,7 @@ ApplicationWindow {
     Dialog {
         id: metadataDialog
         property string documentId: ""
+        property string coverPath: ""
         modal: true
         title: qsTr("Edit document details")
         width: Math.min(window.width - 80, 560)
@@ -309,6 +311,32 @@ ApplicationWindow {
                     }
                 }
             }
+            RowLayout {
+                Layout.fillWidth: true
+                Label {
+                    Layout.fillWidth: true
+                    text: metadataDialog.coverPath.length > 0
+                        ? metadataDialog.coverPath
+                        : qsTr("No cover image selected")
+                    color: Theme.textSecondary
+                    elide: Text.ElideMiddle
+                }
+                Button {
+                    text: qsTr("Choose cover")
+                    onClicked: coverDialog.open()
+                }
+                Button {
+                    text: qsTr("Clear")
+                    enabled: metadataDialog.coverPath.length > 0
+                    onClicked: {
+                        if (appController.library.setCoverPath(metadataDialog.documentId, "")) {
+                            metadataDialog.coverPath = ""
+                            window.notification = qsTr("The cover image was cleared.")
+                            notificationTimer.restart()
+                        }
+                    }
+                }
+            }
             TextArea {
                 id: metadataDescription
                 Layout.fillWidth: true
@@ -330,6 +358,23 @@ ApplicationWindow {
             }
             appController.library.refresh()
             window.notification = saved ? qsTr("Document details saved.") : qsTr("The document details could not be saved.")
+            notificationTimer.restart()
+        }
+    }
+
+    FileDialog {
+        id: coverDialog
+        title: qsTr("Choose a cover image")
+        fileMode: FileDialog.OpenFile
+        nameFilters: [qsTr("Images (*.png *.jpg *.jpeg *.webp *.avif *.gif)"), qsTr("All files (*)")]
+        onAccepted: {
+            var path = window.localPath(selectedFile)
+            if (appController.library.setCoverPath(metadataDialog.documentId, path)) {
+                metadataDialog.coverPath = path
+                window.notification = qsTr("The cover image was saved.")
+            } else {
+                window.notification = qsTr("The selected cover image could not be used.")
+            }
             notificationTimer.restart()
         }
     }
