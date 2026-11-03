@@ -14,6 +14,7 @@
     <PublishTrimmed>false</PublishTrimmed>
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
+    <InformationalVersion Condition="'$(ApplicationVersion)' != ''">$(ApplicationVersion)</InformationalVersion>
     <ApplicationPackage Condition="'$(ApplicationPackage)' == ''">LuminaReader-windows-x64.zip</ApplicationPackage>
     <LogoPath Condition="'$(LogoPath)' == ''">$(MSBuildThisFileDirectory)..\..\..\assets\lumina-logo.png</LogoPath>
   </PropertyGroup>

@@ -17,7 +17,11 @@ internal static class Program
 
 internal sealed class InstallerForm : Form
 {
-    private const string ApplicationVersion = "0.2.0";
+    private static readonly string ApplicationVersion =
+        Assembly.GetEntryAssembly()?
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion
+        ?? "unknown";
     private static readonly Color Accent = Color.FromArgb(79, 70, 229);
     private static readonly Color AccentDark = Color.FromArgb(55, 48, 163);
     private static readonly Color TextPrimary = Color.FromArgb(32, 36, 43);

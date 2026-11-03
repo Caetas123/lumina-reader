@@ -18,6 +18,7 @@ This report describes the behavior implemented in the repository, not only the c
 - Optional system text-to-speech with start, pause, resume, stop, rate, volume, selected-passage reading, and continuous-document reading.
 - Themes, font size, line spacing, continuous reading, high contrast, keyboard navigation, accessible labels/tooltips, settings export/restore, library export/restore, knowledge export, and database backup.
 - Plain-text export of the opened document without changing the source file.
+- One cross-platform release version from `project-version.txt`, with tag checks shared by the Linux, Windows, and macOS packaging workflows.
 - Archive safety checks for normalized paths, symbolic links, entry count, entry sizes, total size, unsupported encryption, and malformed readers.
 
 ## Automated validation

@@ -1,6 +1,15 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(LuminaReader VERSION 0.2.0 LANGUAGES CXX)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/project-version.txt"
+)
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/project-version.txt" LUMINA_READER_VERSION LIMIT_COUNT 1)
+string(STRIP "${LUMINA_READER_VERSION}" LUMINA_READER_VERSION)
+if(NOT LUMINA_READER_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
+    message(FATAL_ERROR "project-version.txt must contain one semantic version such as 0.2.0.")
+endif()
+
+project(LuminaReader VERSION "${LUMINA_READER_VERSION}" LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

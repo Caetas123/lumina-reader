@@ -12,7 +12,7 @@ The project is privacy-focused: documents, reading data, and search indexes stay
 
 ## Download
 
-Ready-to-run builds are published on [GitHub Releases](https://github.com/Caetas123/lumina-reader/releases). The links below are direct executable downloads; Lumina Reader does not require a portable ZIP for end users.
+Ready-to-run builds are published on [GitHub Releases](https://github.com/Caetas123/lumina-reader/releases). The links below are direct executable downloads; Lumina Reader does not require a portable ZIP for end users. Windows, Linux, and macOS packages for a release use the same Git tag, and CI rejects a release when its tag differs from `project-version.txt`.
 
 | Platform | Download | Notes |
 | --- | --- | --- |
