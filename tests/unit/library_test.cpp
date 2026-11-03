@@ -68,6 +68,13 @@ private slots:
         QVERIFY(store.setTags(documentId, {QStringLiteral("study"), QStringLiteral("important")}));
         QCOMPARE(store.tagsForDocument(documentId),
                  QStringList({QStringLiteral("important"), QStringLiteral("study")}));
+        store.setViewFilter(QStringLiteral("collection:") + collectionId);
+        QCOMPARE(store.count(), 1);
+        store.setViewFilter(QStringLiteral("tag:study"));
+        QCOMPARE(store.count(), 1);
+        store.setViewFilter(QStringLiteral("type:text"));
+        QCOMPARE(store.count(), 1);
+        store.setViewFilter(QStringLiteral("all"));
         QVERIFY(store.removeFromCollection(documentId, collectionId));
         QCOMPARE(store.collectionsForDocument(documentId).size(), 0);
         QVERIFY(store.deleteCollection(collectionId));

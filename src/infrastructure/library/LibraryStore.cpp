@@ -231,7 +231,10 @@ bool isValidViewFilter(const QString &filter)
     return filter.isEmpty() || filter == QStringLiteral("all")
         || filter == QStringLiteral("favorites") || filter == QStringLiteral("to_read")
         || filter == QStringLiteral("reading") || filter == QStringLiteral("read")
-        || filter == QStringLiteral("abandoned");
+        || filter == QStringLiteral("abandoned") || filter == QStringLiteral("recent")
+        || (filter.startsWith(QStringLiteral("collection:")) && filter.size() > 11)
+        || (filter.startsWith(QStringLiteral("tag:")) && filter.size() > 4)
+        || (filter.startsWith(QStringLiteral("type:")) && filter.size() > 5);
 }
 
 QString viewFilterPredicate(const QString &filter)
@@ -242,6 +245,9 @@ QString viewFilterPredicate(const QString &filter)
     if (filter == QStringLiteral("to_read") || filter == QStringLiteral("reading")
         || filter == QStringLiteral("read") || filter == QStringLiteral("abandoned")) {
         return QStringLiteral("d.status = '%1'").arg(filter);
+    }
+    if (filter == QStringLiteral("recent")) {
+        return QStringLiteral("COALESCE(d.last_opened_at, d.added_at) >= datetime('now', '-30 days')");
     }
     return {};
 }
@@ -444,6 +450,22 @@ void LibraryStore::reload()
     if (!filterPredicate.isEmpty()) {
         predicates.append(filterPredicate);
     }
+    const QString normalizedFilter = viewFilter();
+    QString dynamicFilterPredicate;
+    if (normalizedFilter.startsWith(QStringLiteral("collection:"))) {
+        dynamicFilterPredicate = QStringLiteral(
+            "EXISTS (SELECT 1 FROM document_collections dc "
+            "WHERE dc.document_id = d.id AND dc.collection_id = :collection_filter)");
+    } else if (normalizedFilter.startsWith(QStringLiteral("tag:"))) {
+        dynamicFilterPredicate = QStringLiteral(
+            "EXISTS (SELECT 1 FROM document_tags dt JOIN tags t ON t.id = dt.tag_id "
+            "WHERE dt.document_id = d.id AND lower(t.name) = lower(:tag_filter))");
+    } else if (normalizedFilter.startsWith(QStringLiteral("type:"))) {
+        dynamicFilterPredicate = QStringLiteral("d.content_type = :type_filter");
+    }
+    if (!dynamicFilterPredicate.isEmpty()) {
+        predicates.append(dynamicFilterPredicate);
+    }
     if (!query_.isEmpty()) {
         predicates.append(QStringLiteral("document_search MATCH :match"));
     }
@@ -462,12 +484,22 @@ void LibraryStore::reload()
     if (!query_.isEmpty()) {
         query.bindValue(QStringLiteral(":match"), ftsPrefixQuery(query_));
     }
+    if (normalizedFilter.startsWith(QStringLiteral("collection:"))) {
+        query.bindValue(QStringLiteral(":collection_filter"), normalizedFilter.mid(11));
+    } else if (normalizedFilter.startsWith(QStringLiteral("tag:"))) {
+        query.bindValue(QStringLiteral(":tag_filter"), normalizedFilter.mid(4));
+    } else if (normalizedFilter.startsWith(QStringLiteral("type:"))) {
+        query.bindValue(QStringLiteral(":type_filter"), normalizedFilter.mid(5));
+    }
 
     if (!query.exec()) {
         if (!query_.isEmpty()) {
             QStringList fallbackPredicates;
             if (!filterPredicate.isEmpty()) {
                 fallbackPredicates.append(filterPredicate);
+            }
+            if (!dynamicFilterPredicate.isEmpty()) {
+                fallbackPredicates.append(dynamicFilterPredicate);
             }
             fallbackPredicates.append(QStringLiteral(
                 "(d.title LIKE :term OR d.author LIKE :term OR d.description LIKE :term)"));
@@ -476,6 +508,13 @@ void LibraryStore::reload()
                                            "ORDER BY COALESCE(d.last_opened_at, d.added_at) DESC")
                                  .arg(columns, fallbackPredicates.join(QStringLiteral(" AND "))));
             fallback.bindValue(QStringLiteral(":term"), QStringLiteral("%") + query_ + QStringLiteral("%"));
+            if (normalizedFilter.startsWith(QStringLiteral("collection:"))) {
+                fallback.bindValue(QStringLiteral(":collection_filter"), normalizedFilter.mid(11));
+            } else if (normalizedFilter.startsWith(QStringLiteral("tag:"))) {
+                fallback.bindValue(QStringLiteral(":tag_filter"), normalizedFilter.mid(4));
+            } else if (normalizedFilter.startsWith(QStringLiteral("type:"))) {
+                fallback.bindValue(QStringLiteral(":type_filter"), normalizedFilter.mid(5));
+            }
             if (fallback.exec()) {
                 while (fallback.next()) {
                     records_.append(recordFromQuery(fallback));

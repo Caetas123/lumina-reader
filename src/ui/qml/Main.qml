@@ -25,17 +25,37 @@ ApplicationWindow {
     property string zoomDocumentId: ""
     property var highlightColors: ["#f6c945", "#7acb8a", "#77a8e8", "#ed8fb3", "#aa8bd8"]
     property var highlightStyles: ["highlight", "underline", "strike"]
+    property var libraryBrowseOptions: []
 
     function applyTheme() {
         Theme.mode = appController.settings.highContrast ? "high-contrast" : appController.settings.theme
     }
 
-    Component.onCompleted: applyTheme()
+    Component.onCompleted: {
+        applyTheme()
+        refreshLibraryBrowseOptions()
+    }
 
     Connections {
         target: appController.settings
         function onSettingsChanged() {
             window.applyTheme()
+        }
+    }
+
+    Connections {
+        target: appController.library
+        function onLibraryChanged() {
+            window.refreshLibraryBrowseOptions()
+        }
+        function onViewFilterChanged() {
+            var filter = appController.library.viewFilter
+            for (var index = 0; index < window.libraryBrowseOptions.length; ++index) {
+                if (window.libraryBrowseOptions[index].filter === filter) {
+                    libraryBrowseFilter.currentIndex = index
+                    break
+                }
+            }
         }
     }
 
@@ -238,6 +258,38 @@ ApplicationWindow {
         return minutes === 0
             ? qsTr("%1 h read").arg(hours)
             : qsTr("%1 h %2 min read").arg(hours).arg(minutes)
+    }
+
+    function refreshLibraryBrowseOptions() {
+        var options = [
+            { label: qsTr("All items"), filter: "all" },
+            { label: qsTr("Recently opened"), filter: "recent" },
+            { label: qsTr("Favorites"), filter: "favorites" },
+            { label: qsTr("To read"), filter: "to_read" },
+            { label: qsTr("Reading"), filter: "reading" },
+            { label: qsTr("Finished"), filter: "read" },
+            { label: qsTr("Abandoned"), filter: "abandoned" },
+            { label: qsTr("Books"), filter: "type:book" },
+            { label: qsTr("Comics"), filter: "type:comic" },
+            { label: qsTr("Documents"), filter: "type:document" },
+            { label: qsTr("Text"), filter: "type:text" },
+            { label: qsTr("Images"), filter: "type:image" }
+        ]
+        var collections = appController.library.collections()
+        for (var collectionIndex = 0; collectionIndex < collections.length; ++collectionIndex) {
+            options.push({
+                label: qsTr("Collection: %1").arg(collections[collectionIndex].name),
+                filter: "collection:" + collections[collectionIndex].id
+            })
+        }
+        var tags = appController.library.tags()
+        for (var tagIndex = 0; tagIndex < tags.length; ++tagIndex) {
+            options.push({
+                label: qsTr("Tag: %1").arg(tags[tagIndex].name),
+                filter: "tag:" + tags[tagIndex].name
+            })
+        }
+        libraryBrowseOptions = options
     }
 
     Timer {
@@ -912,6 +964,18 @@ ApplicationWindow {
                 Button {
                     Layout.fillWidth: true
                     checkable: true
+                    checked: window.currentView === 0 && appController.library.viewFilter === "abandoned"
+                    onClicked: window.setLibraryFilter("abandoned")
+                    contentItem: RowLayout {
+                        spacing: 10
+                        Label { text: "×"; color: parent.parent.checked ? Theme.accent : Theme.textSecondary; font.pixelSize: 18 }
+                        Label { text: qsTr("Abandoned"); color: Theme.textPrimary; Layout.fillWidth: true }
+                    }
+                }
+
+                Button {
+                    Layout.fillWidth: true
+                    checkable: true
                     checked: window.currentView === 1
                     onClicked: window.currentView = 1
                     contentItem: RowLayout {
@@ -1039,6 +1103,14 @@ ApplicationWindow {
                     RowLayout {
                         Layout.fillWidth: true
                         spacing: 10
+                        ComboBox {
+                            id: libraryBrowseFilter
+                            Layout.preferredWidth: 180
+                            model: window.libraryBrowseOptions
+                            textRole: "label"
+                            valueRole: "filter"
+                            onActivated: window.setLibraryFilter(currentValue)
+                        }
                         TextField {
                             id: librarySearch
                             Layout.fillWidth: true
@@ -1328,8 +1400,8 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 property var results: []
-                property var formatFilters: ["", "epub", "pdf", "mobi", "azw", "azw3", "fb2", "txt", "rtf", "cbz", "zip"]
-                property var colorFilters: ["", "#f6c945", "#7acb8a", "#77a8e8", "#ed8fb3", "#aa8bd8"]
+                property var formatFilters: ["", "epub", "pdf", "mobi", "azw", "azw3", "fb2", "txt", "rtf", "cbz", "cbr", "cb7", "cbt", "rar", "7z", "zip"]
+                property var colorFilters: [""].concat(window.highlightColors)
 
                 function refreshResults() {
                     results = appController.library.knowledgeSearch(
@@ -1376,7 +1448,8 @@ ApplicationWindow {
                             Layout.preferredWidth: 140
                             model: [qsTr("All formats"), qsTr("EPUB"), qsTr("PDF"), qsTr("MOBI"),
                                     qsTr("AZW"), qsTr("AZW3"), qsTr("FB2"), qsTr("TXT"),
-                                    qsTr("RTF"), qsTr("CBZ"), qsTr("ZIP")]
+                                    qsTr("RTF"), qsTr("CBZ"), qsTr("CBR"), qsTr("CB7"), qsTr("CBT"),
+                                    qsTr("RAR"), qsTr("7Z"), qsTr("ZIP")]
                             onActivated: knowledgePage.refreshResults()
                         }
                         ComboBox {
