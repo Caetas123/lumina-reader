@@ -2543,6 +2543,8 @@ ApplicationWindow {
                                 visible: appController.reader.open && appController.reader.imageDocument
                                 text: appController.reader.showOcrText
                                     ? qsTr("Show page")
+                                    : appController.reader.pageTextAvailable
+                                        ? qsTr("Show text")
                                     : appController.reader.ocrRunning
                                         ? qsTr("Recognizing…")
                                         : qsTr("Read image")
@@ -2550,6 +2552,8 @@ ApplicationWindow {
                                 onClicked: {
                                     if (appController.reader.showOcrText) {
                                         appController.reader.showOcrText = false
+                                    } else if (appController.reader.pageTextAvailable) {
+                                        appController.reader.showOcrText = true
                                     } else if (!appController.reader.startOcr(
                                                    window.ocrLanguageKeys[ocrLanguageSelector.currentIndex])) {
                                         window.notification = appController.reader.ocrStatus
@@ -2557,7 +2561,9 @@ ApplicationWindow {
                                     }
                                 }
                                 ToolTip.visible: hovered
-                                ToolTip.text: qsTr("Recognize text without leaving the reader")
+                                ToolTip.text: appController.reader.pageTextAvailable
+                                    ? qsTr("Show selectable text from this page")
+                                    : qsTr("Recognize text without leaving the reader")
                             }
                             ComboBox {
                                 id: ocrLanguageSelector

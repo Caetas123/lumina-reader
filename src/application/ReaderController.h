@@ -33,6 +33,7 @@ class ReaderController final : public QObject {
     Q_PROPERTY(QString imageSource READ imageSource NOTIFY stateChanged)
     Q_PROPERTY(bool imageDocument READ isImageDocument NOTIFY stateChanged)
     Q_PROPERTY(bool textDocument READ isTextDocument NOTIFY stateChanged)
+    Q_PROPERTY(bool pageTextAvailable READ pageTextAvailable NOTIFY stateChanged)
     Q_PROPERTY(QString engineName READ engineName NOTIFY stateChanged)
     Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY stateChanged)
     Q_PROPERTY(bool ocrAvailable READ ocrAvailable NOTIFY stateChanged)
@@ -65,6 +66,7 @@ public:
     [[nodiscard]] QString imageSource() const;
     [[nodiscard]] bool isImageDocument() const;
     [[nodiscard]] bool isTextDocument() const;
+    [[nodiscard]] bool pageTextAvailable() const;
     [[nodiscard]] QString engineName() const;
     [[nodiscard]] QString errorMessage() const;
     [[nodiscard]] bool ocrAvailable() const;

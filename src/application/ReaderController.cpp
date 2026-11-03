@@ -109,6 +109,11 @@ bool ReaderController::isTextDocument() const
             && documentEngine_->pageKind(currentPage_) == Lumina::Domain::Reader::PageKind::Text);
 }
 
+bool ReaderController::pageTextAvailable() const
+{
+    return !textContent_.trimmed().isEmpty();
+}
+
 QString ReaderController::engineName() const
 {
     return engineName_;
@@ -304,14 +309,14 @@ void ReaderController::rebuildContinuousText()
 
     QStringList pages;
     for (int page = 0; page < pageCount_; ++page) {
-        if (documentEngine_->pageKind(page) != Lumina::Domain::Reader::PageKind::Text) {
-            continue;
-        }
         Lumina::Domain::Error error;
         const QString pageText = documentEngine_->textPage(page, &error);
         if (error.hasError()) {
-            continuousTextContent_.clear();
-            return;
+            if (documentEngine_->pageKind(page) == Lumina::Domain::Reader::PageKind::Text) {
+                continuousTextContent_.clear();
+                return;
+            }
+            continue;
         }
         if (!pageText.isEmpty()) {
             pages.append(pageText);
