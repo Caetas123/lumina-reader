@@ -2,7 +2,7 @@
 
 Audit date: 2026-11-03  
 Branch: `main`
-Release candidate: `0.2.1`
+Release candidate: `0.2.2`
 
 This report describes the behavior implemented in the repository, not only the controls visible in QML. Optional capabilities are marked as conditional instead of being presented as universally available.
 

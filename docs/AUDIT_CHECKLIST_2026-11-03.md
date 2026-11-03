@@ -1,7 +1,7 @@
 # Lumina Reader final audit checklist
 
 Audit date: 2026-11-03
-Target release: `0.2.1`
+Target release: `0.2.2`
 Local platform: Windows x64
 Validation executable: `C:\Users\caeta\AppData\Local\Temp\lumina-reader-ui-build-20261103\lumina_reader.exe`
 
@@ -69,13 +69,13 @@ This checklist is evidence-bounded. `PASS` means the behavior was exercised in t
 
 ## Packaging and release gate
 
-- [x] `PASS` `project-version.txt` is the single source of the `0.2.1` release version;
+- [x] `PASS` `project-version.txt` is the single source of the `0.2.2` release version;
 - [x] `PASS` Windows workflow builds the graphical installer and publishes the direct `.exe` asset, with its internal ZIP kept out of the end-user download table;
 - [x] `PASS` the Windows installer script was run locally for `0.2.1`; the generated installer was copied to `C:\Users\caeta\Downloads\LuminaReader-Setup-windows-x64.exe` and its SHA-256 matched the repository staging copy;
 - [x] `PASS` Linux workflow builds both the direct x86_64 AppImage and Debian package from the same tag;
 - [x] `PASS` tag/version verification is present in the Windows, Linux, and macOS packaging workflows;
 - [ ] `REMOTE` GitHub Actions CI must pass on the pushed `main` commit;
-- [ ] `REMOTE` tag-triggered Windows and Linux packaging jobs must pass and attach the expected assets to `v0.2.1`;
+- [ ] `REMOTE` tag-triggered Windows, Linux, and macOS packaging jobs must pass and attach the expected assets to `v0.2.2`;
 - [ ] `REMOTE` release asset URLs and SHA-256 checksums must be checked after publication.
 
 ## Audit conclusion
