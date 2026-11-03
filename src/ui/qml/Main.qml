@@ -2000,6 +2000,29 @@ ApplicationWindow {
                                 color: Theme.textSecondary
                                 font.pixelSize: 11
                             }
+                            RowLayout {
+                                visible: appController.reader.open
+                                spacing: 4
+                                Label {
+                                    text: qsTr("Page")
+                                    color: Theme.textSecondary
+                                    font.pixelSize: 11
+                                }
+                                SpinBox {
+                                    id: readerPageNumber
+                                    from: 1
+                                    to: Math.max(1, appController.reader.pageCount)
+                                    value: appController.reader.currentPage + 1
+                                    editable: true
+                                    Layout.preferredWidth: 76
+                                    onValueModified: appController.reader.goToPage(value - 1)
+                                }
+                                Label {
+                                    text: qsTr("of %1").arg(appController.reader.pageCount)
+                                    color: Theme.textSecondary
+                                    font.pixelSize: 11
+                                }
+                            }
                             Button {
                                 text: "‹"
                                 enabled: appController.reader.searchMatches > 0
