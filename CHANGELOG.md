@@ -15,6 +15,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Replaceable `PdfEngine` abstraction.
 - Initial unit tests, cross-platform CI configuration, and open-source project documentation.
 
+## [0.1.4] - 2026-11-02
+
+### Changed
+
+- Redesigned the Windows installer with a branded visual layout, clearer hierarchy, polished cards, rounded controls, and a dedicated progress experience.
+- Preserved localized user-facing copy, installation-folder selection, Start menu integration, and optional desktop shortcut creation.
+- The application and release metadata now use version `0.1.4`.
+
 ## [0.1.3] - 2026-11-02
 
 ### Added
