@@ -4,6 +4,10 @@ All notable changes to Lumina Reader will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows Semantic Versioning where a public release version exists.
 
+## [0.2.0] - 2026-11-03
+
+This release includes the complete local-library restore flow, scoped reader preferences, offline reuse of saved lookups, performance benchmarks, and the repaired graphical Windows installer. Windows, Linux, and macOS packages are published from the same tag by GitHub Actions.
+
 ## [Unreleased]
 
 ### Added
