@@ -44,6 +44,7 @@ The current application provides:
 - reading progress, last position, status, favorites, ratings, descriptions, language, collections, tags, and reading history;
 - TXT, RTF, FB2, unencrypted PalmDOC-compatible MOBI/AZW/AZW3, raster-image, EPUB, CBZ, and ZIP reading when the matching Qt capabilities are present;
 - optional PDF rendering through Qt PDF in the CI/release build;
+- optional asynchronous page OCR through Tesseract when it is installed on the system;
 - in-document search for text pages and EPUB chapters;
 - persistent highlights, annotations, bookmarks, and a global FTS5 Knowledge center;
 - contextual copy, Google, dictionary, translation, and highlight actions for selected text;
@@ -60,6 +61,7 @@ The exact capability set depends on the Qt modules present in the build. See [th
 - CMake 3.24 or newer;
 - Qt 6.5 or newer with `Core`, `Gui`, `Qml`, `Quick`, `QuickControls2`, `Sql`, and `Test`;
 - optional `Pdf`, `TextToSpeech`, and `CorePrivate` modules enable PDF rendering, system speech, and EPUB/CBZ/ZIP reading respectively;
+- Tesseract OCR is optional at runtime; when available on `PATH`, image-based pages can be recognized without uploading documents;
 - Ninja, or another generator configured through a user preset.
 
 See [docs/BUILDING.md](docs/BUILDING.md) for platform-specific notes.

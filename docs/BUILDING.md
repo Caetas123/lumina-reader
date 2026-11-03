@@ -6,6 +6,7 @@
 - CMake 3.24 or newer;
 - Qt 6.5 or newer with `Core`, `Gui`, `Qml`, `Quick`, `QuickControls2`, `Sql`, and `Test`;
 - `Pdf` for PDF rendering, `TextToSpeech` for system speech, and `CorePrivate` for the in-process EPUB/CBZ/ZIP reader. These are optional at configure time.
+- Tesseract is an optional runtime dependency for OCR. Install it separately and expose `tesseract` on `PATH` (or set `LUMINA_TESSERACT_PATH`) to enable the reader's **Read image** action.
 - Ninja for the checked-in default preset.
 
 The project does not require a server, browser runtime, JavaScript engine, or network service to configure and test the local reader.
@@ -43,6 +44,7 @@ The current tests are Qt Test executables registered with CTest:
 - `lumina_archive_tests` covers EPUB/CBZ navigation and archive path-safety behavior when Qt Core private archive support is present;
 - `lumina_settings_tests` covers persisted reading preferences;
 - `lumina_backup_tests` covers knowledge/library export, metadata fields, and metadata restoration.
+- `lumina_ocr_tests` covers the optional OCR provider boundary and invalid-image handling.
 
 Tests use an in-memory SQLite database and do not use the internet or user documents.
 

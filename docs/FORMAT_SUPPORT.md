@@ -21,16 +21,16 @@ This document describes the behavior of the code that is currently shipped. A fi
 | FB2 | Available | Available as paginated text | Available after XML text extraction | Available for text locations | Rich FB2 styling and embedded images are not represented in the current reflow view |
 | TXT | Available | Available as paginated text | Available | Available for text locations | Encoding detection is UTF-8 first |
 | RTF | Available | Available as paginated text | Available after safe plain-text conversion | Available for text locations | Advanced layout, fields, embedded objects, and tracked changes are intentionally not executed |
-| CBZ | Available with Qt archive support | Available as ordered image pages | Not available without OCR | Progress and page bookmarks are available; manual page annotations are stored | OCR and selection overlays are not included in the current build |
-| ZIP comics | Available with Qt archive support | Available when the archive contains supported images | Not available without OCR | Progress and page bookmarks are available | ZIP archives are read-only and never extracted to user-selected paths |
+| CBZ | Available with Qt archive support | Available as ordered image pages | Conditional on Tesseract OCR | Progress, page bookmarks, OCR text, and manual page annotations are available | OCR requires a local Tesseract installation; visual text selection overlays are not included |
+| ZIP comics | Available with Qt archive support | Available when the archive contains supported images | Conditional on Tesseract OCR | Progress, page bookmarks, OCR text, and manual page annotations are available | ZIP archives are read-only and never extracted to user-selected paths; OCR requires Tesseract |
 | CBR | Unavailable | — | — | — | Requires a RAR decoder; no external extractor is invoked automatically |
 | CB7 | Unavailable | — | — | — | Requires a 7z decoder |
 | CBT | Unavailable | — | — | — | Requires a tar reader integration |
 | RAR | Unavailable | — | — | — | Requires a RAR decoder |
 | 7Z | Unavailable | — | — | — | Requires a 7z decoder |
 | DJVU/DJV | Unavailable | — | — | — | Requires DjVuLibre or another compatible decoder and OCR integration |
-| JPG/JPEG | Available | Available as a single image | Not available without OCR | Progress and page bookmarks are available | OCR and text selection are not included in the current build |
-| PNG | Available | Available as a single image | Not available without OCR | Progress and page bookmarks are available | OCR and text selection are not included in the current build |
+| JPG/JPEG | Available | Available as a single image | Conditional on Tesseract OCR | Progress, OCR text, and manual region annotations are available | OCR requires a local Tesseract installation; text selection uses the recognized text view |
+| PNG | Available | Available as a single image | Conditional on Tesseract OCR | Progress, OCR text, and manual region annotations are available | OCR requires a local Tesseract installation; text selection uses the recognized text view |
 | WEBP | Available when the Qt image plugin is present | Available as a single image | Not available without OCR | Progress and page bookmarks are available | Depends on the Qt image plugin shipped with the package |
 | AVIF | Available when the Qt image plugin is present | Available as a single image | Not available without OCR | Progress and page bookmarks are available | Depends on the Qt image plugin shipped with the package |
 | GIF | Available when the Qt image plugin is present | Available as a single image | Not available without OCR | Progress and page bookmarks are available | Animated content is shown through the Qt image pipeline |
@@ -51,4 +51,4 @@ The following capabilities are format-independent when the underlying content pr
 
 Qt PDF, Qt Speech, and Qt's private ZIP helper are optional build capabilities. The CI and release workflows request the public Qt PDF and Speech modules. The ZIP helper is used only for in-process, read-only archive access; it is not a general-purpose extraction service.
 
-OCR, local dictionaries, and dedicated RAR/7z and DJVU engines are not silently emulated. PDF text extraction is available through the optional Qt PDF module, while MOBI/AZW support is limited to unencrypted PalmDOC-compatible text. Until a compatible provider is bundled and tested on each target platform, the application keeps unavailable capabilities out of the picker and explains the limitation instead of claiming support.
+OCR is provided through a local Tesseract executable when the user installs it; no document is uploaded and the UI falls back to manual region annotations when it is unavailable. Local dictionaries and dedicated RAR/7z and DJVU engines are not silently emulated. PDF text extraction is available through the optional Qt PDF module, while MOBI/AZW support is limited to unencrypted PalmDOC-compatible text. The application keeps unsupported formats out of the picker and explains the limitation instead of claiming support.

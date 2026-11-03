@@ -32,7 +32,7 @@ Contains product concepts and rules independent of Qt Quick, SQLite, and operati
 
 Provides persistence, migrations, filesystem access, caches, indexing, OCR, dictionary providers, text-to-speech adapters, backup, and export. Infrastructure implementations are replaceable behind interfaces where external behavior is involved.
 
-The current concrete services include `Database`, `LibraryStore`, `ArchiveReader`, `TextDecoder`, `BackupController`, `SettingsController`, and the optional `SpeechController`. `LibraryStore` owns the C++ model exposed to QML; it also owns import validation, duplicate detection, FTS5 updates, collections, tags, favorites, annotations, bookmarks, and reading history.
+The current concrete services include `Database`, `LibraryStore`, `ArchiveReader`, `TextDecoder`, `TesseractOcrProvider`, `BackupController`, `SettingsController`, and the optional `SpeechController`. `LibraryStore` owns the C++ model exposed to QML; it also owns import validation, duplicate detection, FTS5 updates, collections, tags, favorites, annotations, bookmarks, OCR page text, and reading history.
 
 ### `pdf`
 
@@ -48,11 +48,12 @@ Contains integrations that differ across Windows, macOS, and Linux, such as file
 
 - `AppController` is the initial QML-facing application coordinator.
 - `Database` owns one SQLite connection and applies versioned migrations in transactions.
-- Migration versions 1–5 create application settings, documents, reading state, annotations, bookmarks, OCR/provider history tables, FTS5 indexes, favorites, and ratings.
+- Migration versions 1–6 create application settings, documents, reading state, annotations, bookmarks, OCR/provider history tables, FTS5 indexes, favorites, ratings, and OCR knowledge entries.
 - `LibraryStore` is a `QAbstractListModel`; its view filter is applied in SQL, and its FTS5 queries have a safe LIKE fallback for unusual input.
 - `ArchiveReader` reads EPUB and image archives in-process without extracting untrusted paths. It rejects parent/absolute paths, symbolic links, oversized entries, and archives over the configured entry/size limits.
 - `TextDecoder` converts TXT, RTF, FB2, and unencrypted PalmDOC-compatible MOBI/AZW/AZW3 files into safe reader text without executing document content. DRM and unsupported KF8/Huffman variants are rejected.
 - Image and rendered-PDF pages expose a manual region-annotation fallback when selectable text or OCR is unavailable; region coordinates are stored normalized to the displayed page.
+- `OcrProvider` defines the provider boundary; `TesseractOcrProvider` runs the local Tesseract executable asynchronously, and `ReaderController` stores completed OCR by document and page.
 - `ReaderController` owns the reader state and keeps page locations/progress in the library model. The QML layer never opens files or writes SQL directly.
 - `Logging` configures categorized diagnostics without creating a persistent log file or recording document content.
 - QML design tokens live in `src/ui/qml/Theme.qml`.

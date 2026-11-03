@@ -17,8 +17,9 @@ SQLite is used through Qt's SQL integration. SQLite is public domain; distributi
 - `Qt6::Pdf` supplies PDF document loading and page rendering in CI/release builds.
 - `Qt6::TextToSpeech` supplies the system text-to-speech adapter when the platform has a compatible voice backend.
 - `Qt6::CorePrivate` supplies Qt's read-only `QZipReader` helper for EPUB, CBZ, and ZIP packages. It is a private Qt API and may change between Qt versions; builds without it disable those archive readers rather than silently substituting an extractor.
+- Tesseract OCR is an optional runtime executable discovered through `PATH` or `LUMINA_TESSERACT_PATH`. It is not bundled by this repository; users who install it must follow the Tesseract distribution's license and language-data terms.
 
-No RAR, 7z, DjVu, OCR, online dictionary, translation, or telemetry dependency is bundled by the current repository. Browser lookup actions are initiated by the user and do not create a project-owned network service.
+No RAR, 7z, DjVu, online dictionary, translation, or telemetry dependency is bundled by the current repository. Browser lookup actions are initiated by the user and do not create a project-owned network service.
 
 ## Inventory rule
 
