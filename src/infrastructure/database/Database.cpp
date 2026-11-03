@@ -209,6 +209,32 @@ QList<Migration> migrations()
                     "SELECT id, document_id, text, note FROM highlights"),
             },
         },
+        {
+            4,
+            {
+                QStringLiteral(
+                    "CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_items_search USING fts5 ("
+                    "source_id UNINDEXED, "
+                    "source_kind UNINDEXED, "
+                    "document_id UNINDEXED, "
+                    "text, "
+                    "note, "
+                    "page UNINDEXED, "
+                    "locator UNINDEXED, "
+                    "created_at UNINDEXED"
+                    ")"),
+                QStringLiteral(
+                    "INSERT INTO knowledge_items_search "
+                    "(source_id, source_kind, document_id, text, note, page, locator, created_at) "
+                    "SELECT id, 'highlight', document_id, text, note, page, locator, created_at "
+                    "FROM highlights"),
+                QStringLiteral(
+                    "INSERT INTO knowledge_items_search "
+                    "(source_id, source_kind, document_id, text, note, page, locator, created_at) "
+                    "SELECT id, 'annotation', document_id, text, kind, page, locator, created_at "
+                    "FROM annotations"),
+            },
+        },
     };
 }
 

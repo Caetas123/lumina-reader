@@ -53,12 +53,31 @@ public:
     Q_INVOKABLE bool updateProgress(const QString &documentId, double progress, int currentPage);
     Q_INVOKABLE QVariantMap documentDetails(const QString &documentId) const;
     Q_INVOKABLE QVariantList knowledgeSearch(const QString &term) const;
+    Q_INVOKABLE QVariantList highlightsForDocument(const QString &documentId) const;
+    Q_INVOKABLE bool removeHighlight(const QString &highlightId);
     Q_INVOKABLE bool addHighlight(const QString &documentId,
                                   const QString &text,
                                   const QString &locator,
                                   int page,
                                   const QString &color,
                                   const QString &note = {});
+    Q_INVOKABLE QVariantList annotationsForDocument(const QString &documentId) const;
+    Q_INVOKABLE bool addAnnotation(const QString &documentId,
+                                   const QString &text,
+                                   const QString &kind,
+                                   const QString &locator,
+                                   int page,
+                                   double x = 0.0,
+                                   double y = 0.0,
+                                   double width = 0.0,
+                                   double height = 0.0);
+    Q_INVOKABLE bool removeAnnotation(const QString &annotationId);
+    Q_INVOKABLE QVariantList bookmarksForDocument(const QString &documentId) const;
+    Q_INVOKABLE bool addBookmark(const QString &documentId,
+                                 const QString &label,
+                                 const QString &locator,
+                                 int page);
+    Q_INVOKABLE bool removeBookmark(const QString &bookmarkId);
     Q_INVOKABLE QStringList supportedExtensions() const;
 
 signals:

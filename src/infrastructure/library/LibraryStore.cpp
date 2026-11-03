@@ -486,6 +486,16 @@ bool LibraryStore::removeDocument(const QString &documentId, bool deleteOriginal
         return false;
     }
 
+    QSqlQuery knowledgeItemsSearch(connection);
+    knowledgeItemsSearch.prepare(
+        QStringLiteral("DELETE FROM knowledge_items_search WHERE document_id = :id"));
+    knowledgeItemsSearch.bindValue(QStringLiteral(":id"), documentId);
+    if (!knowledgeItemsSearch.exec()) {
+        connection.rollback();
+        setError(QStringLiteral("The document could not be removed from knowledge search."));
+        return false;
+    }
+
     QSqlQuery search(connection);
     search.prepare(QStringLiteral("DELETE FROM document_search WHERE document_id = :id"));
     search.bindValue(QStringLiteral(":id"), documentId);
@@ -630,10 +640,13 @@ QVariantList LibraryStore::knowledgeSearch(const QString &term) const
 
     QSqlQuery query(database_->connection());
     query.prepare(QStringLiteral(
-        "SELECT h.id, h.document_id, d.title, h.text, h.note, h.color, h.page, h.locator, "
-        "h.created_at FROM highlights h JOIN documents d ON d.id = h.document_id "
-        "JOIN knowledge_search ON knowledge_search.highlight_id = h.id "
-        "WHERE knowledge_search MATCH :match ORDER BY rank, h.created_at DESC"));
+        "SELECT ks.source_id, ks.source_kind, ks.document_id, d.title, d.author, ks.text, "
+        "COALESCE(h.note, ''), COALESCE(h.color, '#f6c945'), ks.page, ks.locator, "
+        "ks.created_at, COALESCE(a.kind, '') "
+        "FROM knowledge_items_search ks JOIN documents d ON d.id = ks.document_id "
+        "LEFT JOIN highlights h ON h.id = ks.source_id AND ks.source_kind = 'highlight' "
+        "LEFT JOIN annotations a ON a.id = ks.source_id AND ks.source_kind = 'annotation' "
+        "WHERE knowledge_items_search MATCH :match ORDER BY rank, ks.created_at DESC"));
     query.bindValue(QStringLiteral(":match"), match);
     if (!query.exec()) {
         return results;
@@ -641,14 +654,17 @@ QVariantList LibraryStore::knowledgeSearch(const QString &term) const
     while (query.next()) {
         results.append(QVariantMap{
             {QStringLiteral("id"), query.value(0)},
-            {QStringLiteral("documentId"), query.value(1)},
-            {QStringLiteral("documentTitle"), query.value(2)},
-            {QStringLiteral("text"), query.value(3)},
-            {QStringLiteral("note"), query.value(4)},
-            {QStringLiteral("color"), query.value(5)},
-            {QStringLiteral("page"), query.value(6)},
-            {QStringLiteral("locator"), query.value(7)},
-            {QStringLiteral("createdAt"), query.value(8)},
+            {QStringLiteral("kind"), query.value(1)},
+            {QStringLiteral("documentId"), query.value(2)},
+            {QStringLiteral("documentTitle"), query.value(3)},
+            {QStringLiteral("author"), query.value(4)},
+            {QStringLiteral("text"), query.value(5)},
+            {QStringLiteral("note"), query.value(6)},
+            {QStringLiteral("color"), query.value(7)},
+            {QStringLiteral("page"), query.value(8)},
+            {QStringLiteral("locator"), query.value(9)},
+            {QStringLiteral("createdAt"), query.value(10)},
+            {QStringLiteral("annotationKind"), query.value(11)},
         });
     }
     return results;
@@ -694,11 +710,263 @@ bool LibraryStore::addHighlight(const QString &documentId,
         search.bindValue(QStringLiteral(":note"), note);
         success = search.exec();
     }
+    if (success) {
+        QSqlQuery search(connection);
+        search.prepare(QStringLiteral(
+            "INSERT INTO knowledge_items_search "
+            "(source_id, source_kind, document_id, text, note, page, locator, created_at) "
+            "VALUES (:source, 'highlight', :document, :text, :note, :page, :locator, CURRENT_TIMESTAMP)"));
+        search.bindValue(QStringLiteral(":source"), id);
+        search.bindValue(QStringLiteral(":document"), documentId);
+        search.bindValue(QStringLiteral(":text"), text);
+        search.bindValue(QStringLiteral(":note"), note);
+        search.bindValue(QStringLiteral(":page"), std::max(page, 0));
+        search.bindValue(QStringLiteral(":locator"), locator);
+        success = search.exec();
+    }
     if (!success || !connection.commit()) {
         connection.rollback();
         return false;
     }
     return true;
+}
+
+QVariantList LibraryStore::highlightsForDocument(const QString &documentId) const
+{
+    QVariantList results;
+    if (!isReady() || documentId.trimmed().isEmpty()) {
+        return results;
+    }
+
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral(
+        "SELECT id, text, note, color, style, locator, context_before, context_after, page, "
+        "created_at, updated_at FROM highlights WHERE document_id = :id ORDER BY page, created_at"));
+    query.bindValue(QStringLiteral(":id"), documentId);
+    if (!query.exec()) {
+        return results;
+    }
+    while (query.next()) {
+        results.append(QVariantMap{
+            {QStringLiteral("id"), query.value(0)},
+            {QStringLiteral("text"), query.value(1)},
+            {QStringLiteral("note"), query.value(2)},
+            {QStringLiteral("color"), query.value(3)},
+            {QStringLiteral("style"), query.value(4)},
+            {QStringLiteral("locator"), query.value(5)},
+            {QStringLiteral("contextBefore"), query.value(6)},
+            {QStringLiteral("contextAfter"), query.value(7)},
+            {QStringLiteral("page"), query.value(8)},
+            {QStringLiteral("createdAt"), query.value(9)},
+            {QStringLiteral("updatedAt"), query.value(10)},
+        });
+    }
+    return results;
+}
+
+bool LibraryStore::removeHighlight(const QString &highlightId)
+{
+    if (!isReady() || highlightId.trimmed().isEmpty()) {
+        return false;
+    }
+    QSqlDatabase connection = database_->connection();
+    if (!connection.transaction()) {
+        return false;
+    }
+    QSqlQuery search(connection);
+    search.prepare(QStringLiteral(
+        "DELETE FROM knowledge_items_search WHERE source_id = :id AND source_kind = 'highlight'"));
+    search.bindValue(QStringLiteral(":id"), highlightId);
+    bool success = search.exec();
+    if (success) {
+        QSqlQuery legacy(connection);
+        legacy.prepare(QStringLiteral("DELETE FROM knowledge_search WHERE highlight_id = :id"));
+        legacy.bindValue(QStringLiteral(":id"), highlightId);
+        success = legacy.exec();
+    }
+    if (success) {
+        QSqlQuery query(connection);
+        query.prepare(QStringLiteral("DELETE FROM highlights WHERE id = :id"));
+        query.bindValue(QStringLiteral(":id"), highlightId);
+        success = query.exec() && query.numRowsAffected() > 0;
+    }
+    if (!success || !connection.commit()) {
+        connection.rollback();
+        return false;
+    }
+    return true;
+}
+
+QVariantList LibraryStore::annotationsForDocument(const QString &documentId) const
+{
+    QVariantList results;
+    if (!isReady() || documentId.trimmed().isEmpty()) {
+        return results;
+    }
+
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral(
+        "SELECT id, text, kind, locator, page, x, y, width, height, created_at, updated_at "
+        "FROM annotations WHERE document_id = :id ORDER BY page, created_at"));
+    query.bindValue(QStringLiteral(":id"), documentId);
+    if (!query.exec()) {
+        return results;
+    }
+    while (query.next()) {
+        results.append(QVariantMap{
+            {QStringLiteral("id"), query.value(0)},
+            {QStringLiteral("text"), query.value(1)},
+            {QStringLiteral("kind"), query.value(2)},
+            {QStringLiteral("locator"), query.value(3)},
+            {QStringLiteral("page"), query.value(4)},
+            {QStringLiteral("x"), query.value(5)},
+            {QStringLiteral("y"), query.value(6)},
+            {QStringLiteral("width"), query.value(7)},
+            {QStringLiteral("height"), query.value(8)},
+            {QStringLiteral("createdAt"), query.value(9)},
+            {QStringLiteral("updatedAt"), query.value(10)},
+        });
+    }
+    return results;
+}
+
+bool LibraryStore::addAnnotation(const QString &documentId,
+                                 const QString &text,
+                                 const QString &kind,
+                                 const QString &locator,
+                                 int page,
+                                 double x,
+                                 double y,
+                                 double width,
+                                 double height)
+{
+    if (!isReady() || documentDetails(documentId).isEmpty() || text.trimmed().isEmpty()
+        || locator.trimmed().isEmpty()) {
+        return false;
+    }
+    const QString id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    QSqlDatabase connection = database_->connection();
+    if (!connection.transaction()) {
+        return false;
+    }
+    QSqlQuery query(connection);
+    query.prepare(QStringLiteral(
+        "INSERT INTO annotations (id, document_id, text, kind, locator, page, x, y, width, height) "
+        "VALUES (:id, :document, :text, :kind, :locator, :page, :x, :y, :width, :height)"));
+    query.bindValue(QStringLiteral(":id"), id);
+    query.bindValue(QStringLiteral(":document"), documentId);
+    query.bindValue(QStringLiteral(":text"), text);
+    query.bindValue(QStringLiteral(":kind"), kind.isEmpty() ? QStringLiteral("note") : kind);
+    query.bindValue(QStringLiteral(":locator"), locator);
+    query.bindValue(QStringLiteral(":page"), std::max(page, 0));
+    query.bindValue(QStringLiteral(":x"), x);
+    query.bindValue(QStringLiteral(":y"), y);
+    query.bindValue(QStringLiteral(":width"), width);
+    query.bindValue(QStringLiteral(":height"), height);
+    bool success = query.exec();
+    if (success) {
+        QSqlQuery search(connection);
+        search.prepare(QStringLiteral(
+            "INSERT INTO knowledge_items_search "
+            "(source_id, source_kind, document_id, text, note, page, locator, created_at) "
+            "VALUES (:source, 'annotation', :document, :text, :note, :page, :locator, CURRENT_TIMESTAMP)"));
+        search.bindValue(QStringLiteral(":source"), id);
+        search.bindValue(QStringLiteral(":document"), documentId);
+        search.bindValue(QStringLiteral(":text"), text);
+        search.bindValue(QStringLiteral(":note"), kind);
+        search.bindValue(QStringLiteral(":page"), std::max(page, 0));
+        search.bindValue(QStringLiteral(":locator"), locator);
+        success = search.exec();
+    }
+    if (!success || !connection.commit()) {
+        connection.rollback();
+        return false;
+    }
+    return true;
+}
+
+bool LibraryStore::removeAnnotation(const QString &annotationId)
+{
+    if (!isReady() || annotationId.trimmed().isEmpty()) {
+        return false;
+    }
+    QSqlDatabase connection = database_->connection();
+    if (!connection.transaction()) {
+        return false;
+    }
+    QSqlQuery search(connection);
+    search.prepare(QStringLiteral(
+        "DELETE FROM knowledge_items_search WHERE source_id = :id AND source_kind = 'annotation'"));
+    search.bindValue(QStringLiteral(":id"), annotationId);
+    bool success = search.exec();
+    if (success) {
+        QSqlQuery query(connection);
+        query.prepare(QStringLiteral("DELETE FROM annotations WHERE id = :id"));
+        query.bindValue(QStringLiteral(":id"), annotationId);
+        success = query.exec() && query.numRowsAffected() > 0;
+    }
+    if (!success || !connection.commit()) {
+        connection.rollback();
+        return false;
+    }
+    return true;
+}
+
+QVariantList LibraryStore::bookmarksForDocument(const QString &documentId) const
+{
+    QVariantList results;
+    if (!isReady() || documentId.trimmed().isEmpty()) {
+        return results;
+    }
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral(
+        "SELECT id, label, locator, page, created_at FROM bookmarks "
+        "WHERE document_id = :id ORDER BY page, created_at"));
+    query.bindValue(QStringLiteral(":id"), documentId);
+    if (!query.exec()) {
+        return results;
+    }
+    while (query.next()) {
+        results.append(QVariantMap{
+            {QStringLiteral("id"), query.value(0)},
+            {QStringLiteral("label"), query.value(1)},
+            {QStringLiteral("locator"), query.value(2)},
+            {QStringLiteral("page"), query.value(3)},
+            {QStringLiteral("createdAt"), query.value(4)},
+        });
+    }
+    return results;
+}
+
+bool LibraryStore::addBookmark(const QString &documentId,
+                               const QString &label,
+                               const QString &locator,
+                               int page)
+{
+    if (!isReady() || documentDetails(documentId).isEmpty() || locator.trimmed().isEmpty()) {
+        return false;
+    }
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral(
+        "INSERT INTO bookmarks (id, document_id, label, locator, page) "
+        "VALUES (:id, :document, :label, :locator, :page)"));
+    query.bindValue(QStringLiteral(":id"), QUuid::createUuid().toString(QUuid::WithoutBraces));
+    query.bindValue(QStringLiteral(":document"), documentId);
+    query.bindValue(QStringLiteral(":label"), label);
+    query.bindValue(QStringLiteral(":locator"), locator);
+    query.bindValue(QStringLiteral(":page"), std::max(page, 0));
+    return query.exec();
+}
+
+bool LibraryStore::removeBookmark(const QString &bookmarkId)
+{
+    if (!isReady() || bookmarkId.trimmed().isEmpty()) {
+        return false;
+    }
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral("DELETE FROM bookmarks WHERE id = :id"));
+    query.bindValue(QStringLiteral(":id"), bookmarkId);
+    return query.exec() && query.numRowsAffected() > 0;
 }
 
 QStringList LibraryStore::supportedExtensions() const

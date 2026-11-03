@@ -49,6 +49,25 @@ private slots:
         const QVariantList results = store.knowledgeSearch(QStringLiteral("democ"));
         QCOMPARE(results.size(), 1);
         QCOMPARE(results.first().toMap().value(QStringLiteral("documentId")).toString(), documentId);
+        QCOMPARE(results.first().toMap().value(QStringLiteral("kind")).toString(),
+                 QStringLiteral("highlight"));
+
+        QVERIFY(store.addAnnotation(documentId,
+                                     QStringLiteral("Review this argument later."),
+                                     QStringLiteral("note"),
+                                     QStringLiteral("text:0:20"),
+                                     0));
+        const QVariantList annotationResults = store.knowledgeSearch(QStringLiteral("argument"));
+        QCOMPARE(annotationResults.size(), 1);
+        QCOMPARE(annotationResults.first().toMap().value(QStringLiteral("kind")).toString(),
+                 QStringLiteral("annotation"));
+        QCOMPARE(store.annotationsForDocument(documentId).size(), 1);
+
+        QVERIFY(store.addBookmark(documentId,
+                                   QStringLiteral("Revisit"),
+                                   QStringLiteral("text:0:20"),
+                                   0));
+        QCOMPARE(store.bookmarksForDocument(documentId).size(), 1);
 
         QVERIFY(store.updateProgress(documentId, 0.5, 2));
         QCOMPARE(store.documentDetails(documentId).value(QStringLiteral("status")).toString(),
