@@ -481,7 +481,22 @@ ApplicationWindow {
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
                                     }
+                                     Label {
+                                         text: qsTr("Page %1 · %2").arg(Number(modelData.page) + 1).arg(modelData.kind === "annotation" ? qsTr("Note") : qsTr("Highlight"))
+                                         color: Theme.textSecondary
+                                         font.pixelSize: 11
+                                     }
                                 }
+
+                                 MouseArea {
+                                     anchors.fill: parent
+                                     onClicked: {
+                                         if (appController.reader.openDocument(modelData.documentId)) {
+                                             appController.reader.goToPage(Number(modelData.page))
+                                             window.currentView = 2
+                                         }
+                                     }
+                                 }
                             }
 
                             Label {
@@ -545,6 +560,19 @@ ApplicationWindow {
                                 enabled: appController.reader.currentPage + 1 < appController.reader.pageCount
                                 onClicked: appController.reader.nextPage()
                             }
+                             Button {
+                                 text: qsTr("Bookmark")
+                                 enabled: appController.reader.open
+                                 onClicked: {
+                                     if (appController.library.addBookmark(appController.reader.documentId,
+                                                                           appController.reader.title,
+                                                                           "page:" + appController.reader.currentPage,
+                                                                           appController.reader.currentPage)) {
+                                         window.notification = qsTr("Bookmark saved.")
+                                         notificationTimer.restart()
+                                     }
+                                 }
+                             }
                         }
                     }
 
