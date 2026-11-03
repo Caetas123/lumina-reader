@@ -46,6 +46,7 @@ add_library(lumina_core STATIC
     src/application/SpeechController.h
     src/domain/core/Error.h
     src/domain/lookup/LookupProvider.h
+    src/domain/ocr/OcrProvider.h
     src/infrastructure/database/Database.cpp
     src/infrastructure/database/Database.h
     src/infrastructure/archive/ArchiveReader.cpp
@@ -54,6 +55,8 @@ add_library(lumina_core STATIC
     src/infrastructure/library/LibraryStore.h
     src/infrastructure/logging/Logging.cpp
     src/infrastructure/logging/Logging.h
+    src/infrastructure/ocr/TesseractOcrProvider.cpp
+    src/infrastructure/ocr/TesseractOcrProvider.h
     src/infrastructure/text/TextDecoder.cpp
     src/infrastructure/text/TextDecoder.h
     src/pdf/PdfEngine.h
@@ -222,6 +225,18 @@ if(BUILD_TESTING)
     )
 
     add_test(NAME lumina_backup_tests COMMAND lumina_backup_tests)
+
+    qt_add_executable(lumina_ocr_tests
+        tests/unit/ocr_test.cpp
+    )
+
+    target_link_libraries(lumina_ocr_tests
+        PRIVATE
+            lumina_core
+            Qt6::Test
+    )
+
+    add_test(NAME lumina_ocr_tests COMMAND lumina_ocr_tests)
 endif()
 
 include(GNUInstallDirs)
