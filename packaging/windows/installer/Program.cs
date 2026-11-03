@@ -511,7 +511,7 @@ internal sealed class InstallerForm : Form
                 Directory.CreateDirectory(destinationDirectory);
             }
 
-            progress.Report(new InstallProgress(lastPercent < 0 ? 0 : lastPercent, string.Format(text.InstallingFileTemplate, entry.Name)));
+            progress.Report(new InstallProgress(lastPercent < 0 ? 0 : lastPercent, text.InstallingFiles));
 
             using var input = entry.Open();
             using var output = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None);
@@ -525,7 +525,7 @@ internal sealed class InstallerForm : Form
                 if (percent != lastPercent)
                 {
                     lastPercent = percent;
-                    progress.Report(new InstallProgress(percent, string.Format(text.InstallingFileTemplate, entry.Name)));
+                    progress.Report(new InstallProgress(percent, text.InstallingFiles));
                 }
             }
         }
@@ -1151,7 +1151,7 @@ internal sealed class InstallerForm : Form
         public string InstalledToHeading { get; init; } = string.Empty;
         public string InstallationCompleteNote { get; init; } = string.Empty;
         public string Launch { get; init; } = string.Empty;
-        public string InstallingFileTemplate { get; init; } = string.Empty;
+        public string InstallingFiles { get; init; } = string.Empty;
         public string RegisteringApplication { get; init; } = string.Empty;
         public string CreatingShortcuts { get; init; } = string.Empty;
         public string InstallationCompleteStatus { get; init; } = string.Empty;
@@ -1197,15 +1197,15 @@ internal sealed class InstallerForm : Form
                 Install = "Install",
                 InstallingHeading = "Installing Lumina Reader",
                 InstallingBody = "Please wait while Lumina Reader is installed. This should only take a moment.",
-                PreparingInstallation = "Preparing installation...",
+                PreparingInstallation = "Preparing Lumina Reader...",
                 InstallingButton = "Installing...",
                 InstallationCompleteHeading = "Installation complete",
                 InstallationCompleteBody = "Lumina Reader is ready to use. Your selected shortcuts were created.",
                 InstalledToHeading = "Installed to",
                 InstallationCompleteNote = "Click Launch to open Lumina Reader now, or Close to finish.",
                 Launch = "Launch Lumina Reader",
-                InstallingFileTemplate = "Installing {0}...",
-                RegisteringApplication = "Registering Lumina Reader in Windows...",
+                InstallingFiles = "Installing Lumina Reader...",
+                RegisteringApplication = "Configuring Lumina Reader...",
                 CreatingShortcuts = "Creating shortcuts...",
                 InstallationCompleteStatus = "Installation complete.",
                 InstallationError = "Lumina Reader could not be installed.\n\n{0}",
@@ -1244,15 +1244,15 @@ internal sealed class InstallerForm : Form
                 Install = "Instalar",
                 InstallingHeading = "Instalando o Lumina Reader",
                 InstallingBody = "Aguarde enquanto o Lumina Reader é instalado. Isso deve levar apenas alguns instantes.",
-                PreparingInstallation = "Preparando a instalação...",
+                PreparingInstallation = "Preparando o Lumina Reader...",
                 InstallingButton = "Instalando...",
                 InstallationCompleteHeading = "Instalação concluída",
                 InstallationCompleteBody = "O Lumina Reader está pronto para uso. Os atalhos escolhidos foram criados.",
                 InstalledToHeading = "Instalado em",
                 InstallationCompleteNote = "Clique em Abrir para iniciar o Lumina Reader agora ou em Fechar para concluir.",
                 Launch = "Abrir Lumina Reader",
-                InstallingFileTemplate = "Instalando {0}...",
-                RegisteringApplication = "Registrando o Lumina Reader no Windows...",
+                InstallingFiles = "Instalando o Lumina Reader...",
+                RegisteringApplication = "Configurando o Lumina Reader...",
                 CreatingShortcuts = "Criando atalhos...",
                 InstallationCompleteStatus = "Instalação concluída.",
                 InstallationError = "Não foi possível instalar o Lumina Reader.\n\n{0}",
