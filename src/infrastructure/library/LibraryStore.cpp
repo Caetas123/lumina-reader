@@ -224,6 +224,10 @@ QHash<int, QByteArray> LibraryStore::roleNames() const
         {FileSizeRole, "fileSize"},
         {AddedAtRole, "addedAt"},
         {LastOpenedAtRole, "lastOpenedAt"},
+        {DescriptionRole, "description"},
+        {LanguageRole, "language"},
+        {FavoriteRole, "isFavorite"},
+        {RatingRole, "rating"},
     };
 }
 
@@ -283,7 +287,8 @@ void LibraryStore::reload()
     const QString columns = QStringLiteral(
         "d.id, d.title, d.author, d.file_path, d.format, d.content_type, d.status, "
         "d.progress, d.current_page, d.page_count, d.cover_path, d.file_size, "
-        "d.added_at, COALESCE(d.last_opened_at, '')");
+        "d.added_at, COALESCE(d.last_opened_at, ''), d.description, d.language, "
+        "d.is_favorite, d.rating");
     if (query_.isEmpty()) {
         query.prepare(QStringLiteral("SELECT %1 FROM documents d "
                                      "ORDER BY COALESCE(d.last_opened_at, d.added_at) DESC, d.title COLLATE NOCASE")
@@ -342,6 +347,10 @@ QVariantMap LibraryStore::recordFromQuery(const QSqlQuery &query) const
         {QStringLiteral("fileSize"), query.value(11)},
         {QStringLiteral("addedAt"), query.value(12)},
         {QStringLiteral("lastOpenedAt"), query.value(13)},
+        {QStringLiteral("description"), query.value(14)},
+        {QStringLiteral("language"), query.value(15)},
+        {QStringLiteral("isFavorite"), query.value(16)},
+        {QStringLiteral("rating"), query.value(17)},
     };
 }
 
@@ -566,6 +575,82 @@ bool LibraryStore::setPageCount(const QString &documentId, int pageCount)
     return true;
 }
 
+bool LibraryStore::setFavorite(const QString &documentId, bool favorite)
+{
+    if (!isReady() || documentId.trimmed().isEmpty()) {
+        return false;
+    }
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral(
+        "UPDATE documents SET is_favorite = :favorite, updated_at = CURRENT_TIMESTAMP WHERE id = :id"));
+    query.bindValue(QStringLiteral(":favorite"), favorite ? 1 : 0);
+    query.bindValue(QStringLiteral(":id"), documentId);
+    if (!query.exec() || query.numRowsAffected() == 0) {
+        return false;
+    }
+    reload();
+    return true;
+}
+
+bool LibraryStore::setRating(const QString &documentId, int rating)
+{
+    if (!isReady() || documentId.trimmed().isEmpty()) {
+        return false;
+    }
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral(
+        "UPDATE documents SET rating = :rating, updated_at = CURRENT_TIMESTAMP WHERE id = :id"));
+    query.bindValue(QStringLiteral(":rating"), std::clamp(rating, 0, 5));
+    query.bindValue(QStringLiteral(":id"), documentId);
+    if (!query.exec() || query.numRowsAffected() == 0) {
+        return false;
+    }
+    reload();
+    return true;
+}
+
+bool LibraryStore::updateMetadata(const QString &documentId,
+                                  const QString &title,
+                                  const QString &author,
+                                  const QString &description,
+                                  const QString &language)
+{
+    if (!isReady() || documentId.trimmed().isEmpty() || title.trimmed().isEmpty()) {
+        return false;
+    }
+    QSqlDatabase connection = database_->connection();
+    if (!connection.transaction()) {
+        return false;
+    }
+    QSqlQuery query(connection);
+    query.prepare(QStringLiteral(
+        "UPDATE documents SET title = :title, author = :author, description = :description, "
+        "language = :language, updated_at = CURRENT_TIMESTAMP WHERE id = :id"));
+    query.bindValue(QStringLiteral(":title"), title.trimmed());
+    query.bindValue(QStringLiteral(":author"), author.trimmed());
+    query.bindValue(QStringLiteral(":description"), description.trimmed());
+    query.bindValue(QStringLiteral(":language"), language.trimmed());
+    query.bindValue(QStringLiteral(":id"), documentId);
+    bool success = query.exec() && query.numRowsAffected() > 0;
+    if (success) {
+        QSqlQuery search(connection);
+        search.prepare(QStringLiteral(
+            "UPDATE document_search SET title = :title, author = :author, description = :description "
+            "WHERE document_id = :id"));
+        search.bindValue(QStringLiteral(":title"), title.trimmed());
+        search.bindValue(QStringLiteral(":author"), author.trimmed());
+        search.bindValue(QStringLiteral(":description"), description.trimmed());
+        search.bindValue(QStringLiteral(":id"), documentId);
+        success = search.exec();
+    }
+    if (!success || !connection.commit()) {
+        connection.rollback();
+        return false;
+    }
+    reload();
+    return true;
+}
+
 bool LibraryStore::updateProgress(const QString &documentId, double progress, int currentPage)
 {
     if (!isReady() || documentId.trimmed().isEmpty()) {
@@ -617,7 +702,8 @@ QVariantMap LibraryStore::documentDetails(const QString &documentId) const
     QSqlQuery query(database_->connection());
     query.prepare(QStringLiteral(
         "SELECT id, title, author, file_path, format, content_type, status, progress, "
-        "current_page, page_count, cover_path, file_size, added_at, COALESCE(last_opened_at, '') "
+        "current_page, page_count, cover_path, file_size, added_at, COALESCE(last_opened_at, ''), "
+        "description, language, is_favorite, rating "
         "FROM documents WHERE id = :id"));
     query.bindValue(QStringLiteral(":id"), documentId);
     if (!query.exec() || !query.next()) {

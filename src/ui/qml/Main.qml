@@ -431,6 +431,17 @@ ApplicationWindow {
                                             }
                                         }
                                     }
+
+                                     ToolButton {
+                                         anchors.top: parent.top
+                                         anchors.right: parent.right
+                                         anchors.margins: 6
+                                         z: 2
+                                         text: model.isFavorite ? "★" : "☆"
+                                         font.pixelSize: 20
+                                         display: AbstractButton.TextOnly
+                                         onClicked: appController.library.setFavorite(documentId, !model.isFavorite)
+                                     }
                                 }
                             }
 

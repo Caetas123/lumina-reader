@@ -235,6 +235,20 @@ QList<Migration> migrations()
                     "FROM annotations"),
             },
         },
+        {
+            5,
+            {
+                QStringLiteral(
+                    "ALTER TABLE documents ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0 "
+                    "CHECK (is_favorite IN (0, 1))"),
+                QStringLiteral(
+                    "ALTER TABLE documents ADD COLUMN rating INTEGER NOT NULL DEFAULT 0 "
+                    "CHECK (rating >= 0 AND rating <= 5)"),
+                QStringLiteral(
+                    "CREATE INDEX IF NOT EXISTS documents_favorite_idx "
+                    "ON documents(is_favorite, last_opened_at DESC)"),
+            },
+        },
     };
 }
 

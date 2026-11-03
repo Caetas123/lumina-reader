@@ -31,6 +31,10 @@ public:
         FileSizeRole,
         AddedAtRole,
         LastOpenedAtRole,
+        DescriptionRole,
+        LanguageRole,
+        FavoriteRole,
+        RatingRole,
     };
     Q_ENUM(Role)
 
@@ -50,6 +54,13 @@ public:
     Q_INVOKABLE bool removeDocument(const QString &documentId, bool deleteOriginal = false);
     Q_INVOKABLE bool setStatus(const QString &documentId, const QString &status);
     Q_INVOKABLE bool setPageCount(const QString &documentId, int pageCount);
+    Q_INVOKABLE bool setFavorite(const QString &documentId, bool favorite);
+    Q_INVOKABLE bool setRating(const QString &documentId, int rating);
+    Q_INVOKABLE bool updateMetadata(const QString &documentId,
+                                    const QString &title,
+                                    const QString &author,
+                                    const QString &description,
+                                    const QString &language);
     Q_INVOKABLE bool updateProgress(const QString &documentId, double progress, int currentPage);
     Q_INVOKABLE QVariantMap documentDetails(const QString &documentId) const;
     Q_INVOKABLE QVariantList knowledgeSearch(const QString &term) const;

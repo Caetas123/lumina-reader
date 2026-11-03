@@ -39,6 +39,20 @@ private slots:
                  QStringLiteral("txt"));
         QCOMPARE(store.data(index, Lumina::Infrastructure::LibraryStore::TitleRole).toString(),
                  QStringLiteral("learning-notes"));
+        QVERIFY(!store.data(index, Lumina::Infrastructure::LibraryStore::FavoriteRole).toBool());
+        QCOMPARE(store.data(index, Lumina::Infrastructure::LibraryStore::RatingRole).toInt(), 0);
+
+        QVERIFY(store.setFavorite(documentId, true));
+        QVERIFY(store.setRating(documentId, 5));
+        QVERIFY(store.updateMetadata(documentId,
+                                     QStringLiteral("Learning notes"),
+                                     QStringLiteral("Lumina author"),
+                                     QStringLiteral("Personal study notes"),
+                                     QStringLiteral("en")));
+        QCOMPARE(store.documentDetails(documentId).value(QStringLiteral("title")).toString(),
+                 QStringLiteral("Learning notes"));
+        QVERIFY(store.documentDetails(documentId).value(QStringLiteral("isFavorite")).toBool());
+        QCOMPARE(store.documentDetails(documentId).value(QStringLiteral("rating")).toInt(), 5);
 
         QVERIFY(store.addHighlight(documentId,
                                    QStringLiteral("Democracy"),
