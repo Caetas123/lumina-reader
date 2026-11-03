@@ -83,6 +83,20 @@ ApplicationWindow {
         }
     }
 
+    Timer {
+        id: librarySearchHistoryTimer
+        interval: 650
+        repeat: false
+        onTriggered: appController.library.recordSearch(librarySearch.text, "library")
+    }
+
+    Timer {
+        id: knowledgeSearchHistoryTimer
+        interval: 650
+        repeat: false
+        onTriggered: appController.library.recordSearch(knowledgeSearch.text, "knowledge")
+    }
+
     Shortcut {
         sequence: StandardKey.Open
         onActivated: importDialog.open()
@@ -237,6 +251,26 @@ ApplicationWindow {
         window.currentView = 2
         documentSearch.forceActiveFocus()
         documentSearch.selectAll()
+    }
+
+    function openSearchHistory(scope) {
+        searchHistoryDialog.scope = scope
+        searchHistoryDialog.entries = appController.library.searchHistoryForScope(scope)
+        searchHistoryDialog.open()
+    }
+
+    function useSearchHistory(query) {
+        if (searchHistoryDialog.scope === "library") {
+            librarySearch.text = query
+            appController.library.query = query
+        } else if (searchHistoryDialog.scope === "knowledge") {
+            knowledgeSearch.text = query
+            knowledgePage.refreshResults()
+        } else if (searchHistoryDialog.scope === "document") {
+            documentSearch.text = query
+            appController.reader.findInDocument(query)
+        }
+        searchHistoryDialog.close()
     }
 
     function cycleTheme() {
@@ -857,6 +891,99 @@ ApplicationWindow {
         onRejected: {
             editingId = ""
             annotationEditText.clear()
+        }
+    }
+
+    Dialog {
+        id: searchHistoryDialog
+        property string scope: "library"
+        property var entries: []
+        modal: true
+        title: qsTr("Search history")
+        width: Math.min(window.width - 80, 620)
+        standardButtons: Dialog.Close
+
+        function scopeLabel() {
+            if (scope === "document") {
+                return qsTr("This document")
+            }
+            if (scope === "knowledge") {
+                return qsTr("Knowledge center")
+            }
+            return qsTr("Your library")
+        }
+
+        onOpened: entries = appController.library.searchHistoryForScope(scope)
+        onClosed: entries = []
+
+        contentItem: ColumnLayout {
+            spacing: 10
+
+            Label {
+                Layout.fillWidth: true
+                text: qsTr("Recent searches in %1").arg(searchHistoryDialog.scopeLabel())
+                color: Theme.textSecondary
+                wrapMode: Text.WordWrap
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                Button {
+                    text: qsTr("Clear history")
+                    enabled: searchHistoryDialog.entries.length > 0
+                    onClicked: {
+                        if (appController.library.clearSearchHistory(searchHistoryDialog.scope)) {
+                            searchHistoryDialog.entries = []
+                            window.notification = qsTr("Search history cleared.")
+                            notificationTimer.restart()
+                        }
+                    }
+                }
+                Item { Layout.fillWidth: true }
+            }
+            Label {
+                visible: searchHistoryDialog.entries.length === 0
+                Layout.fillWidth: true
+                text: qsTr("No saved searches yet.")
+                color: Theme.textSecondary
+            }
+            ListView {
+                Layout.fillWidth: true
+                Layout.preferredHeight: Math.min(360, Math.max(64, searchHistoryDialog.entries.length * 52))
+                visible: searchHistoryDialog.entries.length > 0
+                clip: true
+                spacing: 8
+                model: searchHistoryDialog.entries
+
+                delegate: Rectangle {
+                    required property var modelData
+                    width: ListView.view.width
+                    height: 44
+                    radius: 8
+                    color: Theme.surfaceMuted
+                    border.color: Theme.border
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 8
+                        spacing: 8
+                        Label {
+                            Layout.fillWidth: true
+                            text: modelData.query
+                            color: Theme.textPrimary
+                            elide: Text.ElideRight
+                        }
+                        Label {
+                            text: modelData.createdAt
+                            color: Theme.textSecondary
+                            font.pixelSize: 11
+                        }
+                        Button {
+                            text: qsTr("Use")
+                            onClicked: window.useSearchHistory(modelData.query)
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -1669,7 +1796,14 @@ ApplicationWindow {
                             id: librarySearch
                             Layout.fillWidth: true
                             placeholderText: qsTr("Search your library by title, author, or text")
-                            onTextChanged: appController.library.query = text
+                            onTextChanged: {
+                                appController.library.query = text
+                                librarySearchHistoryTimer.restart()
+                            }
+                        }
+                        Button {
+                            text: qsTr("History")
+                            onClicked: window.openSearchHistory("library")
                         }
                         Label {
                             text: qsTr("%1 item(s)").arg(appController.library.count)
@@ -2021,7 +2155,14 @@ ApplicationWindow {
                             id: knowledgeSearch
                             Layout.fillWidth: true
                             placeholderText: qsTr("Search highlights and notes")
-                            onTextChanged: knowledgePage.refreshResults()
+                            onTextChanged: {
+                                knowledgePage.refreshResults()
+                                knowledgeSearchHistoryTimer.restart()
+                            }
+                        }
+                        Button {
+                            text: qsTr("History")
+                            onClicked: window.openSearchHistory("knowledge")
                         }
                         ComboBox {
                             id: knowledgeFormatFilter
@@ -2267,7 +2408,15 @@ ApplicationWindow {
                                 placeholderText: qsTr("Find in document")
                                 enabled: appController.reader.open
                                 onTextChanged: appController.reader.findInDocument(text)
-                                onAccepted: appController.reader.nextSearchMatch()
+                                onAccepted: {
+                                    appController.library.recordSearch(text, "document")
+                                    appController.reader.nextSearchMatch()
+                                }
+                            }
+                            Button {
+                                visible: appController.reader.open
+                                text: qsTr("History")
+                                onClicked: window.openSearchHistory("document")
                             }
                             Label {
                                 visible: documentSearch.text.length > 0

@@ -11,6 +11,44 @@ class LibraryTest final : public QObject {
     Q_OBJECT
 
 private slots:
+    void managesSearchHistory()
+    {
+        Lumina::Infrastructure::Database database;
+        Lumina::Domain::Error error;
+        QVERIFY2(database.open(QStringLiteral(":memory:"), &error),
+                 qPrintable(error.logMessage()));
+        QVERIFY2(database.migrate(&error), qPrintable(error.logMessage()));
+
+        Lumina::Infrastructure::LibraryStore store;
+        store.setDatabase(&database);
+
+        QVERIFY(store.recordSearch(QStringLiteral("democracy"), QStringLiteral("library")));
+        QVERIFY(store.recordSearch(QStringLiteral("chapter two"), QStringLiteral("document")));
+        QVERIFY(store.recordSearch(QStringLiteral("saved idea"), QStringLiteral("knowledge")));
+        QCOMPARE(store.searchHistoryForScope(QStringLiteral("library")).size(), 1);
+        QCOMPARE(store.searchHistoryForScope(QStringLiteral("document")).size(), 1);
+        QCOMPARE(store.searchHistoryForScope(QStringLiteral("knowledge")).size(), 1);
+        QCOMPARE(store.searchHistoryForScope(QStringLiteral("library"))
+                     .first().toMap().value(QStringLiteral("query")).toString(),
+                 QStringLiteral("democracy"));
+
+        QVERIFY(store.recordSearch(QStringLiteral("Democracy"), QStringLiteral("library")));
+        QCOMPARE(store.searchHistoryForScope(QStringLiteral("library")).size(), 1);
+
+        for (int index = 0; index < 55; ++index) {
+            QVERIFY(store.recordSearch(QStringLiteral("term %1").arg(index),
+                                       QStringLiteral("library")));
+        }
+        QCOMPARE(store.searchHistoryForScope(QStringLiteral("library")).size(), 50);
+        QVERIFY(store.clearSearchHistory(QStringLiteral("document")));
+        QCOMPARE(store.searchHistoryForScope(QStringLiteral("document")).size(), 0);
+        QCOMPARE(store.searchHistoryForScope(QStringLiteral("knowledge")).size(), 1);
+        QVERIFY(!store.recordSearch(QStringLiteral("x"), QStringLiteral("library")));
+        QVERIFY(!store.recordSearch(QStringLiteral("term"), QStringLiteral("unsupported")));
+        QVERIFY(store.clearSearchHistory());
+        QCOMPARE(store.searchHistory().size(), 0);
+    }
+
     void importsTextAndRejectsDuplicate()
     {
         Lumina::Infrastructure::Database database;

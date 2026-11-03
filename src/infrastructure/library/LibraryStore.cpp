@@ -499,6 +499,135 @@ int LibraryStore::count() const
     return records_.size();
 }
 
+QVariantList LibraryStore::searchHistory() const
+{
+    return searchHistoryForScope({});
+}
+
+QVariantList LibraryStore::searchHistoryForScope(const QString &scope) const
+{
+    if (!isReady()) {
+        return {};
+    }
+
+    const QString normalizedScope = scope.trimmed().toLower();
+    if (!normalizedScope.isEmpty()
+        && normalizedScope != QStringLiteral("library")
+        && normalizedScope != QStringLiteral("document")
+        && normalizedScope != QStringLiteral("knowledge")) {
+        return {};
+    }
+
+    QSqlQuery query(database_->connection());
+    QString statement = QStringLiteral(
+        "SELECT id, query, scope, created_at FROM search_history ");
+    if (!normalizedScope.isEmpty()) {
+        statement += QStringLiteral("WHERE scope = :scope ");
+    }
+    statement += QStringLiteral("ORDER BY id DESC LIMIT 50");
+    query.prepare(statement);
+    if (!normalizedScope.isEmpty()) {
+        query.bindValue(QStringLiteral(":scope"), normalizedScope);
+    }
+    if (!query.exec()) {
+        return {};
+    }
+
+    QVariantList entries;
+    while (query.next()) {
+        entries.append(QVariantMap{
+            {QStringLiteral("id"), query.value(0)},
+            {QStringLiteral("query"), query.value(1)},
+            {QStringLiteral("scope"), query.value(2)},
+            {QStringLiteral("createdAt"), query.value(3)},
+        });
+    }
+    return entries;
+}
+
+bool LibraryStore::recordSearch(const QString &query, const QString &scope)
+{
+    if (!isReady()) {
+        return false;
+    }
+
+    const QString normalizedQuery = query.simplified();
+    const QString normalizedScope = scope.trimmed().toLower();
+    if (normalizedQuery.size() < 2 || normalizedQuery.size() > 512
+        || (normalizedScope != QStringLiteral("library")
+            && normalizedScope != QStringLiteral("document")
+            && normalizedScope != QStringLiteral("knowledge"))) {
+        return false;
+    }
+
+    QSqlDatabase connection = database_->connection();
+    if (!connection.transaction()) {
+        return false;
+    }
+
+    QSqlQuery removeDuplicate(connection);
+    removeDuplicate.prepare(QStringLiteral(
+        "DELETE FROM search_history WHERE scope = :scope AND lower(query) = lower(:query)"));
+    removeDuplicate.bindValue(QStringLiteral(":scope"), normalizedScope);
+    removeDuplicate.bindValue(QStringLiteral(":query"), normalizedQuery);
+    bool success = removeDuplicate.exec();
+
+    QSqlQuery insert(connection);
+    if (success) {
+        insert.prepare(QStringLiteral(
+            "INSERT INTO search_history (query, scope) VALUES (:query, :scope)"));
+        insert.bindValue(QStringLiteral(":query"), normalizedQuery);
+        insert.bindValue(QStringLiteral(":scope"), normalizedScope);
+        success = insert.exec();
+    }
+
+    QSqlQuery trim(connection);
+    if (success) {
+        trim.prepare(QStringLiteral(
+            "DELETE FROM search_history WHERE scope = :scope AND id NOT IN ("
+            "SELECT id FROM search_history WHERE scope = :scope ORDER BY id DESC LIMIT 50)"));
+        trim.bindValue(QStringLiteral(":scope"), normalizedScope);
+        success = trim.exec();
+    }
+
+    if (!success || !connection.commit()) {
+        connection.rollback();
+        return false;
+    }
+
+    emit searchHistoryChanged();
+    return true;
+}
+
+bool LibraryStore::clearSearchHistory(const QString &scope)
+{
+    if (!isReady()) {
+        return false;
+    }
+
+    const QString normalizedScope = scope.trimmed().toLower();
+    if (!normalizedScope.isEmpty()
+        && normalizedScope != QStringLiteral("library")
+        && normalizedScope != QStringLiteral("document")
+        && normalizedScope != QStringLiteral("knowledge")) {
+        return false;
+    }
+
+    QSqlQuery query(database_->connection());
+    if (normalizedScope.isEmpty()) {
+        query.prepare(QStringLiteral("DELETE FROM search_history"));
+    } else {
+        query.prepare(QStringLiteral("DELETE FROM search_history WHERE scope = :scope"));
+        query.bindValue(QStringLiteral(":scope"), normalizedScope);
+    }
+    if (!query.exec()) {
+        return false;
+    }
+
+    emit searchHistoryChanged();
+    return true;
+}
+
 void LibraryStore::setDatabase(Database *database)
 {
     if (database_ == database) {
@@ -506,6 +635,7 @@ void LibraryStore::setDatabase(Database *database)
     }
     database_ = database;
     reload();
+    emit searchHistoryChanged();
 }
 
 void LibraryStore::refresh()

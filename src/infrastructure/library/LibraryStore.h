@@ -17,6 +17,7 @@ class LibraryStore final : public QAbstractListModel {
     Q_PROPERTY(QString viewFilter READ viewFilter WRITE setViewFilter NOTIFY viewFilterChanged)
     Q_PROPERTY(QString sortMode READ sortMode WRITE setSortMode NOTIFY sortModeChanged)
     Q_PROPERTY(int count READ count NOTIFY countChanged)
+    Q_PROPERTY(QVariantList searchHistory READ searchHistory NOTIFY searchHistoryChanged)
 
 public:
     enum Role {
@@ -57,6 +58,7 @@ public:
     [[nodiscard]] QString sortMode() const;
     void setSortMode(const QString &mode);
     [[nodiscard]] int count() const;
+    [[nodiscard]] QVariantList searchHistory() const;
 
     void setDatabase(Database *database);
     Q_INVOKABLE void refresh();
@@ -97,6 +99,9 @@ public:
     Q_INVOKABLE QStringList formats() const;
     Q_INVOKABLE bool setTags(const QString &documentId, const QStringList &tags);
     Q_INVOKABLE QVariantList knowledgeDocumentOptions() const;
+    Q_INVOKABLE QVariantList searchHistoryForScope(const QString &scope) const;
+    Q_INVOKABLE bool recordSearch(const QString &query, const QString &scope);
+    Q_INVOKABLE bool clearSearchHistory(const QString &scope = {});
     Q_INVOKABLE QVariantList knowledgeSearch(const QString &term,
                                              const QString &format = {},
                                              const QString &color = {},
@@ -151,6 +156,7 @@ signals:
     void viewFilterChanged();
     void sortModeChanged();
     void countChanged();
+    void searchHistoryChanged();
     void libraryChanged();
     void documentsImported(int count);
     void errorOccurred(const QString &message);
