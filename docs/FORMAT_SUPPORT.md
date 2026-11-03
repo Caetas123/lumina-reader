@@ -64,9 +64,10 @@ The following capabilities are format-independent when the underlying content pr
 - Markdown, JSON, and plain-text knowledge export;
 - plain-text and annotated PDF export of the opened document, plus system printing;
 - library metadata export and metadata restoration by file hash or saved path;
-- local themes, font size, line spacing, high contrast, keyboard-friendly navigation, and optional system text-to-speech with backend-dependent word progress;
+- local themes, font size, line spacing, font/layout/color reader preferences at global, format, content-type, and document scope, high contrast, keyboard-friendly navigation, and optional system text-to-speech with backend-dependent word progress;
+- integrity-checked database backup and restoration with a recoverable previous database copy;
 - single-page and two-page layouts for visual documents;
-- explicit browser actions for Google, dictionary lookup, and translation. The document itself is never uploaded automatically.
+- explicit browser actions for Google, dictionary lookup, and translation; previously fetched lookup results are reusable from the local cache. The document itself is never uploaded automatically.
 
 ## Optional capabilities and honest limitations
 

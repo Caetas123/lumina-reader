@@ -17,7 +17,7 @@ This report describes the behavior implemented in the repository, not only the c
 - Explicit Google, dictionary, and translation actions; lookup history can be reopened, cleared, favorited, and copied.
 - Optional local Tesseract OCR with selectable English, Portuguese, Spanish, Japanese, Korean, and Chinese language codes, persisted word coordinates, and selection-to-image mapping.
 - Optional system text-to-speech with start, pause, resume, stop, rate, volume, selected-passage reading, continuous-document reading, and backend-dependent spoken-word highlighting.
-- Themes, font size, line spacing, continuous reading, high contrast, keyboard navigation, accessible labels/tooltips, settings export/restore, library export/restore, knowledge export, and database backup.
+- Themes, font size, line spacing, continuous reading, high contrast, keyboard navigation, accessible labels/tooltips, persisted font/layout/color reader preferences at global, format, content-type, and document scope with fallback precedence, settings export/restore, library export/restore, knowledge export, database backup, and integrity-checked database restoration with a recoverable previous copy.
 - Plain-text export of the opened document without changing the source file.
 - PDF export and system printing of the opened document, including text highlights and normalized visual-region annotations, without changing the source file.
 - One cross-platform release version from `project-version.txt`, with tag checks shared by the Linux, Windows, and macOS packaging workflows.
@@ -28,7 +28,7 @@ This report describes the behavior implemented in the repository, not only the c
 The clean Windows/MSVC validation build used Qt 6.8.3 and completed:
 
 ```text
-9/9 tests passed
+10/10 tests passed
 lumina_smoke_tests
 lumina_database_tests
 lumina_lookup_tests
@@ -38,9 +38,12 @@ lumina_archive_tests
 lumina_settings_tests
 lumina_backup_tests
 lumina_ocr_tests
+lumina_performance_tests
 ```
 
 The graphical executable also stayed alive for more than ten seconds with `QT_QPA_PLATFORM=offscreen` after each clean build used for the latest changes. The process was then stopped as a test cleanup operation.
+
+The performance target uses Qt Test benchmarks for library refresh, Knowledge search, large-text decoding, and representative image-page decoding. These are repeatable local micro-benchmarks rather than claims about every machine or every optional engine.
 
 ## Platform and dependency matrix
 
@@ -63,7 +66,8 @@ The graphical executable also stayed alive for more than ten seconds with `QT_QP
 - HTML/HTM is converted to safe local plain text. Scripts, styles, frames, objects, and embeds are not executed or shown, and browser layout/resources are not reproduced.
 - PDF pages are rendered through Qt PDF when available. Extracted text is exposed in a selectable fallback view, visual pages support single-page/two-page layouts, saved manual regions are restored as coordinate overlays, and text highlights/visual regions are carried into exported or printed output; native PDF text-selection coordinate mapping remains limited because the fallback view does not expose the source PDF glyph geometry.
 - OCR supports asynchronous page and document-wide passes, persists normalized Tesseract word boxes, and maps saved OCR text highlights back over the original image; manual region annotations remain the safe fallback when OCR is unavailable.
-- Dictionary and translation providers are explicit online integrations. No local dictionary database is bundled, and no external request occurs without a user action.
+- Dictionary and translation providers are explicit online integrations. No bundled local dictionary database is shipped; previously fetched definitions and translations are cached in the local database and reused offline, and no external request occurs without a user action.
+- Reader appearance preferences support global, format, content-type, and document layers with document-first fallback to type, format, and global values. Named user profiles are not implemented yet.
 - Qt Speech word-level highlighting is enabled when the selected backend exposes the Qt 6.6+ word-progress capability; engines without that capability still support read-aloud without visual word tracking.
 - The current Windows workspace did not provide the optional Qt PDF, CorePrivate, libarchive, DjVuLibre, or Tesseract dependencies, so those runtime paths were not claimed as locally executed in this audit.
 - Native macOS and Linux execution was not performed in this Windows workspace; the workflows and packaging scripts remain the source of truth for those platforms.

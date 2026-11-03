@@ -46,7 +46,7 @@ The current tests are Qt Test executables registered with CTest:
 - `lumina_reader_tests` covers pagination, position persistence, document search, text/image PDF export with saved annotations, RTF/FB2/HTML text extraction, and safe HTML import/search;
 - `lumina_archive_tests` covers EPUB/CBZ navigation and archive path-safety behavior when Qt Core private archive support is present;
 - `lumina_settings_tests` covers persisted reading preferences;
-- `lumina_backup_tests` covers knowledge/library export, metadata fields, and metadata restoration.
+- `lumina_backup_tests` covers knowledge/library export, metadata fields, metadata restoration, and integrity-checked database backup/restore.
 - `lumina_ocr_tests` covers the optional OCR provider boundary and invalid-image handling; OCR word-coordinate persistence is covered by `lumina_library_tests`.
 
 Tests use an in-memory SQLite database and do not use the internet or user documents.

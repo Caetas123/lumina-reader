@@ -42,6 +42,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - OCR now persists Tesseract word coordinates so saved OCR highlights can be restored over the source image.
 - Linux release packaging now publishes both an x86_64 AppImage and a Debian/Ubuntu-compatible `.deb` from the same versioned build.
 - HTML and HTM files can now be imported, searched, and read as safe local text without executing page content.
+- Reader appearance preferences can now be saved globally or for a format, content type, or individual document, with settings export and restore preserving those layers.
+- The Windows installer now keeps the selected desktop-shortcut option, renders its progress page safely, creates a verifiable Start Menu shortcut, and opens the installed application from the completion page.
+- Qt benchmarks now cover library refresh/search and representative text/image reading paths without requiring network services.
 
 ### Changed
 
