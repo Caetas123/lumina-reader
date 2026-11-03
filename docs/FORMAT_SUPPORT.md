@@ -14,7 +14,7 @@ This document describes the behavior of the code that is currently shipped. A fi
 | Format | Import | Open and navigate | Text/search | Highlights, notes, bookmarks, progress | Current limitation or alternative |
 | --- | --- | --- | --- | --- | --- |
 | EPUB | Available with Qt archive support | Available, following the EPUB spine | Available for XHTML chapters | Available for text locations and the global Knowledge center | The Contents panel follows the EPUB spine and uses chapter titles when present; CSS layout, embedded fonts, media, and nested navigation levels are not reproduced by the native text view |
-| PDF | Conditional on `Qt6::Pdf` | Available when the module is present | Page text is indexed and searchable; pages with an extracted text layer offer a selectable text view, while scanned pages can use Tesseract OCR | Progress and bookmarks are available; highlights on the text fallback view use text locators rather than visual PDF coordinates | Release builds request Qt PDF. A build without it reports a clear capability message; opened documents can use single-page/two-page layouts, be exported as a basic PDF, or sent to the system printer |
+| PDF | Conditional on `Qt6::Pdf` | Available when the module is present | Page text is indexed and searchable; pages with an extracted text layer offer a selectable text view, while scanned pages can use Tesseract OCR | Progress and bookmarks are available; saved text highlights and visual region annotations are included in exported/printed pages when their coordinates are known | Release builds request Qt PDF. A build without it reports a clear capability message; opened documents can use single-page/two-page layouts, export, and system printing |
 | MOBI | Available for unencrypted PalmDOC files | Available as paginated text | Available for decoded text | Available for text locations | PalmDOC compression is decoded; DRM and unsupported Huffman/KF8 variants are rejected with a normal reader error |
 | AZW | Available for unencrypted PalmDOC-compatible files | Available as paginated text | Available for decoded text | Available for text locations | DRM-protected content is not supported and is never unlocked |
 | AZW3 | Available for unencrypted PalmDOC-compatible files | Available as paginated text | Available for decoded text | Available for text locations | Complex KF8 layout/resources and DRM-protected content are not supported |
@@ -43,7 +43,7 @@ The following capabilities are format-independent when the underlying content pr
 - SQLite migrations and FTS5 search for library metadata and saved knowledge;
 - persistent highlights, annotations, bookmarks, reading history, and the global Knowledge center;
 - Markdown, JSON, and plain-text knowledge export;
-- plain-text and basic PDF export of the opened document, plus system printing;
+- plain-text and annotated PDF export of the opened document, plus system printing;
 - library metadata export and metadata restoration by file hash or saved path;
 - local themes, font size, line spacing, high contrast, keyboard-friendly navigation, and optional system text-to-speech with backend-dependent word progress;
 - single-page and two-page layouts for visual documents;

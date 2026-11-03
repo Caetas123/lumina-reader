@@ -19,7 +19,7 @@ This report describes the behavior implemented in the repository, not only the c
 - Optional system text-to-speech with start, pause, resume, stop, rate, volume, selected-passage reading, continuous-document reading, and backend-dependent spoken-word highlighting.
 - Themes, font size, line spacing, continuous reading, high contrast, keyboard navigation, accessible labels/tooltips, settings export/restore, library export/restore, knowledge export, and database backup.
 - Plain-text export of the opened document without changing the source file.
-- Basic PDF export and system printing of the opened document without changing the source file.
+- PDF export and system printing of the opened document, including text highlights and normalized visual-region annotations, without changing the source file.
 - One cross-platform release version from `project-version.txt`, with tag checks shared by the Linux, Windows, and macOS packaging workflows.
 - Archive safety checks for normalized paths, symbolic links, entry count, entry sizes, total size, unsupported encryption, and malformed readers.
 
@@ -60,7 +60,7 @@ The graphical executable also stayed alive for more than ten seconds with `QT_QP
 ## Intentional limitations
 
 - EPUB is rendered as a safe native text view. CSS pagination, embedded fonts/media, links, and nested navigation levels are not reproduced; the Contents panel follows the EPUB spine and uses chapter labels when available.
-- PDF pages are rendered through Qt PDF when available. Extracted text is exposed in a selectable fallback view, visual pages support single-page/two-page layouts, saved manual regions are restored as coordinate overlays, and the opened document can be exported as a basic PDF or sent to the system printer; text-selection-to-PDF coordinate mapping and annotated-PDF export are not yet implemented.
+- PDF pages are rendered through Qt PDF when available. Extracted text is exposed in a selectable fallback view, visual pages support single-page/two-page layouts, saved manual regions are restored as coordinate overlays, and text highlights/visual regions are carried into exported or printed output; native PDF text-selection coordinate mapping remains limited because the fallback view does not expose the source PDF glyph geometry.
 - OCR now supports asynchronous page and document-wide passes. Word-level overlays over OCR output remain future work; manual region annotations are stored and restored over the original image coordinates as the safe fallback.
 - Dictionary and translation providers are explicit online integrations. No local dictionary database is bundled, and no external request occurs without a user action.
 - Qt Speech word-level highlighting is enabled when the selected backend exposes the Qt 6.6+ word-progress capability; engines without that capability still support read-aloud without visual word tracking.
@@ -70,6 +70,8 @@ The graphical executable also stayed alive for more than ten seconds with `QT_QP
 ## Recent thematic commits
 
 - `f5caac7` — restore saved visual region annotations over page coordinates.
+- `c114061` — normalize optional highlight notes and cover cross-format Knowledge search.
+- `c8ee5bd` — cover visual page sources and annotated PDF export paths.
 - `ce81667` — highlight the spoken word when the speech backend provides progress.
 - `c6ce6ad` — add single-page and two-page visual reading layouts.
 - `cb6511e` — add basic PDF export and system printing.

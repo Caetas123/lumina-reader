@@ -6,13 +6,16 @@
 #include "infrastructure/reader/DocumentEngineFactory.h"
 
 #include <QBuffer>
+#include <QAbstractTextDocumentLayout>
 #include <QApplication>
+#include <QColor>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QImage>
 #include <QPainter>
 #include <QPageSize>
+#include <QPen>
 #include <QPagedPaintDevice>
 #include <QPdfWriter>
 #include <QPrintDialog>
@@ -675,6 +678,12 @@ bool ReaderController::renderDocument(QPagedPaintDevice &device) const
         painter.end();
         return false;
     }
+    const QVariantList savedHighlights = library_ == nullptr
+        ? QVariantList{}
+        : library_->highlightsForDocument(documentId_);
+    const QVariantList savedAnnotations = library_ == nullptr
+        ? QVariantList{}
+        : library_->annotationsForDocument(documentId_);
 
     for (int page = 0; page < pageCount_; ++page) {
         if (page > 0 && !device.newPage()) {
@@ -696,6 +705,38 @@ bool ReaderController::renderDocument(QPagedPaintDevice &device) const
             const QPoint topLeft = pageRect.center()
                 - QPoint(scaledSize.width() / 2, scaledSize.height() / 2);
             painter.drawImage(QRect(topLeft, scaledSize), image);
+            for (const QVariant &value : savedAnnotations) {
+                const QVariantMap annotation = value.toMap();
+                if (annotation.value(QStringLiteral("kind")).toString().toLower()
+                        != QStringLiteral("region")
+                    || annotation.value(QStringLiteral("page")).toInt() != page) {
+                    continue;
+                }
+                const qreal x = std::clamp(annotation.value(QStringLiteral("x")).toDouble(), 0.0, 1.0);
+                const qreal y = std::clamp(annotation.value(QStringLiteral("y")).toDouble(), 0.0, 1.0);
+                const qreal width = std::clamp(annotation.value(QStringLiteral("width")).toDouble(), 0.0, 1.0 - x);
+                const qreal height = std::clamp(annotation.value(QStringLiteral("height")).toDouble(), 0.0, 1.0 - y);
+                if (width <= 0.0 || height <= 0.0) {
+                    continue;
+                }
+                QRectF region(QPointF(topLeft) + QPointF(x * scaledSize.width(), y * scaledSize.height()),
+                              QSizeF(width * scaledSize.width(), height * scaledSize.height()));
+                QColor color(QStringLiteral("#f6c945"));
+                color.setAlpha(78);
+                painter.save();
+                painter.setPen(QPen(QColor(QStringLiteral("#a47700")),
+                                    std::max<qreal>(1.0, pageRect.width() / 1800.0)));
+                painter.setBrush(color);
+                painter.drawRect(region);
+                const QString note = annotation.value(QStringLiteral("text")).toString().trimmed();
+                if (!note.isEmpty() && region.width() >= 80.0 && region.height() >= 24.0) {
+                    painter.setPen(QColor(QStringLiteral("#2b2200")));
+                    painter.drawText(region.adjusted(4.0, 4.0, -4.0, -4.0),
+                                     Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap,
+                                     note.left(240));
+                }
+                painter.restore();
+            }
             continue;
         }
 
@@ -713,14 +754,62 @@ bool ReaderController::renderDocument(QPagedPaintDevice &device) const
         document.setTextWidth(pageRect.width());
         const qreal documentHeight = std::max<qreal>(document.size().height(), 1.0);
         const qreal scale = std::min<qreal>(1.0, pageRect.height() / documentHeight);
+        QAbstractTextDocumentLayout::PaintContext paintContext;
+        for (const QVariant &value : savedHighlights) {
+            const QVariantMap highlight = value.toMap();
+            if (highlight.value(QStringLiteral("page")).toInt() != page) {
+                continue;
+            }
+            const QStringList locatorParts = highlight.value(QStringLiteral("locator"))
+                                                 .toString()
+                                                 .split(QChar(':'), Qt::KeepEmptyParts);
+            if (locatorParts.size() < 3 || locatorParts.first() != QStringLiteral("text")) {
+                continue;
+            }
+            bool startOk = false;
+            bool endOk = false;
+            const int start = locatorParts.at(locatorParts.size() - (locatorParts.size() >= 4 ? 2 : 1))
+                                  .toInt(&startOk);
+            const int end = locatorParts.size() >= 4
+                ? locatorParts.last().toInt(&endOk)
+                : start + highlight.value(QStringLiteral("text")).toString().size();
+            if (!startOk || (locatorParts.size() >= 4 && !endOk)) {
+                continue;
+            }
+            const int maximumPosition = std::max(0, document.characterCount() - 1);
+            const int boundedStart = std::clamp(start, 0, maximumPosition);
+            const int boundedEnd = std::clamp(std::max(end, boundedStart), boundedStart, maximumPosition);
+            if (boundedStart == boundedEnd) {
+                continue;
+            }
+            QTextCursor cursor(&document);
+            cursor.setPosition(boundedStart);
+            cursor.setPosition(boundedEnd, QTextCursor::KeepAnchor);
+            QAbstractTextDocumentLayout::Selection selection;
+            selection.cursor = cursor;
+            QColor color(highlight.value(QStringLiteral("color")).toString());
+            if (!color.isValid()) {
+                color = QColor(QStringLiteral("#f6c945"));
+            }
+            color.setAlpha(96);
+            selection.format.setBackground(color);
+            const QString style = highlight.value(QStringLiteral("style")).toString().toLower();
+            if (style == QStringLiteral("underline")) {
+                selection.format.setUnderlineStyle(QTextCharFormat::SingleUnderline);
+                selection.format.setUnderlineColor(color.darker(140));
+            } else if (style == QStringLiteral("strike")) {
+                selection.format.setFontStrikeOut(true);
+            }
+            paintContext.selections.append(selection);
+        }
         painter.save();
         painter.translate(pageRect.topLeft());
         painter.scale(scale, scale);
-        document.drawContents(&painter,
-                              QRectF(0,
-                                     0,
-                                     pageRect.width() / scale,
-                                     pageRect.height() / scale));
+        paintContext.clip = QRectF(0,
+                                   0,
+                                   pageRect.width() / scale,
+                                   pageRect.height() / scale);
+        document.documentLayout()->draw(&painter, paintContext);
         painter.restore();
     }
     return painter.end();

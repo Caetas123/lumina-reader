@@ -46,6 +46,11 @@ private slots:
         QVERIFY(!reader.textContent().contains(QStringLiteral("PAGE TWO")));
         QVERIFY(reader.continuousTextContent().contains(QStringLiteral("PAGE TWO")));
         QVERIFY(reader.pageTextAvailable());
+        QVERIFY(library.addHighlight(documentId,
+                                     QStringLiteral("AAAAA"),
+                                     QStringLiteral("text:0:0:5"),
+                                     0,
+                                     QStringLiteral("#f6c945")));
         const QString exportPath = directory.filePath(QStringLiteral("exported.txt"));
         QVERIFY(reader.exportText(exportPath));
         QFile exported(exportPath);
@@ -65,6 +70,44 @@ private slots:
         QCOMPARE(reader.searchMatches(), 1);
         QVERIFY(reader.searchStart() >= 0);
         QCOMPARE(library.documentDetails(documentId).value(QStringLiteral("currentPage")).toInt(), 1);
+    }
+
+    void exportsVisualAnnotationsToPdf()
+    {
+        Lumina::Infrastructure::Database database;
+        Lumina::Domain::Error error;
+        QVERIFY2(database.open(QStringLiteral(":memory:"), &error),
+                 qPrintable(error.logMessage()));
+        QVERIFY2(database.migrate(&error), qPrintable(error.logMessage()));
+
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const QString imagePath = directory.filePath(QStringLiteral("annotated-page.png"));
+        QImage image(120, 80, QImage::Format_ARGB32);
+        image.fill(Qt::white);
+        QVERIFY(image.save(imagePath));
+
+        Lumina::Infrastructure::LibraryStore library;
+        library.setDatabase(&database);
+        QVERIFY(library.importFiles({imagePath}));
+        const QString documentId = library.data(
+            library.index(0, 0), Lumina::Infrastructure::LibraryStore::IdRole).toString();
+        QVERIFY(!documentId.isEmpty());
+        QVERIFY(library.addAnnotation(documentId,
+                                      QStringLiteral("A saved visual note"),
+                                      QStringLiteral("region"),
+                                      QStringLiteral("region:0.1,0.2,0.4,0.3"),
+                                      0,
+                                      0.1,
+                                      0.2,
+                                      0.4,
+                                      0.3));
+
+        Lumina::Application::ReaderController reader(&library);
+        QVERIFY(reader.openDocument(documentId));
+        const QString pdfPath = directory.filePath(QStringLiteral("annotated.pdf"));
+        QVERIFY(reader.exportPdf(pdfPath));
+        QVERIFY(QFileInfo(pdfPath).size() > 0);
     }
 
     void decodesRtfAndFb2Text()
