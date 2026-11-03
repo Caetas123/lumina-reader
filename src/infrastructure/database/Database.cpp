@@ -276,6 +276,16 @@ QList<Migration> migrations()
                     "CHECK (reading_seconds >= 0)"),
             },
         },
+        {
+            9,
+            {
+                QStringLiteral(
+                    "ALTER TABLE documents ADD COLUMN genre TEXT NOT NULL DEFAULT ''"),
+                QStringLiteral(
+                    "CREATE INDEX IF NOT EXISTS documents_genre_idx "
+                    "ON documents(genre COLLATE NOCASE)"),
+            },
+        },
     };
 }
 

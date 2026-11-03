@@ -39,6 +39,7 @@ public:
         RatingRole,
         PageRotationRole,
         ReadingSecondsRole,
+        GenreRole,
     };
     Q_ENUM(Role)
 
@@ -73,7 +74,8 @@ public:
                                     const QString &author,
                                     const QString &description,
                                     const QString &language,
-                                    const QString &contentType = {});
+                                    const QString &contentType = {},
+                                    const QString &genre = {});
     Q_INVOKABLE bool setCoverPath(const QString &documentId, const QString &coverPath);
     Q_INVOKABLE bool setPageRotation(const QString &documentId, int rotation);
     Q_INVOKABLE bool updateProgress(const QString &documentId, double progress, int currentPage);
@@ -87,6 +89,7 @@ public:
     Q_INVOKABLE bool removeFromCollection(const QString &documentId, const QString &collectionId);
     Q_INVOKABLE QVariantList tags() const;
     Q_INVOKABLE QStringList tagsForDocument(const QString &documentId) const;
+    Q_INVOKABLE QStringList genres() const;
     Q_INVOKABLE bool setTags(const QString &documentId, const QStringList &tags);
     Q_INVOKABLE QVariantList knowledgeDocumentOptions() const;
     Q_INVOKABLE QVariantList knowledgeSearch(const QString &term,

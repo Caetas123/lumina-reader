@@ -15,7 +15,7 @@ private slots:
         QVERIFY2(database.open(QStringLiteral(":memory:"), &error),
                  qPrintable(error.logMessage()));
         QVERIFY2(database.migrate(&error), qPrintable(error.logMessage()));
-        QCOMPARE(database.schemaVersion(), 8);
+        QCOMPARE(database.schemaVersion(), 9);
 
         QSqlQuery query(database.connection());
         QVERIFY(query.exec(QStringLiteral(
@@ -50,12 +50,12 @@ private slots:
                  qPrintable(error.logMessage()));
         QVERIFY2(database.migrate(&error), qPrintable(error.logMessage()));
         QVERIFY2(database.migrate(&error), qPrintable(error.logMessage()));
-        QCOMPARE(database.schemaVersion(), 8);
+        QCOMPARE(database.schemaVersion(), 9);
 
         QSqlQuery query(database.connection());
         QVERIFY(query.exec(QStringLiteral("SELECT COUNT(*) FROM schema_migrations")));
         QVERIFY(query.next());
-        QCOMPARE(query.value(0).toInt(), 8);
+        QCOMPARE(query.value(0).toInt(), 9);
     }
 
     void rejectsEmptyPath()

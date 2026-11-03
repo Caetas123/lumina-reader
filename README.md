@@ -43,7 +43,7 @@ The current application provides:
 - a native Qt Quick desktop interface with light, dark, sepia, paper, gray, low-light, and high-contrast themes;
 - individual and multiple-file import, drag and drop, folder import, SHA-256 duplicate detection, and optional folder watching through the library model;
 - library filters for favorites, to-read, reading, and finished documents;
-- reading progress, last position, status, favorites, ratings, descriptions, language, collections, tags, and reading history;
+- reading progress, last position, status, favorites, ratings, descriptions, language, genre, collections, tags, and reading history;
 - generated or personalized covers, page rotation for visual documents, and backup/restoration of that reading metadata;
 - TXT, RTF, FB2, unencrypted PalmDOC-compatible MOBI/AZW/AZW3, raster-image, EPUB, CBZ, and ZIP reading when the matching Qt capabilities are present;
 - optional PDF rendering through Qt PDF in the CI/release build;

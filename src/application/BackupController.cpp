@@ -24,6 +24,18 @@ bool isValidStatus(const QString &status)
         || status == QStringLiteral("read") || status == QStringLiteral("abandoned");
 }
 
+bool isValidContentType(const QString &contentType)
+{
+    static const QStringList types = {
+        QStringLiteral("book"), QStringLiteral("manga"), QStringLiteral("manhwa"),
+        QStringLiteral("webtoon"), QStringLiteral("newspaper"), QStringLiteral("magazine"),
+        QStringLiteral("article"), QStringLiteral("academic"), QStringLiteral("handout"),
+        QStringLiteral("comic"), QStringLiteral("document"), QStringLiteral("image"),
+        QStringLiteral("text"), QStringLiteral("other"),
+    };
+    return types.contains(contentType);
+}
+
 bool isKnownSetting(const QString &key)
 {
     static const QStringList keys = {
@@ -210,7 +222,7 @@ bool BackupController::exportLibrary(const QString &path)
     if (!query.exec(QStringLiteral(
             "SELECT id, title, author, file_path, file_hash, file_size, format, content_type, "
             "status, progress, current_page, page_count, added_at, COALESCE(last_opened_at, ''), "
-            "description, language, is_favorite, rating, page_rotation, reading_seconds "
+            "description, language, is_favorite, rating, page_rotation, reading_seconds, genre "
             "FROM documents ORDER BY title COLLATE NOCASE"))) {
         fail(QStringLiteral("The library could not be read for export."));
         return false;
@@ -239,6 +251,7 @@ bool BackupController::exportLibrary(const QString &path)
             {QStringLiteral("rating"), query.value(17).toInt()},
             {QStringLiteral("pageRotation"), query.value(18).toInt()},
             {QStringLiteral("readingSeconds"), query.value(19).toLongLong()},
+            {QStringLiteral("genre"), query.value(20).toString()},
         });
     }
 
@@ -359,11 +372,17 @@ bool BackupController::restoreLibrary(const QString &path)
             : 0;
         const qint64 readingSeconds = std::max<qint64>(
             0, item.value(QStringLiteral("readingSeconds")).toVariant().toLongLong());
+        const QString requestedContentType = item.value(QStringLiteral("contentType")).toString().trimmed().toLower();
+        const QString contentType = isValidContentType(requestedContentType)
+            ? requestedContentType
+            : QStringLiteral("other");
+        const QString genre = item.value(QStringLiteral("genre")).toString().trimmed().left(120);
 
         QSqlQuery update(connection);
         update.prepare(QStringLiteral(
             "UPDATE documents SET title = :title, author = :author, description = :description, "
-            "language = :language, status = :status, progress = :progress, current_page = :page, "
+            "language = :language, content_type = :content_type, genre = :genre, "
+            "status = :status, progress = :progress, current_page = :page, "
             "page_count = :page_count, last_opened_at = NULLIF(:last_opened, ''), "
             "is_favorite = :favorite, rating = :rating, page_rotation = :rotation, "
             "reading_seconds = :reading_seconds, "
@@ -372,6 +391,8 @@ bool BackupController::restoreLibrary(const QString &path)
         update.bindValue(QStringLiteral(":author"), item.value(QStringLiteral("author")).toString());
         update.bindValue(QStringLiteral(":description"), item.value(QStringLiteral("description")).toString());
         update.bindValue(QStringLiteral(":language"), item.value(QStringLiteral("language")).toString());
+        update.bindValue(QStringLiteral(":content_type"), contentType);
+        update.bindValue(QStringLiteral(":genre"), genre);
         update.bindValue(QStringLiteral(":status"), restoredStatus);
         update.bindValue(QStringLiteral(":progress"), progress);
         update.bindValue(QStringLiteral(":page"), page);

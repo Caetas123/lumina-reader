@@ -246,7 +246,8 @@ bool isValidViewFilter(const QString &filter)
         || filter == QStringLiteral("abandoned") || filter == QStringLiteral("recent")
         || (filter.startsWith(QStringLiteral("collection:")) && filter.size() > 11)
         || (filter.startsWith(QStringLiteral("tag:")) && filter.size() > 4)
-        || (filter.startsWith(QStringLiteral("type:")) && filter.size() > 5);
+        || (filter.startsWith(QStringLiteral("type:")) && filter.size() > 5)
+        || (filter.startsWith(QStringLiteral("genre:")) && filter.size() > 6);
 }
 
 QString viewFilterPredicate(const QString &filter)
@@ -375,6 +376,7 @@ QHash<int, QByteArray> LibraryStore::roleNames() const
         {RatingRole, "rating"},
         {PageRotationRole, "pageRotation"},
         {ReadingSecondsRole, "readingSeconds"},
+        {GenreRole, "genre"},
     };
 }
 
@@ -456,7 +458,7 @@ void LibraryStore::reload()
         "d.id, d.title, d.author, d.file_path, d.format, d.content_type, d.status, "
         "d.progress, d.current_page, d.page_count, d.cover_path, d.file_size, "
         "d.added_at, COALESCE(d.last_opened_at, ''), d.description, d.language, "
-        "d.is_favorite, d.rating, d.page_rotation, d.reading_seconds");
+        "d.is_favorite, d.rating, d.page_rotation, d.reading_seconds, d.genre");
     QStringList predicates;
     const QString filterPredicate = viewFilterPredicate(viewFilter_);
     if (!filterPredicate.isEmpty()) {
@@ -474,6 +476,8 @@ void LibraryStore::reload()
             "WHERE dt.document_id = d.id AND lower(t.name) = lower(:tag_filter))");
     } else if (normalizedFilter.startsWith(QStringLiteral("type:"))) {
         dynamicFilterPredicate = QStringLiteral("d.content_type = :type_filter");
+    } else if (normalizedFilter.startsWith(QStringLiteral("genre:"))) {
+        dynamicFilterPredicate = QStringLiteral("lower(d.genre) = lower(:genre_filter)");
     }
     if (!dynamicFilterPredicate.isEmpty()) {
         predicates.append(dynamicFilterPredicate);
@@ -502,6 +506,8 @@ void LibraryStore::reload()
         query.bindValue(QStringLiteral(":tag_filter"), normalizedFilter.mid(4));
     } else if (normalizedFilter.startsWith(QStringLiteral("type:"))) {
         query.bindValue(QStringLiteral(":type_filter"), normalizedFilter.mid(5));
+    } else if (normalizedFilter.startsWith(QStringLiteral("genre:"))) {
+        query.bindValue(QStringLiteral(":genre_filter"), normalizedFilter.mid(6));
     }
 
     if (!query.exec()) {
@@ -526,6 +532,8 @@ void LibraryStore::reload()
                 fallback.bindValue(QStringLiteral(":tag_filter"), normalizedFilter.mid(4));
             } else if (normalizedFilter.startsWith(QStringLiteral("type:"))) {
                 fallback.bindValue(QStringLiteral(":type_filter"), normalizedFilter.mid(5));
+            } else if (normalizedFilter.startsWith(QStringLiteral("genre:"))) {
+                fallback.bindValue(QStringLiteral(":genre_filter"), normalizedFilter.mid(6));
             }
             if (fallback.exec()) {
                 while (fallback.next()) {
@@ -569,6 +577,7 @@ QVariantMap LibraryStore::recordFromQuery(const QSqlQuery &query) const
         {QStringLiteral("rating"), query.value(17)},
         {QStringLiteral("pageRotation"), query.value(18)},
         {QStringLiteral("readingSeconds"), query.value(19)},
+        {QStringLiteral("genre"), query.value(20)},
     };
 }
 
@@ -958,13 +967,18 @@ bool LibraryStore::updateMetadata(const QString &documentId,
                                   const QString &author,
                                   const QString &description,
                                   const QString &language,
-                                  const QString &contentType)
+                                  const QString &contentType,
+                                  const QString &genre)
 {
     if (!isReady() || documentId.trimmed().isEmpty() || title.trimmed().isEmpty()) {
         return false;
     }
     const QString normalizedContentType = contentType.trimmed().toLower();
     if (!normalizedContentType.isEmpty() && !isValidContentType(normalizedContentType)) {
+        return false;
+    }
+    const QString normalizedGenre = genre.isNull() ? QStringLiteral("") : genre.trimmed();
+    if (normalizedGenre.size() > 120) {
         return false;
     }
     QSqlDatabase connection = database_->connection();
@@ -975,12 +989,14 @@ bool LibraryStore::updateMetadata(const QString &documentId,
     query.prepare(QStringLiteral(
         "UPDATE documents SET title = :title, author = :author, description = :description, "
         "language = :language, content_type = COALESCE(NULLIF(:content_type, ''), content_type), "
+        "genre = :genre, "
         "updated_at = CURRENT_TIMESTAMP WHERE id = :id"));
     query.bindValue(QStringLiteral(":title"), title.trimmed());
     query.bindValue(QStringLiteral(":author"), author.trimmed());
     query.bindValue(QStringLiteral(":description"), description.trimmed());
     query.bindValue(QStringLiteral(":language"), language.trimmed());
     query.bindValue(QStringLiteral(":content_type"), normalizedContentType);
+    query.bindValue(QStringLiteral(":genre"), normalizedGenre);
     query.bindValue(QStringLiteral(":id"), documentId);
     bool success = query.exec() && query.numRowsAffected() > 0;
     if (success) {
@@ -1130,7 +1146,7 @@ QVariantMap LibraryStore::documentDetails(const QString &documentId) const
     query.prepare(QStringLiteral(
         "SELECT id, title, author, file_path, format, content_type, status, progress, "
         "current_page, page_count, cover_path, file_size, added_at, COALESCE(last_opened_at, ''), "
-        "description, language, is_favorite, rating, page_rotation, reading_seconds "
+        "description, language, is_favorite, rating, page_rotation, reading_seconds, genre "
         "FROM documents WHERE id = :id"));
     query.bindValue(QStringLiteral(":id"), documentId);
     if (!query.exec() || !query.next()) {
@@ -1272,6 +1288,24 @@ QStringList LibraryStore::tagsForDocument(const QString &documentId) const
         "WHERE dt.document_id = :document ORDER BY t.name COLLATE NOCASE"));
     query.bindValue(QStringLiteral(":document"), documentId);
     if (!query.exec()) {
+        return results;
+    }
+    while (query.next()) {
+        results.append(query.value(0).toString());
+    }
+    return results;
+}
+
+QStringList LibraryStore::genres() const
+{
+    QStringList results;
+    if (!isReady()) {
+        return results;
+    }
+    QSqlQuery query(database_->connection());
+    if (!query.exec(QStringLiteral(
+            "SELECT DISTINCT genre FROM documents WHERE trim(genre) <> '' "
+            "ORDER BY genre COLLATE NOCASE"))) {
         return results;
     }
     while (query.next()) {

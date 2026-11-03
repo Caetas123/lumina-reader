@@ -241,6 +241,7 @@ ApplicationWindow {
         metadataTitle.text = record.title || ""
         metadataAuthor.text = record.author || ""
         metadataLanguage.text = record.language || ""
+        metadataGenre.text = record.genre || ""
         metadataDescription.text = record.description || ""
         metadataTags.text = appController.library.tagsForDocument(documentId).join(", ")
         collectionSelector.model = appController.library.collections()
@@ -296,6 +297,13 @@ ApplicationWindow {
             options.push({
                 label: qsTr("Tag: %1").arg(tags[tagIndex].name),
                 filter: "tag:" + tags[tagIndex].name
+            })
+        }
+        var genres = appController.library.genres()
+        for (var genreIndex = 0; genreIndex < genres.length; ++genreIndex) {
+            options.push({
+                label: qsTr("Genre: %1").arg(genres[genreIndex]),
+                filter: "genre:" + genres[genreIndex]
             })
         }
         libraryBrowseOptions = options
@@ -429,6 +437,11 @@ ApplicationWindow {
                     placeholderText: qsTr("Language")
                 }
                 TextField {
+                    id: metadataGenre
+                    Layout.fillWidth: true
+                    placeholderText: qsTr("Genre")
+                }
+                TextField {
                     id: metadataTags
                     Layout.fillWidth: true
                     placeholderText: qsTr("Tags, separated by commas")
@@ -519,7 +532,8 @@ ApplicationWindow {
                                                               metadataAuthor.text,
                                                               metadataDescription.text,
                                                               metadataLanguage.text,
-                                                              window.contentTypeKeys[metadataContentType.currentIndex])
+                                                               window.contentTypeKeys[metadataContentType.currentIndex],
+                                                               metadataGenre.text)
             if (saved) {
                 var tags = metadataTags.text.split(",")
                 saved = appController.library.setTags(documentId, tags)

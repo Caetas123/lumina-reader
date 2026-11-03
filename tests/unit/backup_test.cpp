@@ -44,7 +44,9 @@ private slots:
                                        QStringLiteral("Original title"),
                                        QStringLiteral("Original author"),
                                        QStringLiteral("A saved description"),
-                                       QStringLiteral("en")));
+                                       QStringLiteral("en"),
+                                       QStringLiteral("academic"),
+                                       QStringLiteral("History")));
 
         Lumina::Application::BackupController backup;
         backup.setDatabase(&database);
@@ -84,6 +86,10 @@ private slots:
                  QStringLiteral("Original title"));
         QCOMPARE(library.documentDetails(documentId).value(QStringLiteral("language")).toString(),
                  QStringLiteral("en"));
+        QCOMPARE(library.documentDetails(documentId).value(QStringLiteral("contentType")).toString(),
+                 QStringLiteral("academic"));
+        QCOMPARE(library.documentDetails(documentId).value(QStringLiteral("genre")).toString(),
+                 QStringLiteral("History"));
         QVERIFY(library.documentDetails(documentId).value(QStringLiteral("isFavorite")).toBool());
         QCOMPARE(library.documentDetails(documentId).value(QStringLiteral("rating")).toInt(), 4);
         QCOMPARE(library.documentDetails(documentId).value(QStringLiteral("readingSeconds")).toLongLong(), 90);
