@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Automatic and user-selected library covers, plus persisted page rotation for visual documents and backup restoration.
 - Accumulated local reading time is persisted per document alongside progress and reading history.
 - Optional libarchive-backed, read-only comic archive engines for CBR, CB7, CBT, RAR, and 7Z when the dependency is available at configure time.
+- macOS x86_64 DMG packaging with Qt deployment and a self-contained application bundle.
 
 ### Changed
 

@@ -17,13 +17,15 @@ Ready-to-run builds are published on [GitHub Releases](https://github.com/Caetas
 | Platform | Download | Notes |
 | --- | --- | --- |
 | Windows x64 | [Download installer EXE (`v0.1.6`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.1.6/LuminaReader-Setup-windows-x64.exe) | Recommended. Run the `.exe` to install the application and its Qt dependencies. |
-| macOS | Not packaged yet | [Build from source](docs/BUILDING.md). |
+| macOS x86_64 | Not included in the currently published `v0.1.6` release | The next tagged release will include a direct `LuminaReader-macos-x86_64.dmg` download. |
 | Linux x86_64 | [Download AppImage (`v0.1.6`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.1.6/LuminaReader-linux-x86_64.AppImage) | Make it executable with `chmod +x`, then run it. No installation or Qt setup is required. |
 
 The Windows installer is a self-contained `.exe` that installs the Qt runtime and platform plugins before launching Lumina Reader.
 The Linux AppImage is a self-contained executable for 64-bit Linux systems and includes the Qt runtime required by Lumina Reader.
 
 See the [v0.1.6 release notes](https://github.com/Caetas123/lumina-reader/releases/tag/v0.1.6) for the currently published Windows and Linux packages and their SHA-256 checksums. New builds are added to Releases when a version tag is published; this branch does not push or publish automatically.
+
+The macOS release workflow builds a self-contained DMG for Intel Macs. It is ready for the next tagged release but is not attached to the older `v0.1.6` release yet.
 
 ## Principles
 

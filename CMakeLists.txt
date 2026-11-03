@@ -147,6 +147,10 @@ target_link_libraries(lumina_reader
 
 set_target_properties(lumina_reader PROPERTIES
     MACOSX_BUNDLE TRUE
+    MACOSX_BUNDLE_BUNDLE_NAME "Lumina Reader"
+    MACOSX_BUNDLE_GUI_IDENTIFIER "com.caetas.luminareader"
+    MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
+    MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
     WIN32_EXECUTABLE TRUE
 )
 
