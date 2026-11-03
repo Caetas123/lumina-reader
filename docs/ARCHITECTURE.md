@@ -55,7 +55,7 @@ Contains integrations that differ across Windows, macOS, and Linux, such as file
 - `ArchiveReader` reads EPUB and image archives in-process without extracting untrusted paths. It rejects parent/absolute paths, symbolic links, oversized entries, and archives over the configured entry/size limits.
 - `TextDecoder` converts TXT, RTF, FB2, and unencrypted PalmDOC-compatible MOBI/AZW/AZW3 files into safe reader text without executing document content. DRM and unsupported KF8/Huffman variants are rejected.
 - Image and rendered-PDF pages expose a manual region-annotation fallback when selectable text or OCR is unavailable; region coordinates are stored normalized to the displayed page.
-- `OcrProvider` defines the provider boundary; `TesseractOcrProvider` runs the local Tesseract executable asynchronously, and `ReaderController` stores completed OCR by document and page.
+- `OcrProvider` defines the provider boundary; `TesseractOcrProvider` runs the local Tesseract executable asynchronously, while `ReaderController` coordinates page and document-wide passes and stores completed OCR by document and page.
 - `ReaderController` owns the reader state and keeps page locations/progress in the library model. The QML layer never opens files or writes SQL directly.
 - Image, PDF, and comic pages can be rotated through the reader; the normalized rotation is stored with the document and included in library backups.
 - `Logging` configures categorized diagnostics without creating a persistent log file or recording document content.

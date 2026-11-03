@@ -38,6 +38,8 @@ class ReaderController final : public QObject {
     Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY stateChanged)
     Q_PROPERTY(bool ocrAvailable READ ocrAvailable NOTIFY stateChanged)
     Q_PROPERTY(bool ocrRunning READ ocrRunning NOTIFY stateChanged)
+    Q_PROPERTY(bool ocrDocumentRunning READ ocrDocumentRunning NOTIFY stateChanged)
+    Q_PROPERTY(double ocrProgress READ ocrProgress NOTIFY stateChanged)
     Q_PROPERTY(QString ocrStatus READ ocrStatus NOTIFY stateChanged)
     Q_PROPERTY(bool showOcrText READ showOcrText WRITE setShowOcrText NOTIFY stateChanged)
     Q_PROPERTY(int pageCount READ pageCount NOTIFY stateChanged)
@@ -71,6 +73,8 @@ public:
     [[nodiscard]] QString errorMessage() const;
     [[nodiscard]] bool ocrAvailable() const;
     [[nodiscard]] bool ocrRunning() const;
+    [[nodiscard]] bool ocrDocumentRunning() const;
+    [[nodiscard]] double ocrProgress() const;
     [[nodiscard]] QString ocrStatus() const;
     [[nodiscard]] bool showOcrText() const;
     void setShowOcrText(bool show);
@@ -98,6 +102,7 @@ public:
     Q_INVOKABLE bool nextSearchMatch();
     Q_INVOKABLE bool previousSearchMatch();
     Q_INVOKABLE bool startOcr(const QString &language = QStringLiteral("eng"));
+    Q_INVOKABLE bool startDocumentOcr(const QString &language = QStringLiteral("eng"));
     Q_INVOKABLE void cancelOcr();
 
 signals:
@@ -109,7 +114,9 @@ private:
     [[nodiscard]] bool refreshPage();
     void rebuildContinuousText();
     void applyCachedOcr();
+    [[nodiscard]] QImage pageImage(int page) const;
     [[nodiscard]] QImage currentPageImage() const;
+    void processNextDocumentOcrPage();
     void rebuildSearchMatches();
     [[nodiscard]] bool selectSearchMatch(int index);
     void persistProgress();
@@ -133,6 +140,13 @@ private:
     QString ocrDocumentId_;
     QString ocrLanguage_;
     int ocrPage_ = -1;
+    bool ocrDocumentRunning_ = false;
+    QString ocrBatchDocumentId_;
+    QString ocrBatchLanguage_;
+    QList<int> ocrBatchPages_;
+    int ocrBatchIndex_ = 0;
+    int ocrBatchSucceeded_ = 0;
+    int ocrBatchFailed_ = 0;
     bool showOcrText_ = false;
     int pageCount_ = 0;
     int currentPage_ = 0;

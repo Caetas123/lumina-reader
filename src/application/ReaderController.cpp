@@ -11,9 +11,11 @@
 #include <QImage>
 #include <QSaveFile>
 #include <QStringList>
+#include <QTimer>
 #include <QTransform>
 
 #include <algorithm>
+#include <utility>
 
 namespace {
 
@@ -133,7 +135,23 @@ bool ReaderController::ocrAvailable() const
 
 bool ReaderController::ocrRunning() const
 {
-    return ocrProvider_ != nullptr && ocrProvider_->busy();
+    return ocrDocumentRunning_ || (ocrProvider_ != nullptr && ocrProvider_->busy());
+}
+
+bool ReaderController::ocrDocumentRunning() const
+{
+    return ocrDocumentRunning_;
+}
+
+double ReaderController::ocrProgress() const
+{
+    if (ocrBatchPages_.isEmpty()) {
+        return 0.0;
+    }
+    return std::clamp(static_cast<double>(ocrBatchIndex_)
+                          / static_cast<double>(ocrBatchPages_.size()),
+                      0.0,
+                      1.0);
 }
 
 QString ReaderController::ocrStatus() const
@@ -227,6 +245,13 @@ int ReaderController::searchLength() const
 
 void ReaderController::clearState()
 {
+    ocrDocumentRunning_ = false;
+    ocrBatchDocumentId_.clear();
+    ocrBatchLanguage_.clear();
+    ocrBatchPages_.clear();
+    ocrBatchIndex_ = 0;
+    ocrBatchSucceeded_ = 0;
+    ocrBatchFailed_ = 0;
     ocrDocumentId_.clear();
     ocrLanguage_.clear();
     ocrPage_ = -1;
@@ -347,16 +372,22 @@ void ReaderController::applyCachedOcr()
     rebuildSearchMatches();
 }
 
-QImage ReaderController::currentPageImage() const
+QImage ReaderController::pageImage(int page) const
 {
-    if (documentEngine_ != nullptr && isImageDocument()) {
-        QImage image = documentEngine_->renderPage(currentPage_, QSize(2200, 3100));
+    if (documentEngine_ != nullptr && page >= 0 && page < pageCount_
+        && documentEngine_->pageKind(page) == Lumina::Domain::Reader::PageKind::Image) {
+        QImage image = documentEngine_->renderPage(page, QSize(2200, 3100));
         if (!image.isNull() && pageRotation_ != 0) {
             image = image.transformed(QTransform().rotate(pageRotation_), Qt::SmoothTransformation);
         }
         return image;
     }
     return {};
+}
+
+QImage ReaderController::currentPageImage() const
+{
+    return pageImage(currentPage_);
 }
 
 void ReaderController::rebuildSearchMatches()
@@ -592,7 +623,7 @@ bool ReaderController::startOcr(const QString &language)
     if (!open_ || ocrProvider_ == nullptr) {
         return false;
     }
-    if (ocrProvider_->busy()) {
+    if (ocrDocumentRunning_ || ocrProvider_->busy()) {
         return false;
     }
 
@@ -664,15 +695,141 @@ bool ReaderController::startOcr(const QString &language)
     return started;
 }
 
-void ReaderController::cancelOcr()
+bool ReaderController::startDocumentOcr(const QString &language)
 {
-    if (ocrProvider_ == nullptr || !ocrProvider_->busy()) {
+    if (!open_ || documentEngine_ == nullptr || ocrProvider_ == nullptr || ocrRunning()) {
+        return false;
+    }
+
+    QList<int> imagePages;
+    for (int page = 0; page < pageCount_; ++page) {
+        if (documentEngine_->pageKind(page) != Lumina::Domain::Reader::PageKind::Image) {
+            continue;
+        }
+        Lumina::Domain::Error error;
+        const QString nativeText = documentEngine_->textPage(page, &error);
+        if (!error.hasError() && !nativeText.trimmed().isEmpty()) {
+            continue;
+        }
+        imagePages.append(page);
+    }
+    if (imagePages.isEmpty()) {
+        ocrStatus_ = QStringLiteral("This document has no image pages that need OCR.");
+        emit stateChanged();
+        return false;
+    }
+    if (!ocrProvider_->isAvailable()) {
+        ocrStatus_ = QStringLiteral(
+            "Tesseract OCR is not installed. Install it and make it available on PATH.");
+        emit stateChanged();
+        return false;
+    }
+
+    ocrBatchDocumentId_ = documentId_;
+    ocrBatchLanguage_ = language.trimmed().isEmpty() ? QStringLiteral("eng") : language.trimmed();
+    ocrBatchPages_ = std::move(imagePages);
+    ocrBatchIndex_ = 0;
+    ocrBatchSucceeded_ = 0;
+    ocrBatchFailed_ = 0;
+    ocrDocumentRunning_ = true;
+    ocrPage_ = -1;
+    ocrStatus_ = QStringLiteral("Preparing OCR for %1 image pages…").arg(ocrBatchPages_.size());
+    emit stateChanged();
+    processNextDocumentOcrPage();
+    return true;
+}
+
+void ReaderController::processNextDocumentOcrPage()
+{
+    if (!ocrDocumentRunning_ || ocrProvider_ == nullptr || library_ == nullptr) {
         return;
     }
+    if (ocrBatchIndex_ >= ocrBatchPages_.size()) {
+        const int total = ocrBatchPages_.size();
+        ocrDocumentRunning_ = false;
+        ocrBatchDocumentId_.clear();
+        ocrBatchLanguage_.clear();
+        ocrPage_ = -1;
+        ocrStatus_ = ocrBatchFailed_ == 0
+            ? QStringLiteral("OCR completed for %1 image pages.").arg(ocrBatchSucceeded_)
+            : QStringLiteral("OCR completed for %1 of %2 image pages; %3 could not be processed.")
+                  .arg(ocrBatchSucceeded_)
+                  .arg(total)
+                  .arg(ocrBatchFailed_);
+        emit stateChanged();
+        return;
+    }
+
+    const int targetPage = ocrBatchPages_.at(ocrBatchIndex_);
+    const QImage image = pageImage(targetPage);
+    if (image.isNull()) {
+        ++ocrBatchFailed_;
+        ++ocrBatchIndex_;
+        ocrStatus_ = QStringLiteral("Could not render OCR page %1 of %2.")
+                         .arg(targetPage + 1)
+                         .arg(ocrBatchPages_.size());
+        emit stateChanged();
+        QTimer::singleShot(0, this, [this]() { processNextDocumentOcrPage(); });
+        return;
+    }
+
+    ocrPage_ = targetPage;
+    ocrStatus_ = QStringLiteral("Recognizing page %1 of %2…")
+                     .arg(targetPage + 1)
+                     .arg(ocrBatchPages_.size());
+    const QString targetDocumentId = ocrBatchDocumentId_;
+    const QString targetLanguage = ocrBatchLanguage_;
+    const int initialBatchIndex = ocrBatchIndex_;
+    const bool started = ocrProvider_->recognize(
+        image,
+        targetLanguage,
+        [this, targetDocumentId, targetLanguage, targetPage](const QString &text,
+                                                              const QString &error) {
+            if (!ocrDocumentRunning_ || targetDocumentId != ocrBatchDocumentId_
+                || library_ == nullptr) {
+                return;
+            }
+            if (error.isEmpty()
+                && library_->saveOcrPage(targetDocumentId,
+                                         targetPage,
+                                         targetLanguage,
+                                         text,
+                                         QStringLiteral("completed"))) {
+                ++ocrBatchSucceeded_;
+            } else {
+                ++ocrBatchFailed_;
+            }
+            ++ocrBatchIndex_;
+            ocrPage_ = -1;
+            emit stateChanged();
+            QTimer::singleShot(0, this, [this]() { processNextDocumentOcrPage(); });
+        });
+    if (!started && ocrBatchIndex_ == initialBatchIndex) {
+        ++ocrBatchFailed_;
+        ++ocrBatchIndex_;
+        ocrPage_ = -1;
+        QTimer::singleShot(0, this, [this]() { processNextDocumentOcrPage(); });
+    }
+}
+
+void ReaderController::cancelOcr()
+{
+    if (!ocrRunning()) {
+        return;
+    }
+    ocrDocumentRunning_ = false;
+    ocrBatchDocumentId_.clear();
+    ocrBatchLanguage_.clear();
+    ocrBatchPages_.clear();
+    ocrBatchIndex_ = 0;
+    ocrBatchSucceeded_ = 0;
+    ocrBatchFailed_ = 0;
     ocrDocumentId_.clear();
     ocrLanguage_.clear();
     ocrPage_ = -1;
-    ocrProvider_->cancel();
+    if (ocrProvider_ != nullptr && ocrProvider_->busy()) {
+        ocrProvider_->cancel();
+    }
     ocrStatus_ = QStringLiteral("OCR was cancelled.");
     emit stateChanged();
 }

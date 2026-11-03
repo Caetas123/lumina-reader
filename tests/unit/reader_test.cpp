@@ -39,6 +39,9 @@ private slots:
         QCOMPARE(reader.pageCount(), 2);
         QCOMPARE(reader.currentPage(), 0);
         QCOMPARE(library.documentDetails(documentId).value(QStringLiteral("pageCount")).toInt(), 2);
+        QVERIFY(!reader.startDocumentOcr(QStringLiteral("eng")));
+        QCOMPARE(reader.ocrStatus(),
+                 QStringLiteral("This document has no image pages that need OCR."));
         QVERIFY(!reader.textContent().contains(QStringLiteral("PAGE TWO")));
         QVERIFY(reader.continuousTextContent().contains(QStringLiteral("PAGE TWO")));
         QVERIFY(reader.pageTextAvailable());

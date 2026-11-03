@@ -49,7 +49,7 @@ The current application provides:
 - optional PDF rendering through Qt PDF in the CI/release build;
 - optional in-process CBR, CB7, CBT, RAR, and 7Z reading when libarchive is available at configure time;
 - optional in-process DJVU/DJV page rendering and hidden-text extraction when DjVuLibre is available at configure time;
-- optional asynchronous page OCR through Tesseract when it is installed on the system;
+- optional asynchronous page and document OCR through Tesseract when it is installed on the system, with local progress and cancellation;
 - in-document search for text pages and EPUB chapters;
 - a Contents panel for multi-page documents, with EPUB chapter labels when the source provides them;
 - scoped, local search history for the library, the open document, and the Knowledge center, with deduplication, retention, reopening, and clearing;

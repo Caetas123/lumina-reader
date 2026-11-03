@@ -2678,6 +2678,34 @@ ApplicationWindow {
                                 ToolTip.visible: hovered
                                 ToolTip.text: qsTr("OCR language")
                             }
+                            Button {
+                                visible: appController.reader.open && appController.reader.imageDocument
+                                enabled: !appController.reader.ocrRunning
+                                text: qsTr("Read all pages")
+                                onClicked: {
+                                    if (!appController.reader.startDocumentOcr(
+                                            window.ocrLanguageKeys[ocrLanguageSelector.currentIndex])) {
+                                        window.notification = appController.reader.ocrStatus
+                                        notificationTimer.restart()
+                                    }
+                                }
+                                ToolTip.visible: hovered
+                                ToolTip.text: qsTr("Recognize all image pages and save the text locally")
+                            }
+                            ProgressBar {
+                                visible: appController.reader.ocrDocumentRunning
+                                value: appController.reader.ocrProgress
+                                Layout.preferredWidth: 96
+                                ToolTip.visible: hovered
+                                ToolTip.text: qsTr("Document OCR progress")
+                            }
+                            Button {
+                                visible: appController.reader.ocrRunning
+                                text: qsTr("Cancel OCR")
+                                onClicked: appController.reader.cancelOcr()
+                                ToolTip.visible: hovered
+                                ToolTip.text: qsTr("Stop the current OCR operation")
+                            }
                             Label {
                                 visible: appController.reader.open && appController.reader.ocrStatus.length > 0
                                 text: appController.reader.ocrStatus

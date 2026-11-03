@@ -33,6 +33,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Continuous text reading, chapter-aware Contents navigation, selectable extracted page text, OCR language selection, selected-passage notes, and Knowledge undo/redo.
 - Plain-text export for the opened document when selectable or OCR text is available, with protection against overwriting the source file.
 - One `project-version.txt` file now controls the application, installer, and cross-platform release version; packaging workflows reject mismatched Git tags.
+- Document-wide OCR now processes image pages sequentially with progress, cancellation, and local persistence.
 
 ### Changed
 
