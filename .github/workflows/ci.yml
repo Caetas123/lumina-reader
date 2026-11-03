@@ -23,7 +23,7 @@ jobs:
             qt-host: linux
             qt-arch: linux_gcc_64
           - name: macOS
-            os: macos-13
+            os: macos-15-intel
             qt-host: mac
             qt-arch: clang_64
           - name: Windows
