@@ -3,6 +3,7 @@
 #include "infrastructure/database/Database.h"
 
 #include <QSqlQuery>
+#include <QtGlobal>
 
 #include <algorithm>
 
@@ -18,6 +19,19 @@ SpeechController::SpeechController(QObject *parent)
 #ifdef LUMINA_HAS_QT_SPEECH
     speech_ = std::make_unique<QTextToSpeech>(this);
     available_ = speech_ != nullptr;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
+    if (speech_ != nullptr) {
+        wordProgressAvailable_ = speech_->engineCapabilities().testFlag(
+            QTextToSpeech::Capability::WordByWordProgress);
+        connect(speech_.get(), &QTextToSpeech::sayingWord,
+                this,
+                [this](const QString &, qsizetype, qsizetype start, qsizetype length) {
+                    spokenStart_ = speechDocumentOffset_ + static_cast<int>(start);
+                    spokenLength_ = std::max(0, static_cast<int>(length));
+                    emit stateChanged();
+                });
+    }
+#endif
     connect(speech_.get(), &QTextToSpeech::stateChanged, this, [this](QTextToSpeech::State state) {
         speaking_ = state == QTextToSpeech::Speaking || state == QTextToSpeech::Paused;
         paused_ = state == QTextToSpeech::Paused;
@@ -46,6 +60,21 @@ bool SpeechController::speaking() const
 bool SpeechController::paused() const
 {
     return paused_;
+}
+
+bool SpeechController::wordProgressAvailable() const
+{
+    return wordProgressAvailable_;
+}
+
+int SpeechController::spokenStart() const
+{
+    return spokenStart_;
+}
+
+int SpeechController::spokenLength() const
+{
+    return spokenLength_;
 }
 
 int SpeechController::rate() const
@@ -106,7 +135,7 @@ void SpeechController::setVolume(int volume)
     emit settingsChanged();
 }
 
-bool SpeechController::speak(const QString &text)
+bool SpeechController::speak(const QString &text, int documentOffset)
 {
     const QString trimmed = text.trimmed();
     if (trimmed.isEmpty()) {
@@ -118,6 +147,11 @@ bool SpeechController::speak(const QString &text)
     if (speech_ != nullptr) {
         errorMessage_.clear();
         paused_ = false;
+        const qsizetype leadingOffset = text.indexOf(trimmed);
+        speechDocumentOffset_ = std::max(0, documentOffset)
+            + (leadingOffset < 0 ? 0 : static_cast<int>(leadingOffset));
+        spokenStart_ = -1;
+        spokenLength_ = 0;
         speech_->say(trimmed);
         emit stateChanged();
         return true;
@@ -137,6 +171,8 @@ void SpeechController::stop()
 #endif
     paused_ = false;
     speaking_ = false;
+    spokenStart_ = -1;
+    spokenLength_ = 0;
     emit stateChanged();
 }
 

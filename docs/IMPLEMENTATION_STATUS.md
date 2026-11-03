@@ -16,7 +16,7 @@ This report describes the behavior implemented in the repository, not only the c
 - Scoped local search history for the library, the open document, and the Knowledge center, including deduplication, retention, reopening, and clearing.
 - Explicit Google, dictionary, and translation actions; lookup history can be reopened, cleared, favorited, and copied.
 - Optional local Tesseract OCR with selectable English, Portuguese, Spanish, Japanese, Korean, and Chinese language codes.
-- Optional system text-to-speech with start, pause, resume, stop, rate, volume, selected-passage reading, and continuous-document reading.
+- Optional system text-to-speech with start, pause, resume, stop, rate, volume, selected-passage reading, continuous-document reading, and backend-dependent spoken-word highlighting.
 - Themes, font size, line spacing, continuous reading, high contrast, keyboard navigation, accessible labels/tooltips, settings export/restore, library export/restore, knowledge export, and database backup.
 - Plain-text export of the opened document without changing the source file.
 - Basic PDF export and system printing of the opened document without changing the source file.
@@ -63,7 +63,7 @@ The graphical executable also stayed alive for more than ten seconds with `QT_QP
 - PDF pages are rendered through Qt PDF when available. Extracted text is exposed in a selectable fallback view, visual pages support single-page/two-page layouts, and the opened document can be exported as a basic PDF or sent to the system printer; visual PDF coordinate overlays and annotated-PDF export are not yet implemented.
 - OCR now supports asynchronous page and document-wide passes. Coordinate mapping over the original image and word-level highlight overlays remain future work; manual region annotations are available as the safe fallback.
 - Dictionary and translation providers are explicit online integrations. No local dictionary database is bundled, and no external request occurs without a user action.
-- The current TTS integration follows Qt/system speech state but does not yet paint word-level progress over the reader text.
+- Qt Speech word-level highlighting is enabled when the selected backend exposes the Qt 6.6+ word-progress capability; engines without that capability still support read-aloud without visual word tracking.
 - The current Windows workspace did not provide the optional Qt PDF, CorePrivate, libarchive, DjVuLibre, or Tesseract dependencies, so those runtime paths were not claimed as locally executed in this audit.
 - Native macOS and Linux execution was not performed in this Windows workspace; the workflows and packaging scripts remain the source of truth for those platforms.
 

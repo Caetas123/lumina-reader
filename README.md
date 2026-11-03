@@ -60,7 +60,7 @@ The current application provides:
 - Knowledge center undo/redo for highlight and annotation creation, editing, and removal, with Ctrl+Z/Ctrl+Y shortcuts;
 - contextual copy, Google, integrated dictionary, translation, and highlight actions for selected text;
 - optional explicit online dictionary and translation results shown inside the app, with local lookup history, reopen/clear actions, lookup favorites, and copy actions;
-- optional system text-to-speech through Qt Speech;
+- optional system text-to-speech through Qt Speech, with word highlighting when the platform voice engine exposes word progress;
 - Markdown, JSON, and plain-text knowledge export, library metadata export, database backup, and metadata restoration;
 - plain-text export of the currently opened document when selectable text or OCR text is available;
 - PDF export and system printing of the opened document when its reader engine is available;

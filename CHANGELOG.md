@@ -36,6 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Document-wide OCR now processes image pages sequentially with progress, cancellation, and local persistence.
 - Basic PDF export and system printing now render the opened document without modifying the original file.
 - Visual documents now support single-page and two-page reading layouts with matching navigation steps.
+- System read-aloud can now highlight the spoken word when the installed Qt Speech backend reports word progress.
 - Linux release packaging now publishes both an x86_64 AppImage and a Debian/Ubuntu-compatible `.deb` from the same versioned build.
 
 ### Changed

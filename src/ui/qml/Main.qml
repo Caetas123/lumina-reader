@@ -22,6 +22,7 @@ ApplicationWindow {
     property bool focusMode: false
     property bool listMode: false
     property bool twoPageMode: false
+    property bool speechHighlightActive: false
     property real imageZoom: 1.0
     property string zoomDocumentId: ""
     property var highlightColors: ["#f6c945", "#7acb8a", "#77a8e8", "#ed8fb3", "#aa8bd8"]
@@ -2503,6 +2504,30 @@ ApplicationWindow {
                     }
                 }
 
+                Connections {
+                    target: appController.speech
+                    function onStateChanged() {
+                        if (!appController.speech.speaking) {
+                            if (window.speechHighlightActive && readerText.selectedText.length > 0) {
+                                readerText.deselect()
+                            }
+                            window.speechHighlightActive = false
+                            return
+                        }
+                        if (!appController.speech.wordProgressAvailable
+                                || appController.speech.spokenStart < 0
+                                || appController.speech.spokenLength <= 0) {
+                            return
+                        }
+                        var start = appController.speech.spokenStart
+                        var end = start + appController.speech.spokenLength
+                        if (start >= 0 && end <= readerText.text.length) {
+                            window.speechHighlightActive = true
+                            readerText.select(start, end)
+                        }
+                    }
+                }
+
                 ColumnLayout {
                     anchors.fill: parent
                     spacing: 0
@@ -2796,12 +2821,15 @@ ApplicationWindow {
                                      if (appController.speech.speaking) {
                                          appController.speech.stop()
                                      } else {
-                                         appController.speech.speak(readerText.selectedText.length > 0
-                                                                    ? readerText.selectedText
-                                                                    : (appController.settings.continuousReading
-                                                                       && appController.reader.continuousTextContent.length > 0
-                                                                       ? appController.reader.continuousTextContent
-                                                                       : appController.reader.textContent))
+                                        var selected = readerText.selectedText.length > 0
+                                        var text = selected
+                                            ? readerText.selectedText
+                                            : (appController.settings.continuousReading
+                                               && appController.reader.continuousTextContent.length > 0
+                                               ? appController.reader.continuousTextContent
+                                               : appController.reader.textContent)
+                                        appController.speech.speak(text,
+                                                                   selected ? readerText.selectionStart : 0)
                                      }
                                  }
                              }
@@ -3002,6 +3030,7 @@ ApplicationWindow {
                             anchors.bottom: parent.bottom
                             anchors.margins: 18
                             visible: appController.reader.open && readerText.selectedText.length > 0
+                                && !window.speechHighlightActive
                             spacing: 8
 
                             Rectangle {

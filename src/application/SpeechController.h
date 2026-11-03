@@ -21,6 +21,9 @@ class SpeechController final : public QObject {
     Q_PROPERTY(bool available READ available CONSTANT)
     Q_PROPERTY(bool speaking READ speaking NOTIFY stateChanged)
     Q_PROPERTY(bool paused READ paused NOTIFY stateChanged)
+    Q_PROPERTY(bool wordProgressAvailable READ wordProgressAvailable NOTIFY stateChanged)
+    Q_PROPERTY(int spokenStart READ spokenStart NOTIFY stateChanged)
+    Q_PROPERTY(int spokenLength READ spokenLength NOTIFY stateChanged)
     Q_PROPERTY(int rate READ rate WRITE setRate NOTIFY settingsChanged)
     Q_PROPERTY(int volume READ volume WRITE setVolume NOTIFY settingsChanged)
     Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY stateChanged)
@@ -32,6 +35,9 @@ public:
     [[nodiscard]] bool available() const;
     [[nodiscard]] bool speaking() const;
     [[nodiscard]] bool paused() const;
+    [[nodiscard]] bool wordProgressAvailable() const;
+    [[nodiscard]] int spokenStart() const;
+    [[nodiscard]] int spokenLength() const;
     [[nodiscard]] int rate() const;
     [[nodiscard]] int volume() const;
     [[nodiscard]] QString errorMessage() const;
@@ -41,7 +47,7 @@ public:
     void setDatabase(Lumina::Infrastructure::Database *database);
     Q_INVOKABLE void reload();
 
-    Q_INVOKABLE bool speak(const QString &text);
+    Q_INVOKABLE bool speak(const QString &text, int documentOffset = 0);
     Q_INVOKABLE void stop();
     Q_INVOKABLE void pause();
     Q_INVOKABLE void resume();
@@ -57,6 +63,10 @@ private:
     bool available_ = false;
     bool speaking_ = false;
     bool paused_ = false;
+    bool wordProgressAvailable_ = false;
+    int spokenStart_ = -1;
+    int spokenLength_ = 0;
+    int speechDocumentOffset_ = 0;
     int rate_ = 100;
     int volume_ = 100;
     QString errorMessage_;
