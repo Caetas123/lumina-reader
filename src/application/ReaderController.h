@@ -96,6 +96,7 @@ public:
     Q_INVOKABLE bool previousPage();
     Q_INVOKABLE bool goToPage(int page);
     Q_INVOKABLE QString pageName(int page) const;
+    Q_INVOKABLE QString pageImageSource(int page) const;
     Q_INVOKABLE bool exportText(const QString &path);
     Q_INVOKABLE bool exportPdf(const QString &path);
     Q_INVOKABLE bool printDocument();
@@ -157,6 +158,7 @@ private:
     int currentPage_ = 0;
     int pageRotation_ = 0;
     mutable QHash<int, QString> thumbnailCache_;
+    mutable QHash<int, QString> pageImageCache_;
     int thumbnailRevision_ = 0;
     QString searchQuery_;
     QList<int> searchStarts_;

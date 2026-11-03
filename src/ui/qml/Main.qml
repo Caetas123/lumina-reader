@@ -21,6 +21,7 @@ ApplicationWindow {
     property var themeKeys: ["light", "dark", "sepia", "paper", "gray", "high-contrast", "low-light"]
     property bool focusMode: false
     property bool listMode: false
+    property bool twoPageMode: false
     property real imageZoom: 1.0
     property string zoomDocumentId: ""
     property var highlightColors: ["#f6c945", "#7acb8a", "#77a8e8", "#ed8fb3", "#aa8bd8"]
@@ -128,13 +129,15 @@ ApplicationWindow {
     Shortcut {
         sequence: "Right"
         enabled: window.currentView === 2 && appController.reader.open
-        onActivated: appController.reader.nextPage()
+        onActivated: appController.reader.goToPage(
+                         appController.reader.currentPage + window.readerPageStep())
     }
 
     Shortcut {
         sequence: "Left"
         enabled: window.currentView === 2 && appController.reader.open
-        onActivated: appController.reader.previousPage()
+        onActivated: appController.reader.goToPage(
+                         Math.max(0, appController.reader.currentPage - window.readerPageStep()))
     }
 
     Shortcut {
@@ -260,6 +263,10 @@ ApplicationWindow {
 
     function resetImageZoom() {
         imageZoom = 1.0
+    }
+
+    function readerPageStep() {
+        return window.twoPageMode && appController.reader.imageDocument ? 2 : 1
     }
 
     function focusDocumentSearch() {
@@ -2484,6 +2491,9 @@ ApplicationWindow {
                             documentSearch.text = ""
                             return
                         }
+                        if (!appController.reader.imageDocument) {
+                            window.twoPageMode = false
+                        }
                         Qt.callLater(function() {
                             if (appController.reader.searchStart >= 0 && appController.reader.searchLength > 0) {
                                 readerText.select(appController.reader.searchStart,
@@ -2608,12 +2618,15 @@ ApplicationWindow {
                             Button {
                                 text: qsTr("Previous")
                                 enabled: appController.reader.currentPage > 0
-                                onClicked: appController.reader.previousPage()
+                                onClicked: appController.reader.goToPage(
+                                               Math.max(0, appController.reader.currentPage - window.readerPageStep()))
                             }
                             Button {
                                 text: qsTr("Next")
-                                enabled: appController.reader.currentPage + 1 < appController.reader.pageCount
-                                onClicked: appController.reader.nextPage()
+                                enabled: appController.reader.currentPage + window.readerPageStep()
+                                    < appController.reader.pageCount
+                                onClicked: appController.reader.goToPage(
+                                               appController.reader.currentPage + window.readerPageStep())
                             }
                             Button {
                                 text: window.focusMode ? qsTr("Exit focus") : qsTr("Focus")
@@ -2674,6 +2687,17 @@ ApplicationWindow {
                                     ToolTip.visible: hovered
                                     ToolTip.text: qsTr("Fit page (Ctrl+0)")
                                 }
+                            }
+                            ComboBox {
+                                id: readerLayoutSelector
+                                visible: appController.reader.open && appController.reader.imageDocument
+                                    && appController.reader.pageCount > 1
+                                Layout.preferredWidth: 118
+                                model: [qsTr("Single page"), qsTr("Two pages")]
+                                currentIndex: window.twoPageMode ? 1 : 0
+                                onActivated: window.twoPageMode = currentIndex === 1
+                                ToolTip.visible: hovered
+                                ToolTip.text: qsTr("Choose a single-page or two-page reading layout")
                             }
                             Button {
                                 visible: appController.reader.open && appController.reader.imageDocument
@@ -2800,11 +2824,35 @@ ApplicationWindow {
 
                         Image {
                             id: readerImage
-                            anchors.fill: parent
-                            anchors.margins: 28
+                            x: 28
+                            y: 28
+                            width: window.twoPageMode
+                                ? Math.max(1, (parent.width - 76) / 2)
+                                : Math.max(1, parent.width - 56)
+                            height: Math.max(1, parent.height - 56)
                             visible: appController.reader.open && appController.reader.imageDocument
                                 && !appController.reader.showOcrText
                             source: appController.reader.imageSource
+                            fillMode: Image.PreserveAspectFit
+                            asynchronous: true
+                            scale: window.imageZoom
+                            transformOrigin: Item.Center
+                            smooth: true
+                        }
+
+                        Image {
+                            id: readerSecondImage
+                            x: readerImage.x + readerImage.width + 20
+                            y: readerImage.y
+                            width: readerImage.width
+                            height: readerImage.height
+                            visible: window.twoPageMode && appController.reader.open
+                                && appController.reader.imageDocument
+                                && !appController.reader.showOcrText
+                                && appController.reader.currentPage + 1 < appController.reader.pageCount
+                            source: visible
+                                ? appController.reader.pageImageSource(appController.reader.currentPage + 1)
+                                : ""
                             fillMode: Image.PreserveAspectFit
                             asynchronous: true
                             scale: window.imageZoom
@@ -2816,7 +2864,7 @@ ApplicationWindow {
                             id: imageRegionLayer
                             anchors.fill: parent
                             visible: appController.reader.open && appController.reader.imageDocument
-                                && !appController.reader.showOcrText
+                                && !appController.reader.showOcrText && !window.twoPageMode
                             z: 2
 
                             property real startX: 0

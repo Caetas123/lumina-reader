@@ -11,6 +11,7 @@ This report describes the behavior implemented in the repository, not only the c
 - Local library import, duplicate detection, folder import, drag and drop, optional folder watching, metadata, covers, status, progress, reading time, favorites, ratings, genres, languages, formats, collections, tags, moved-file relinking, and safe removal.
 - Text, RTF, FB2, unencrypted PalmDOC-compatible MOBI/AZW/AZW3, images, EPUB/CBZ/ZIP through the Qt archive capability, and conditional PDF/DJVU/libarchive engines.
 - Paged reading, continuous text reading, page navigation, contents/spine navigation, thumbnails, zoom, rotation, focus mode, full screen, bookmarks, in-document search, and selectable extracted page text.
+- Single-page and two-page visual layouts with page-step navigation.
 - Persistent highlights with color/style/comment, selected-passage notes, image-region annotations, bookmarks, OCR page storage, document-wide OCR, global Knowledge center search, filters, ordering, editing, deletion, export, and Knowledge undo/redo.
 - Scoped local search history for the library, the open document, and the Knowledge center, including deduplication, retention, reopening, and clearing.
 - Explicit Google, dictionary, and translation actions; lookup history can be reopened, cleared, favorited, and copied.
@@ -59,7 +60,7 @@ The graphical executable also stayed alive for more than ten seconds with `QT_QP
 ## Intentional limitations
 
 - EPUB is rendered as a safe native text view. CSS pagination, embedded fonts/media, links, and nested navigation levels are not reproduced; the Contents panel follows the EPUB spine and uses chapter labels when available.
-- PDF pages are rendered through Qt PDF when available. Extracted text is exposed in a selectable fallback view, and the opened document can be exported as a basic PDF or sent to the system printer; visual PDF coordinate overlays, true two-page layout, and annotated-PDF export are not yet implemented.
+- PDF pages are rendered through Qt PDF when available. Extracted text is exposed in a selectable fallback view, visual pages support single-page/two-page layouts, and the opened document can be exported as a basic PDF or sent to the system printer; visual PDF coordinate overlays and annotated-PDF export are not yet implemented.
 - OCR now supports asynchronous page and document-wide passes. Coordinate mapping over the original image and word-level highlight overlays remain future work; manual region annotations are available as the safe fallback.
 - Dictionary and translation providers are explicit online integrations. No local dictionary database is bundled, and no external request occurs without a user action.
 - The current TTS integration follows Qt/system speech state but does not yet paint word-level progress over the reader text.

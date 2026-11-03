@@ -305,6 +305,7 @@ void ReaderController::clearState()
     searchStart_ = -1;
     searchLength_ = 0;
     thumbnailCache_.clear();
+    pageImageCache_.clear();
     ++thumbnailRevision_;
     readingTimer_.invalidate();
 }
@@ -542,6 +543,26 @@ QString ReaderController::pageName(int page) const
     return documentEngine_->pageName(page);
 }
 
+QString ReaderController::pageImageSource(int page) const
+{
+    if (!open_ || documentEngine_ == nullptr || page < 0 || page >= pageCount_
+        || documentEngine_->pageKind(page) != Lumina::Domain::Reader::PageKind::Image) {
+        return {};
+    }
+    if (page == currentPage_) {
+        return imageSource_;
+    }
+    if (pageImageCache_.contains(page)) {
+        return pageImageCache_.value(page);
+    }
+
+    const QString source = imageDataUrl(pageImage(page));
+    if (!source.isEmpty()) {
+        pageImageCache_.insert(page, source);
+    }
+    return source;
+}
+
 bool ReaderController::exportText(const QString &path)
 {
     if (!open_) {
@@ -723,6 +744,7 @@ bool ReaderController::rotatePage(int degrees)
     }
     pageRotation_ = nextRotation;
     thumbnailCache_.clear();
+    pageImageCache_.clear();
     ++thumbnailRevision_;
     if (!refreshPage()) {
         return false;
