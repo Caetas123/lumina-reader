@@ -1481,6 +1481,21 @@ ApplicationWindow {
     }
 
     FileDialog {
+        id: readerExportDialog
+        title: qsTr("Export document text")
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "txt"
+        nameFilters: [qsTr("Plain text (*.txt)"), qsTr("All files (*)")]
+        onAccepted: {
+            var path = window.localPath(selectedFile)
+            window.notification = appController.reader.exportText(path)
+                ? qsTr("Document text exported successfully.")
+                : appController.reader.errorMessage
+            notificationTimer.restart()
+        }
+    }
+
+    FileDialog {
         id: knowledgeExportDialog
         title: qsTr("Export knowledge")
         fileMode: FileDialog.SaveFile
@@ -2511,6 +2526,11 @@ ApplicationWindow {
                                 visible: appController.reader.open
                                 text: qsTr("History")
                                 onClicked: window.openSearchHistory("document")
+                            }
+                            Button {
+                                visible: appController.reader.open && appController.reader.pageTextAvailable
+                                text: qsTr("Export text")
+                                onClicked: readerExportDialog.open()
                             }
                             Label {
                                 visible: documentSearch.text.length > 0

@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Optional DjVuLibre-backed DJVU/DJV reading with page rendering and hidden-text extraction.
 - Scoped local search history for the library, open document, and Knowledge center, with reopening and clearing.
 - Continuous text reading, chapter-aware Contents navigation, selectable extracted page text, OCR language selection, selected-passage notes, and Knowledge undo/redo.
+- Plain-text export for the opened document when selectable or OCR text is available, with protection against overwriting the source file.
 
 ### Changed
 

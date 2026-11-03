@@ -42,6 +42,14 @@ private slots:
         QVERIFY(!reader.textContent().contains(QStringLiteral("PAGE TWO")));
         QVERIFY(reader.continuousTextContent().contains(QStringLiteral("PAGE TWO")));
         QVERIFY(reader.pageTextAvailable());
+        const QString exportPath = directory.filePath(QStringLiteral("exported.txt"));
+        QVERIFY(reader.exportText(exportPath));
+        QFile exported(exportPath);
+        QVERIFY(exported.open(QIODevice::ReadOnly | QIODevice::Text));
+        QVERIFY(QString::fromUtf8(exported.readAll()).contains(QStringLiteral("PAGE TWO")));
+        QVERIFY(!reader.exportText(filePath));
+        QCOMPARE(reader.errorMessage(),
+                 QStringLiteral("Choose a different destination from the original document."));
 
         QVERIFY(reader.nextPage());
         QCOMPARE(reader.currentPage(), 1);

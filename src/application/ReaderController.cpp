@@ -6,8 +6,10 @@
 #include "infrastructure/reader/DocumentEngineFactory.h"
 
 #include <QBuffer>
+#include <QDir>
 #include <QFileInfo>
 #include <QImage>
+#include <QSaveFile>
 #include <QStringList>
 #include <QTransform>
 
@@ -486,6 +488,55 @@ QString ReaderController::pageName(int page) const
         return {};
     }
     return documentEngine_->pageName(page);
+}
+
+bool ReaderController::exportText(const QString &path)
+{
+    if (!open_) {
+        return false;
+    }
+    const QString normalizedPath = path.trimmed();
+    const QFileInfo outputInfo(normalizedPath);
+    if (normalizedPath.isEmpty() || !outputInfo.absoluteDir().exists()) {
+        errorMessage_ = QStringLiteral("Choose a valid destination folder for the text export.");
+        emit stateChanged();
+        return false;
+    }
+
+    const QString sourcePath = QDir::cleanPath(QFileInfo(filePath_).absoluteFilePath());
+    const QString destinationPath = QDir::cleanPath(outputInfo.absoluteFilePath());
+#ifdef Q_OS_WIN
+    constexpr Qt::CaseSensitivity pathCaseSensitivity = Qt::CaseInsensitive;
+#else
+    constexpr Qt::CaseSensitivity pathCaseSensitivity = Qt::CaseSensitive;
+#endif
+    if (destinationPath.compare(sourcePath, pathCaseSensitivity) == 0) {
+        errorMessage_ = QStringLiteral("Choose a different destination from the original document.");
+        emit stateChanged();
+        return false;
+    }
+
+    const QString text = continuousTextContent_.isEmpty()
+        ? textContent_
+        : continuousTextContent_;
+    if (text.isEmpty()) {
+        errorMessage_ = QStringLiteral("This document does not contain selectable text to export.");
+        emit stateChanged();
+        return false;
+    }
+
+    QSaveFile file(normalizedPath);
+    const QByteArray data = text.toUtf8();
+    if (!file.open(QIODevice::WriteOnly)
+        || file.write(data) != data.size()
+        || !file.commit()) {
+        errorMessage_ = QStringLiteral("The text export could not be written.");
+        emit stateChanged();
+        return false;
+    }
+    errorMessage_.clear();
+    emit stateChanged();
+    return true;
 }
 
 bool ReaderController::rotatePage(int degrees)

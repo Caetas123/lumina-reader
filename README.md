@@ -59,6 +59,7 @@ The current application provides:
 - optional explicit online dictionary and translation results shown inside the app, with local lookup history, reopen/clear actions, lookup favorites, and copy actions;
 - optional system text-to-speech through Qt Speech;
 - Markdown, JSON, and plain-text knowledge export, library metadata export, database backup, and metadata restoration;
+- plain-text export of the currently opened document when selectable text or OCR text is available;
 - SQLite migrations, safe read-only archive handling, Zip Slip checks, archive entry limits, and Qt Test coverage;
 - GitHub Actions validation for Linux, macOS, and Windows.
 
