@@ -2565,7 +2565,10 @@ ApplicationWindow {
                                 id: readerText
                                 width: Math.min(parent.width, 860)
                                 anchors.horizontalCenter: parent.horizontalCenter
-                                text: appController.reader.textContent
+                                text: appController.settings.continuousReading
+                                    && appController.reader.continuousTextContent.length > 0
+                                    ? appController.reader.continuousTextContent
+                                    : appController.reader.textContent
                                 readOnly: true
                                 selectByMouse: true
                                 wrapMode: TextArea.Wrap

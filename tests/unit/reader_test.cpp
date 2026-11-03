@@ -40,6 +40,7 @@ private slots:
         QCOMPARE(reader.currentPage(), 0);
         QCOMPARE(library.documentDetails(documentId).value(QStringLiteral("pageCount")).toInt(), 2);
         QVERIFY(!reader.textContent().contains(QStringLiteral("PAGE TWO")));
+        QVERIFY(reader.continuousTextContent().contains(QStringLiteral("PAGE TWO")));
 
         QVERIFY(reader.nextPage());
         QCOMPARE(reader.currentPage(), 1);

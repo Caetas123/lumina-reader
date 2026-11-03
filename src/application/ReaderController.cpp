@@ -8,6 +8,7 @@
 #include <QBuffer>
 #include <QFileInfo>
 #include <QImage>
+#include <QStringList>
 #include <QTransform>
 
 #include <algorithm>
@@ -83,6 +84,11 @@ QString ReaderController::contentType() const
 QString ReaderController::textContent() const
 {
     return textContent_;
+}
+
+QString ReaderController::continuousTextContent() const
+{
+    return continuousTextContent_;
 }
 
 QString ReaderController::imageSource() const
@@ -231,6 +237,7 @@ void ReaderController::clearState()
     format_.clear();
     contentType_.clear();
     textContent_.clear();
+    continuousTextContent_.clear();
     imageSource_.clear();
     engineName_.clear();
     errorMessage_.clear();
@@ -286,6 +293,31 @@ bool ReaderController::refreshPage()
     }
     rebuildSearchMatches();
     return true;
+}
+
+void ReaderController::rebuildContinuousText()
+{
+    continuousTextContent_.clear();
+    if (documentEngine_ == nullptr || pageCount_ <= 0) {
+        return;
+    }
+
+    QStringList pages;
+    for (int page = 0; page < pageCount_; ++page) {
+        if (documentEngine_->pageKind(page) != Lumina::Domain::Reader::PageKind::Text) {
+            continue;
+        }
+        Lumina::Domain::Error error;
+        const QString pageText = documentEngine_->textPage(page, &error);
+        if (error.hasError()) {
+            continuousTextContent_.clear();
+            return;
+        }
+        if (!pageText.isEmpty()) {
+            pages.append(pageText);
+        }
+    }
+    continuousTextContent_ = pages.join(QStringLiteral("\n\n"));
 }
 
 void ReaderController::applyCachedOcr()
@@ -406,6 +438,7 @@ bool ReaderController::openDocument(const QString &documentId)
     pageCount_ = documentEngine_->pageCount();
     currentPage_ = std::clamp(currentPage_, 0, pageCount_ - 1);
     engineName_ = documentEngine_->name();
+    rebuildContinuousText();
     if (!refreshPage()) {
         fail(QStringLiteral("The first page of this document could not be read."));
         return false;

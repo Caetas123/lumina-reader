@@ -29,6 +29,7 @@ class ReaderController final : public QObject {
     Q_PROPERTY(QString format READ format NOTIFY stateChanged)
     Q_PROPERTY(QString contentType READ contentType NOTIFY stateChanged)
     Q_PROPERTY(QString textContent READ textContent NOTIFY stateChanged)
+    Q_PROPERTY(QString continuousTextContent READ continuousTextContent NOTIFY stateChanged)
     Q_PROPERTY(QString imageSource READ imageSource NOTIFY stateChanged)
     Q_PROPERTY(bool imageDocument READ isImageDocument NOTIFY stateChanged)
     Q_PROPERTY(bool textDocument READ isTextDocument NOTIFY stateChanged)
@@ -60,6 +61,7 @@ public:
     [[nodiscard]] QString format() const;
     [[nodiscard]] QString contentType() const;
     [[nodiscard]] QString textContent() const;
+    [[nodiscard]] QString continuousTextContent() const;
     [[nodiscard]] QString imageSource() const;
     [[nodiscard]] bool isImageDocument() const;
     [[nodiscard]] bool isTextDocument() const;
@@ -101,6 +103,7 @@ private:
     void clearState();
     void fail(const QString &message);
     [[nodiscard]] bool refreshPage();
+    void rebuildContinuousText();
     void applyCachedOcr();
     [[nodiscard]] QImage currentPageImage() const;
     void rebuildSearchMatches();
@@ -118,6 +121,7 @@ private:
     QString format_;
     QString contentType_;
     QString textContent_;
+    QString continuousTextContent_;
     QString imageSource_;
     QString engineName_;
     QString errorMessage_;
