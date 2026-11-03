@@ -244,7 +244,12 @@ internal sealed class InstallerForm : Form
         public ProgressIndicator()
         {
             DoubleBuffered = true;
-            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
+            SetStyle(
+                ControlStyles.UserPaint |
+                ControlStyles.AllPaintingInWmPaint |
+                ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.SupportsTransparentBackColor,
+                true);
             BackColor = Color.Transparent;
         }
 
@@ -431,9 +436,9 @@ internal sealed class InstallerForm : Form
 
     private async Task BeginInstallationAsync()
     {
+        var createDesktopShortcut = desktopShortcutCheckBox?.Checked ?? true;
         installationInProgress = true;
         ShowProgressPage();
-        var createDesktopShortcut = desktopShortcutCheckBox?.Checked ?? true;
 
         var progress = new Progress<InstallProgress>(update =>
         {
@@ -542,7 +547,7 @@ internal sealed class InstallerForm : Form
         return destination;
     }
 
-    private void CreateStartMenuShortcut()
+    private bool CreateStartMenuShortcut()
     {
         try
         {
@@ -551,64 +556,44 @@ internal sealed class InstallerForm : Form
                 "Programs",
                 "Lumina Reader");
             Directory.CreateDirectory(startMenuRoot);
-
-            var shellType = Type.GetTypeFromProgID("WScript.Shell");
-            if (shellType is null)
-            {
-                return;
-            }
-
-            var shell = Activator.CreateInstance(shellType);
-            var shortcut = shellType.GetMethod("CreateShortcut")?.Invoke(
-                shell,
-                [Path.Combine(startMenuRoot, "Lumina Reader.lnk")]);
-            if (shortcut is null)
-            {
-                return;
-            }
-
-            var shortcutType = shortcut.GetType();
-            shortcutType.GetProperty("TargetPath")?.SetValue(shortcut, executablePath);
-            shortcutType.GetProperty("WorkingDirectory")?.SetValue(shortcut, installRoot);
-            shortcutType.GetProperty("IconLocation")?.SetValue(shortcut, $"{executablePath},0");
-            shortcutType.GetMethod("Save")?.Invoke(shortcut, null);
+            return TryCreateShortcut(Path.Combine(startMenuRoot, "Lumina Reader.lnk"));
         }
         catch
         {
             // Installation remains successful when shortcut creation is unavailable.
+            return false;
         }
     }
 
-    private void CreateDesktopShortcut()
+    private bool CreateDesktopShortcut()
     {
         try
         {
             var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-            var shellType = Type.GetTypeFromProgID("WScript.Shell");
-            if (shellType is null)
-            {
-                return;
-            }
-
-            var shell = Activator.CreateInstance(shellType);
-            var shortcut = shellType.GetMethod("CreateShortcut")?.Invoke(
-                shell,
-                [Path.Combine(desktopPath, "Lumina Reader.lnk")]);
-            if (shortcut is null)
-            {
-                return;
-            }
-
-            var shortcutType = shortcut.GetType();
-            shortcutType.GetProperty("TargetPath")?.SetValue(shortcut, executablePath);
-            shortcutType.GetProperty("WorkingDirectory")?.SetValue(shortcut, installRoot);
-            shortcutType.GetProperty("IconLocation")?.SetValue(shortcut, $"{executablePath},0");
-            shortcutType.GetMethod("Save")?.Invoke(shortcut, null);
+            return TryCreateShortcut(Path.Combine(desktopPath, "Lumina Reader.lnk"));
         }
         catch
         {
             // Installation remains successful when shortcut creation is unavailable.
+            return false;
         }
+    }
+
+    private bool TryCreateShortcut(string shortcutPath)
+    {
+        var shellType = Type.GetTypeFromProgID("WScript.Shell");
+        if (shellType is null)
+        {
+            return false;
+        }
+
+        dynamic shell = Activator.CreateInstance(shellType)!;
+        dynamic shortcut = shell.CreateShortcut(shortcutPath);
+        shortcut.TargetPath = executablePath;
+        shortcut.WorkingDirectory = installRoot;
+        shortcut.IconLocation = $"{executablePath},0";
+        shortcut.Save();
+        return File.Exists(shortcutPath);
     }
 
     private bool LaunchApplication()
