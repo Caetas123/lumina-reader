@@ -27,6 +27,7 @@ Phase 0 is in progress. The current implementation provides:
 - typed domain errors with separate user and diagnostic messages;
 - initial Qt Test coverage;
 - a replaceable `PdfEngine` interface;
+- GitHub Actions build/test workflow for Windows, macOS, and Linux;
 - open-source contribution and security documentation.
 
 The PDF adapter is not implemented yet. Defining the boundary first keeps future Qt PDF/PDFium work isolated from the UI and domain layers.

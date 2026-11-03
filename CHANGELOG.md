@@ -13,4 +13,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - SQLite connection handling with versioned migrations and an FTS5 search foundation.
 - Typed domain errors and categorized diagnostic logging.
 - Replaceable `PdfEngine` abstraction.
-- Initial unit tests and open-source project documentation.
+- Initial unit tests, cross-platform CI configuration, and open-source project documentation.
