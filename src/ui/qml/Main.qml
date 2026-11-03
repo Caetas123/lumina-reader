@@ -791,6 +791,82 @@ ApplicationWindow {
         }
     }
 
+    Dialog {
+        id: bookmarksDialog
+        property var entries: []
+        modal: true
+        title: qsTr("Bookmarks")
+        width: Math.min(window.width - 80, 620)
+        standardButtons: Dialog.Close
+
+        onOpened: entries = appController.library.bookmarksForDocument(appController.reader.documentId)
+        onClosed: entries = []
+
+        contentItem: ColumnLayout {
+            spacing: 10
+
+            Label {
+                visible: bookmarksDialog.entries.length === 0
+                text: qsTr("No bookmarks have been saved for this document yet.")
+                color: Theme.textSecondary
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+
+            ListView {
+                Layout.fillWidth: true
+                Layout.preferredHeight: Math.min(360, Math.max(64, bookmarksDialog.entries.length * 54))
+                visible: bookmarksDialog.entries.length > 0
+                clip: true
+                spacing: 8
+                model: bookmarksDialog.entries
+
+                delegate: Rectangle {
+                    width: ListView.view.width
+                    height: 46
+                    radius: 8
+                    color: Theme.surfaceMuted
+                    border.color: Theme.border
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 8
+                        spacing: 8
+                        Label {
+                            text: String(modelData.label || qsTr("Page %1").arg(Number(modelData.page) + 1))
+                            color: Theme.textPrimary
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                        }
+                        Label {
+                            text: qsTr("Page %1").arg(Number(modelData.page) + 1)
+                            color: Theme.textSecondary
+                        }
+                        Button {
+                            text: qsTr("Go")
+                            onClicked: {
+                                appController.reader.goToPage(Number(modelData.page))
+                                bookmarksDialog.close()
+                            }
+                        }
+                        Button {
+                            text: qsTr("Delete")
+                            onClicked: {
+                                if (appController.library.removeBookmark(modelData.id)) {
+                                    bookmarksDialog.entries = appController.library.bookmarksForDocument(appController.reader.documentId)
+                                    window.notification = qsTr("Bookmark removed.")
+                                } else {
+                                    window.notification = qsTr("The bookmark could not be removed.")
+                                }
+                                notificationTimer.restart()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     FileDialog {
         id: knowledgeExportDialog
         title: qsTr("Export knowledge")
@@ -1882,6 +1958,11 @@ ApplicationWindow {
                                          notificationTimer.restart()
                                      }
                                  }
+                             }
+                             Button {
+                                 text: qsTr("Bookmarks")
+                                 enabled: appController.reader.open
+                                 onClicked: bookmarksDialog.open()
                              }
                              Button {
                                  text: appController.speech.speaking ? qsTr("Stop") : qsTr("Read aloud")

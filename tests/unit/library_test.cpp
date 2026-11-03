@@ -254,7 +254,11 @@ private slots:
                                    QStringLiteral("Revisit"),
                                    QStringLiteral("text:0:20"),
                                    0));
+        const QString bookmarkId = store.bookmarksForDocument(documentId)
+                                       .first().toMap().value(QStringLiteral("id")).toString();
         QCOMPARE(store.bookmarksForDocument(documentId).size(), 1);
+        QVERIFY(store.removeBookmark(bookmarkId));
+        QCOMPARE(store.bookmarksForDocument(documentId).size(), 0);
 
         QVERIFY(store.updateProgress(documentId, 0.5, 2));
         QCOMPARE(store.documentDetails(documentId).value(QStringLiteral("status")).toString(),
