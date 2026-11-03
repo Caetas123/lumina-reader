@@ -32,13 +32,15 @@ Contains product concepts and rules independent of Qt Quick, SQLite, and operati
 
 Provides persistence, migrations, filesystem access, caches, indexing, OCR, dictionary providers, text-to-speech adapters, backup, and export. Infrastructure implementations are replaceable behind interfaces where external behavior is involved.
 
-The current concrete services include `Database`, `LibraryStore`, `ArchiveReader`, `TextDecoder`, `DocumentEngineFactory`, the optional libarchive adapter, `TesseractOcrProvider`, `BackupController`, `SettingsController`, `LookupController`, and the optional `SpeechController`. `LibraryStore` owns the C++ model exposed to QML; it also owns import validation, duplicate detection, cover generation, FTS5 updates, collections, tags, favorites, annotations, bookmarks, OCR page text, page rotation, reading time, and reading history. `LookupController` keeps online dictionary and translation requests explicit, parses bounded JSON responses, and records only local lookup history.
+The current concrete services include `Database`, `LibraryStore`, `ArchiveReader`, `TextDecoder`, `DocumentEngineFactory`, the optional libarchive and DjVuLibre adapters, `TesseractOcrProvider`, `BackupController`, `SettingsController`, `LookupController`, and the optional `SpeechController`. `LibraryStore` owns the C++ model exposed to QML; it also owns import validation, duplicate detection, cover generation, FTS5 updates, collections, tags, favorites, annotations, bookmarks, OCR page text, page rotation, reading time, and reading history. `LookupController` keeps online dictionary and translation requests explicit, parses bounded JSON responses, and records only local lookup history.
 
 ### `reader engines`
 
-`domain/reader/DocumentEngine.h` is the central contract used by `ReaderController`. It exposes open/close, metadata identity, page count, page kind, text extraction, rendering, and safe errors without exposing Qt PDF, ZIP, or text-decoder implementation details to the application layer. `DocumentEngineFactory` selects the appropriate adapter for image, text, archive, EPUB/CBZ/ZIP, and optional PDF documents.
+`domain/reader/DocumentEngine.h` is the central contract used by `ReaderController`. It exposes open/close, metadata identity, page count, page kind, text extraction, rendering, and safe errors without exposing Qt PDF, ZIP, DjVuLibre, or text-decoder implementation details to the application layer. `DocumentEngineFactory` selects the appropriate adapter for image, text, archive, EPUB/CBZ/ZIP, optional PDF, and optional DJVU/DJV documents.
 
 The current PDF adapter uses Qt PDF when `Qt6::Pdf` is available. The dependency remains optional so that the core, text, image, and database tests can still build on a Qt installation without the PDF add-on. The UI reports the missing capability instead of accepting a PDF that cannot be opened. The older `PdfEngine` header remains available for future backend-specific adapters.
+
+The DjVu adapter uses the read-only DjVuLibre `ddjvuapi` when that optional library is found at configure time. It waits for bounded document/page decode jobs, renders RGB pages through the shared engine contract, and extracts hidden page text without exposing the third-party API to the application layer. Builds without DjVuLibre omit DJVU/DJV from the picker.
 
 ### `platform`
 

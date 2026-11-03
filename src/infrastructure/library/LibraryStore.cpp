@@ -3,6 +3,7 @@
 #include "infrastructure/database/Database.h"
 #include "infrastructure/archive/ArchiveReader.h"
 #include "infrastructure/logging/Logging.h"
+#include "infrastructure/reader/DocumentEngineFactory.h"
 #include "infrastructure/text/TextDecoder.h"
 
 #include <QCryptographicHash>
@@ -56,6 +57,9 @@ QStringList supportedFormats()
 #ifdef LUMINA_HAS_LIBARCHIVE
     formats << QStringLiteral("cbr") << QStringLiteral("cb7") << QStringLiteral("cbt")
             << QStringLiteral("rar") << QStringLiteral("7z");
+#endif
+#ifdef LUMINA_HAS_DJVU
+    formats << QStringLiteral("djvu") << QStringLiteral("djv");
 #endif
     return formats;
 }
@@ -155,6 +159,9 @@ bool hasExpectedSignature(const QString &path, const QString &format)
         }
         return file.read(5) == QByteArrayLiteral("ustar");
     }
+    if (format == QStringLiteral("djvu") || format == QStringLiteral("djv")) {
+        return header.startsWith("AT&TFORM") && header.size() >= 12;
+    }
     if (format == QStringLiteral("epub") || format == QStringLiteral("cbz")
         || format == QStringLiteral("zip")) {
         return header.startsWith("PK\x03\x04") || header.startsWith("PK\x05\x06")
@@ -199,6 +206,26 @@ QString searchableText(const QString &path, const QString &format)
         return text.left(4 * 1024 * 1024);
     }
 #endif
+    if (format == QStringLiteral("djvu") || format == QStringLiteral("djv")) {
+#ifdef LUMINA_HAS_DJVU
+        auto engine = Lumina::Infrastructure::createDocumentEngine(format);
+        Lumina::Domain::Error error;
+        if (engine == nullptr || !engine->open(path, &error)) {
+            return {};
+        }
+        QString text;
+        for (int page = 0; page < engine->pageCount(); ++page) {
+            text.append(engine->textPage(page, &error));
+            text.append(QChar('\n'));
+            if (text.size() >= 4 * 1024 * 1024) {
+                break;
+            }
+        }
+        return text.left(4 * 1024 * 1024);
+#else
+        return {};
+#endif
+    }
     if (format == QStringLiteral("epub")) {
         Lumina::Infrastructure::ArchiveReader archive;
         if (!archive.open(path, format)) {
@@ -286,6 +313,15 @@ QString generatedCoverPath(const QString &path, const QString &format, const QSt
         QPdfDocument document;
         if (document.load(path) == QPdfDocument::Error::None && document.pageCount() > 0) {
             image = document.render(0, QSize(640, 900));
+        }
+    }
+#endif
+#ifdef LUMINA_HAS_DJVU
+    else if (format == QStringLiteral("djvu") || format == QStringLiteral("djv")) {
+        auto engine = Lumina::Infrastructure::createDocumentEngine(format);
+        Lumina::Domain::Error error;
+        if (engine != nullptr && engine->open(path, &error)) {
+            image = engine->renderPage(0, QSize(640, 900), &error);
         }
     }
 #endif

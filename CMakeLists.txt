@@ -27,6 +27,8 @@ find_package(Qt6 6.5 QUIET COMPONENTS CorePrivate)
 find_package(Qt6 6.5 QUIET COMPONENTS TextToSpeech)
 find_path(LUMINA_LIBARCHIVE_INCLUDE_DIR NAMES archive.h)
 find_library(LUMINA_LIBARCHIVE_LIBRARY NAMES archive libarchive)
+find_path(LUMINA_DJVU_INCLUDE_DIR NAMES ddjvuapi.h PATH_SUFFIXES libdjvu)
+find_library(LUMINA_DJVU_LIBRARY NAMES djvulibre ddjvu libddjvu)
 
 qt_standard_project_setup(REQUIRES 6.5)
 
@@ -63,6 +65,8 @@ add_library(lumina_core STATIC
     src/infrastructure/ocr/TesseractOcrProvider.h
     src/infrastructure/reader/DocumentEngineFactory.cpp
     src/infrastructure/reader/DocumentEngineFactory.h
+    src/infrastructure/reader/DjvuEngine.cpp
+    src/infrastructure/reader/DjvuEngine.h
     src/infrastructure/text/TextDecoder.cpp
     src/infrastructure/text/TextDecoder.h
     src/pdf/PdfEngine.h
@@ -105,6 +109,12 @@ if(LUMINA_LIBARCHIVE_INCLUDE_DIR AND LUMINA_LIBARCHIVE_LIBRARY)
     target_compile_definitions(lumina_core PUBLIC LUMINA_HAS_LIBARCHIVE=1)
     target_include_directories(lumina_core PUBLIC "${LUMINA_LIBARCHIVE_INCLUDE_DIR}")
     target_link_libraries(lumina_core PUBLIC "${LUMINA_LIBARCHIVE_LIBRARY}")
+endif()
+
+if(LUMINA_DJVU_INCLUDE_DIR AND LUMINA_DJVU_LIBRARY)
+    target_compile_definitions(lumina_core PUBLIC LUMINA_HAS_DJVU=1)
+    target_include_directories(lumina_core PUBLIC "${LUMINA_DJVU_INCLUDE_DIR}")
+    target_link_libraries(lumina_core PUBLIC "${LUMINA_DJVU_LIBRARY}")
 endif()
 
 qt_add_executable(lumina_reader

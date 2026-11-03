@@ -1,6 +1,7 @@
 #include "infrastructure/reader/DocumentEngineFactory.h"
 
 #include "infrastructure/archive/ArchiveReader.h"
+#include "infrastructure/reader/DjvuEngine.h"
 #include "infrastructure/text/TextDecoder.h"
 
 #include <QFileInfo>
@@ -330,6 +331,11 @@ createDocumentEngine(const QString &format)
     }
 #else
     Q_UNUSED(normalized)
+#endif
+#ifdef LUMINA_HAS_DJVU
+    if (normalized == QStringLiteral("djvu") || normalized == QStringLiteral("djv")) {
+        return std::make_unique<Lumina::Infrastructure::DjvuEngine>();
+    }
 #endif
     return nullptr;
 }
