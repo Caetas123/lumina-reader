@@ -46,7 +46,7 @@ The current application provides:
 - library filters for favorites, to-read, reading, and finished documents;
 - reading progress, last position, status, favorites, ratings, descriptions, language, genre, collections, tags, and reading history;
 - generated or personalized covers, page rotation for visual documents, and backup/restoration of that reading metadata;
-- TXT, RTF, FB2, unencrypted PalmDOC-compatible MOBI/AZW/AZW3, raster-image, EPUB, CBZ, and ZIP reading when the matching Qt capabilities are present;
+- TXT, RTF, HTML/HTM, FB2, unencrypted PalmDOC-compatible MOBI/AZW/AZW3, raster-image, EPUB, CBZ, and ZIP reading when the matching Qt capabilities are present;
 - optional PDF rendering through Qt PDF in the CI/release build;
 - single-page and two-page layouts for visual documents, with page-aware navigation;
 - optional in-process CBR, CB7, CBT, RAR, and 7Z reading when libarchive is available at configure time;

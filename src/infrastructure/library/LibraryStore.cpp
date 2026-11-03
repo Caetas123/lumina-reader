@@ -45,6 +45,7 @@ QStringList supportedFormats()
     QStringList formats{
         QStringLiteral("mobi"), QStringLiteral("azw"), QStringLiteral("azw3"),
         QStringLiteral("fb2"), QStringLiteral("txt"), QStringLiteral("rtf"),
+        QStringLiteral("html"), QStringLiteral("htm"),
         QStringLiteral("jpg"), QStringLiteral("jpeg"), QStringLiteral("png"),
         QStringLiteral("webp"), QStringLiteral("avif"), QStringLiteral("gif"),
     };
@@ -244,6 +245,7 @@ QString searchableText(const QString &path, const QString &format)
     }
 
     if (format != QStringLiteral("txt") && format != QStringLiteral("rtf")
+        && format != QStringLiteral("html") && format != QStringLiteral("htm")
         && format != QStringLiteral("fb2") && format != QStringLiteral("mobi")
         && format != QStringLiteral("azw") && format != QStringLiteral("azw3")) {
         return {};

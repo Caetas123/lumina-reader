@@ -9,7 +9,7 @@ This report describes the behavior implemented in the repository, not only the c
 
 - Native C++20, Qt 6, Qt Quick/QML, SQLite, FTS5, CMake, and Qt Test architecture.
 - Local library import, duplicate detection, folder import, drag and drop, optional folder watching, metadata, covers, status, progress, reading time, favorites, ratings, genres, languages, formats, collections, tags, moved-file relinking, and safe removal.
-- Text, RTF, FB2, unencrypted PalmDOC-compatible MOBI/AZW/AZW3, images, EPUB/CBZ/ZIP through the Qt archive capability, and conditional PDF/DJVU/libarchive engines.
+- Text, RTF, HTML/HTM, FB2, unencrypted PalmDOC-compatible MOBI/AZW/AZW3, images, EPUB/CBZ/ZIP through the Qt archive capability, and conditional PDF/DJVU/libarchive engines.
 - Paged reading, continuous text reading, page navigation, contents/spine navigation, thumbnails, zoom, rotation, focus mode, full screen, bookmarks, in-document search, and selectable extracted page text.
 - Single-page and two-page visual layouts with page-step navigation.
 - Persistent highlights with color/style/comment, selected-passage notes, image-region annotations with restored coordinate overlays, bookmarks, OCR page storage, document-wide OCR, global Knowledge center search, filters, ordering, editing, deletion, export, and Knowledge undo/redo.
@@ -60,6 +60,7 @@ The graphical executable also stayed alive for more than ten seconds with `QT_QP
 ## Intentional limitations
 
 - EPUB is rendered as a safe native text view. CSS pagination, embedded fonts/media, links, and nested navigation levels are not reproduced; the Contents panel follows the EPUB spine and uses chapter labels when available.
+- HTML/HTM is converted to safe local plain text. Scripts, styles, frames, objects, and embeds are not executed or shown, and browser layout/resources are not reproduced.
 - PDF pages are rendered through Qt PDF when available. Extracted text is exposed in a selectable fallback view, visual pages support single-page/two-page layouts, saved manual regions are restored as coordinate overlays, and text highlights/visual regions are carried into exported or printed output; native PDF text-selection coordinate mapping remains limited because the fallback view does not expose the source PDF glyph geometry.
 - OCR supports asynchronous page and document-wide passes, persists normalized Tesseract word boxes, and maps saved OCR text highlights back over the original image; manual region annotations remain the safe fallback when OCR is unavailable.
 - Dictionary and translation providers are explicit online integrations. No local dictionary database is bundled, and no external request occurs without a user action.

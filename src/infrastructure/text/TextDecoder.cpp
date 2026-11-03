@@ -2,6 +2,7 @@
 
 #include <QFile>
 #include <QRegularExpression>
+#include <QTextDocument>
 #include <QXmlStreamReader>
 
 #include <algorithm>
@@ -121,6 +122,24 @@ QString decodeFb2(const QByteArray &data)
             inBody = false;
         }
     }
+    return text.trimmed();
+}
+
+QString decodeHtml(const QByteArray &data)
+{
+    QString html = QString::fromUtf8(data);
+    const QRegularExpression blockedContent(
+        QStringLiteral(R"(<(script|style|noscript|iframe|object|embed)\b[^>]*>.*?</\1\s*>)"),
+        QRegularExpression::CaseInsensitiveOption | QRegularExpression::DotMatchesEverythingOption);
+    html.remove(blockedContent);
+
+    QTextDocument document;
+    document.setHtml(html);
+    QString text = document.toPlainText();
+    text.replace(QStringLiteral("\r\n"), QStringLiteral("\n"));
+    text.replace(QChar('\r'), QChar('\n'));
+    text.replace(QRegularExpression(QStringLiteral("[ \\t]+\\n")), QStringLiteral("\n"));
+    text.replace(QRegularExpression(QStringLiteral("\\n{3,}")), QStringLiteral("\n\n"));
     return text.trimmed();
 }
 
@@ -290,6 +309,10 @@ QString TextDecoder::readFile(const QString &path, const QString &format)
     }
     if (format.compare(QStringLiteral("fb2"), Qt::CaseInsensitive) == 0) {
         return decodeFb2(data);
+    }
+    if (format.compare(QStringLiteral("html"), Qt::CaseInsensitive) == 0
+        || format.compare(QStringLiteral("htm"), Qt::CaseInsensitive) == 0) {
+        return decodeHtml(data);
     }
     return QString::fromUtf8(data);
 }

@@ -41,6 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - PDF export and system printing now carry saved text highlights and visual region annotations into the output.
 - OCR now persists Tesseract word coordinates so saved OCR highlights can be restored over the source image.
 - Linux release packaging now publishes both an x86_64 AppImage and a Debian/Ubuntu-compatible `.deb` from the same versioned build.
+- HTML and HTM files can now be imported, searched, and read as safe local text without executing page content.
 
 ### Changed
 

@@ -133,6 +133,52 @@ private slots:
                     .contains(QStringLiteral("Text from FB2.")));
     }
 
+    void importsAndReadsHtmlAsSafeText()
+    {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const QString path = directory.filePath(QStringLiteral("chapter.html"));
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Text));
+        QVERIFY(file.write(QByteArray(
+                       "<!doctype html><html><head><style>unsafe-style</style>"
+                       "<script>unsafe-script</script></head><body>"
+                       "<h1>Chapter &amp; One</h1><p>Searchable HTML passage.</p>"
+                       "</body></html>"))
+                > 0);
+        file.close();
+
+        const QString decoded = Lumina::Infrastructure::TextDecoder::readFile(
+            path, QStringLiteral("html"));
+        QVERIFY(decoded.contains(QStringLiteral("Chapter & One")));
+        QVERIFY(decoded.contains(QStringLiteral("Searchable HTML passage.")));
+        QVERIFY(!decoded.contains(QStringLiteral("unsafe-style")));
+        QVERIFY(!decoded.contains(QStringLiteral("unsafe-script")));
+
+        Lumina::Infrastructure::Database database;
+        Lumina::Domain::Error error;
+        QVERIFY2(database.open(QStringLiteral(":memory:"), &error),
+                 qPrintable(error.logMessage()));
+        QVERIFY2(database.migrate(&error), qPrintable(error.logMessage()));
+
+        Lumina::Infrastructure::LibraryStore library;
+        library.setDatabase(&database);
+        QVERIFY(library.supportedExtensions().contains(QStringLiteral("*.html")));
+        QVERIFY(library.supportedExtensions().contains(QStringLiteral("*.htm")));
+        QVERIFY(library.importFiles({path}));
+        QCOMPARE(library.count(), 1);
+        library.setQuery(QStringLiteral("Searchable HTML"));
+        QCOMPARE(library.count(), 1);
+        library.setQuery({});
+
+        const QString documentId = library.data(
+            library.index(0, 0), Lumina::Infrastructure::LibraryStore::IdRole).toString();
+        Lumina::Application::ReaderController reader(&library);
+        QVERIFY(reader.openDocument(documentId));
+        QCOMPARE(reader.pageCount(), 1);
+        QVERIFY(reader.textContent().contains(QStringLiteral("Searchable HTML passage.")));
+    }
+
     void rendersImageThumbnail()
     {
         Lumina::Infrastructure::Database database;

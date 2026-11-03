@@ -311,7 +311,8 @@ createDocumentEngine(const QString &format)
         return std::make_unique<ImageEngine>();
     }
     if (normalized == QStringLiteral("txt") || normalized == QStringLiteral("rtf")
-        || normalized == QStringLiteral("fb2") || normalized == QStringLiteral("mobi")
+        || normalized == QStringLiteral("fb2") || normalized == QStringLiteral("html")
+        || normalized == QStringLiteral("htm") || normalized == QStringLiteral("mobi")
         || normalized == QStringLiteral("azw") || normalized == QStringLiteral("azw3")) {
         return std::make_unique<TextEngine>(normalized);
     }
