@@ -4,6 +4,18 @@ All notable changes to Lumina Reader will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows Semantic Versioning where a public release version exists.
 
+## [0.2.3] - 2026-11-03
+
+This patch release completes the PDF validation pass in the Windows GUI and restores the in-document search selection after page navigation. Windows, Linux, and macOS packages are published from the same tag by GitHub Actions.
+
+### Fixed
+
+- PDF search now restores the first matching occurrence after moving between pages, so the result counter remains consistent instead of showing `0/N` for an active match.
+
+### Verified
+
+- A two-page PDF fixture was imported, opened, rendered, searched, navigated, zoomed, and inspected through the native Windows GUI; the corrected flow reports `1/1`, `No matches`, and `1/1` when returning to the matching page.
+
 ## [0.2.2] - 2026-11-03
 
 This patch release keeps the validated Windows and Linux package flow and repairs the macOS DMG workflow for the Qt 6.8.3 `macdeployqt` command-line options.
