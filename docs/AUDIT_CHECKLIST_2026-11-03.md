@@ -74,10 +74,14 @@ This checklist is evidence-bounded. `PASS` means the behavior was exercised in t
 - [x] `PASS` the Windows installer script was run locally for `0.2.1`; the generated installer was copied to `C:\Users\caeta\Downloads\LuminaReader-Setup-windows-x64.exe` and its SHA-256 matched the repository staging copy;
 - [x] `PASS` Linux workflow builds both the direct x86_64 AppImage and Debian package from the same tag;
 - [x] `PASS` tag/version verification is present in the Windows, Linux, and macOS packaging workflows;
-- [ ] `REMOTE` GitHub Actions CI must pass on the pushed `main` commit;
-- [ ] `REMOTE` tag-triggered Windows, Linux, and macOS packaging jobs must pass and attach the expected assets to `v0.2.2`;
-- [ ] `REMOTE` release asset URLs and SHA-256 checksums must be checked after publication.
+- [x] `REMOTE` GitHub Actions CI passed on the pushed `main` commit `fc3a511` (Windows, Linux, and macOS jobs);
+- [x] `REMOTE` tag-triggered packaging passed for `v0.2.2`: Windows run `41695427910`, Linux run `41695427836`, and macOS run `41695427970`;
+- [x] `REMOTE` `v0.2.2` is published at [GitHub Releases](https://github.com/Caetas123/lumina-reader/releases/tag/v0.2.2) with the expected direct assets and verified SHA-256 digests:
+  - Windows EXE: `414db6044f8301ff3ca1765c5eb89019b998058399befe6a9b4f1a0b147ee23b`;
+  - Linux AppImage: `7c047301f7a728d4b0732ceaf33f6b16fd519b7a05bd9cd3ccd90084b905e11e`;
+  - Linux Debian package: `ff5ab2280268364bc37009a9f0f7d9e43ccf0e0315322154d9cb11285b5f9a45`;
+  - macOS DMG: `585a91d2f4719387b1a12ed4ce8d7a10d0931f8c408c0c1ccd3e080ac2197614`.
 
 ## Audit conclusion
 
-The Windows build is locally validated for the core reader/library flow and the formats listed as `PASS`. Optional PDF, libarchive, DjVu, Tesseract, Linux, and macOS evidence is intentionally separated until the corresponding dependency or platform runner has executed. This checklist must not be changed to `100%` by inference; the `REMOTE` items are closed only with actual GitHub Actions and release evidence.
+The Windows build is locally validated for the core reader/library flow and the formats listed as `PASS`. The release workflows and package assets are remotely validated for all three target runners. Optional PDF, libarchive, DjVu, Tesseract, and native Linux/macOS visual evidence remains explicitly conditional because those dependencies or GUI environments were not available for direct local interaction in this Windows session. This checklist does not call those areas `100%` by inference; every `REMOTE` item above is closed with actual GitHub Actions and release evidence.

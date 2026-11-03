@@ -112,4 +112,4 @@ The detailed requirement matrix and evidence boundaries are in [AUDIT_CHECKLIST_
 - `b33707f` — add library metadata filters and sorting.
 - `7e91a7f` — add optional DjVu engine.
 
-Release publication is performed only after the versioned commits are pushed and all tag-triggered GitHub Actions jobs have completed successfully. The final handoff must report those remote run and asset checks separately from this local report.
+Release `v0.2.2` was published after the versioned commits were pushed and all tag-triggered GitHub Actions jobs completed successfully. The remote evidence is recorded in `docs/AUDIT_CHECKLIST_2026-11-03.md`, including run IDs, direct asset names, and SHA-256 digests. Native Linux/macOS GUI rendering and optional PDF/libarchive/DjVu/Tesseract providers remain conditional where they were not available for direct local interaction.
