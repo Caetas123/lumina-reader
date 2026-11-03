@@ -25,6 +25,12 @@ qt_standard_project_setup(REQUIRES 6.5)
 add_library(lumina_core STATIC
     src/application/AppController.cpp
     src/application/AppController.h
+    src/domain/core/Error.h
+    src/infrastructure/database/Database.cpp
+    src/infrastructure/database/Database.h
+    src/infrastructure/logging/Logging.cpp
+    src/infrastructure/logging/Logging.h
+    src/pdf/PdfEngine.h
 )
 
 target_include_directories(lumina_core
@@ -40,6 +46,8 @@ target_compile_definitions(lumina_core
 target_link_libraries(lumina_core
     PUBLIC
         Qt6::Core
+        Qt6::Gui
+        Qt6::Sql
 )
 
 qt_add_executable(lumina_reader
@@ -77,17 +85,29 @@ set_target_properties(lumina_reader PROPERTIES
 include(CTest)
 
 if(BUILD_TESTING)
-    qt_add_executable(lumina_tests
+    qt_add_executable(lumina_smoke_tests
         tests/unit/smoke_test.cpp
     )
 
-    target_link_libraries(lumina_tests
+    target_link_libraries(lumina_smoke_tests
         PRIVATE
             lumina_core
             Qt6::Test
     )
 
-    add_test(NAME lumina_tests COMMAND lumina_tests)
+    add_test(NAME lumina_smoke_tests COMMAND lumina_smoke_tests)
+
+    qt_add_executable(lumina_database_tests
+        tests/unit/database_test.cpp
+    )
+
+    target_link_libraries(lumina_database_tests
+        PRIVATE
+            lumina_core
+            Qt6::Test
+    )
+
+    add_test(NAME lumina_database_tests COMMAND lumina_database_tests)
 endif()
 
 include(GNUInstallDirs)

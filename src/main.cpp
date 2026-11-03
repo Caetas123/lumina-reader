@@ -1,5 +1,7 @@
 #include "application/AppController.h"
 
+#include "infrastructure/logging/Logging.h"
+
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -10,6 +12,7 @@ int main(int argc, char *argv[])
     QCoreApplication::setApplicationName(QStringLiteral("Lumina Reader"));
     QCoreApplication::setApplicationVersion(QStringLiteral(LUMINA_VERSION));
     QCoreApplication::setOrganizationName(QStringLiteral("Lumina Reader contributors"));
+    Lumina::Infrastructure::initializeLogging();
 
     QQmlApplicationEngine engine;
     Lumina::Application::AppController appController;

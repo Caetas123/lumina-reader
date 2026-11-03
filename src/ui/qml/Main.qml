@@ -76,10 +76,10 @@ ApplicationWindow {
 
         Rectangle {
             Layout.fillWidth: true
-            implicitHeight: 92
+            implicitHeight: appController.databaseReady || appController.startupError.length === 0 ? 92 : 132
             radius: 12
-            color: Theme.surface
-            border.color: Theme.border
+            color: appController.databaseReady ? "#ecfdf5" : Theme.surface
+            border.color: appController.databaseReady ? "#a7f3d0" : Theme.border
 
             ColumnLayout {
                 anchors.fill: parent
@@ -87,20 +87,40 @@ ApplicationWindow {
                 spacing: 6
 
                 Label {
-                    text: qsTr("Phase 0 — Foundation")
-                    color: Theme.textPrimary
+                    text: appController.databaseReady
+                        ? qsTr("Local database ready")
+                        : qsTr("Phase 0 — Foundation")
+                    color: appController.databaseReady ? Theme.success : Theme.textPrimary
                     font.pixelSize: 15
                     font.weight: Font.DemiBold
                 }
 
                 Label {
                     Layout.fillWidth: true
-                    text: qsTr("Qt Quick, CMake, a base theme, and a test target are configured.")
+                    text: appController.databaseReady
+                        ? qsTr("Your application data stays on this device by default.")
+                        : qsTr("Qt Quick, CMake, a base theme, and a test target are configured.")
                     color: Theme.textSecondary
                     font.pixelSize: 14
                     wrapMode: Text.WordWrap
                 }
+
+                Label {
+                    Layout.fillWidth: true
+                    visible: !appController.databaseReady && appController.startupError.length > 0
+                    text: appController.startupError
+                    color: Theme.warning
+                    font.pixelSize: 13
+                    wrapMode: Text.WordWrap
+                }
             }
+        }
+
+        Button {
+            Layout.alignment: Qt.AlignHCenter
+            visible: !appController.databaseReady && appController.startupError.length > 0
+            text: qsTr("Retry database initialization")
+            onClicked: appController.retryInitialization()
         }
 
         Button {
