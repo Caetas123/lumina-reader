@@ -15,12 +15,13 @@ private slots:
         QVERIFY2(database.open(QStringLiteral(":memory:"), &error),
                  qPrintable(error.logMessage()));
         QVERIFY2(database.migrate(&error), qPrintable(error.logMessage()));
-        QCOMPARE(database.schemaVersion(), 1);
+        QCOMPARE(database.schemaVersion(), 2);
 
         QSqlQuery query(database.connection());
         QVERIFY(query.exec(QStringLiteral(
             "SELECT name FROM sqlite_master WHERE name IN "
-            "('schema_migrations', 'app_settings', 'document_search')")));
+            "('schema_migrations', 'app_settings', 'document_search', 'documents', "
+            "'highlights', 'annotations', 'bookmarks', 'ocr_pages')")));
 
         QStringList tableNames;
         while (query.next()) {
@@ -30,6 +31,11 @@ private slots:
         QVERIFY(tableNames.contains(QStringLiteral("schema_migrations")));
         QVERIFY(tableNames.contains(QStringLiteral("app_settings")));
         QVERIFY(tableNames.contains(QStringLiteral("document_search")));
+        QVERIFY(tableNames.contains(QStringLiteral("documents")));
+        QVERIFY(tableNames.contains(QStringLiteral("highlights")));
+        QVERIFY(tableNames.contains(QStringLiteral("annotations")));
+        QVERIFY(tableNames.contains(QStringLiteral("bookmarks")));
+        QVERIFY(tableNames.contains(QStringLiteral("ocr_pages")));
     }
 
     void migrationIsIdempotent()
@@ -41,12 +47,12 @@ private slots:
                  qPrintable(error.logMessage()));
         QVERIFY2(database.migrate(&error), qPrintable(error.logMessage()));
         QVERIFY2(database.migrate(&error), qPrintable(error.logMessage()));
-        QCOMPARE(database.schemaVersion(), 1);
+        QCOMPARE(database.schemaVersion(), 2);
 
         QSqlQuery query(database.connection());
         QVERIFY(query.exec(QStringLiteral("SELECT COUNT(*) FROM schema_migrations")));
         QVERIFY(query.next());
-        QCOMPARE(query.value(0).toInt(), 1);
+        QCOMPARE(query.value(0).toInt(), 2);
     }
 
     void rejectsEmptyPath()

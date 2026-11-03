@@ -37,6 +37,163 @@ QList<Migration> migrations()
                     ")"),
             },
         },
+        {
+            2,
+            {
+                QStringLiteral(
+                    "CREATE TABLE IF NOT EXISTS documents ("
+                    "id TEXT PRIMARY KEY NOT NULL, "
+                    "file_path TEXT NOT NULL UNIQUE, "
+                    "canonical_path TEXT NOT NULL, "
+                    "file_hash TEXT NOT NULL, "
+                    "file_size INTEGER NOT NULL DEFAULT 0, "
+                    "format TEXT NOT NULL, "
+                    "content_type TEXT NOT NULL DEFAULT 'other', "
+                    "title TEXT NOT NULL, "
+                    "author TEXT NOT NULL DEFAULT '', "
+                    "description TEXT NOT NULL DEFAULT '', "
+                    "language TEXT NOT NULL DEFAULT '', "
+                    "cover_path TEXT NOT NULL DEFAULT '', "
+                    "status TEXT NOT NULL DEFAULT 'to_read', "
+                    "progress REAL NOT NULL DEFAULT 0.0, "
+                    "current_page INTEGER NOT NULL DEFAULT 0, "
+                    "page_count INTEGER NOT NULL DEFAULT 0, "
+                    "added_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+                    "last_opened_at TEXT, "
+                    "updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+                    "CHECK (progress >= 0.0 AND progress <= 1.0), "
+                    "CHECK (current_page >= 0), "
+                    "CHECK (page_count >= 0)"
+                    ")"),
+                QStringLiteral(
+                    "CREATE INDEX IF NOT EXISTS documents_status_idx "
+                    "ON documents(status)"),
+                QStringLiteral(
+                    "CREATE INDEX IF NOT EXISTS documents_last_opened_idx "
+                    "ON documents(last_opened_at DESC)"),
+                QStringLiteral(
+                    "CREATE INDEX IF NOT EXISTS documents_hash_idx "
+                    "ON documents(file_hash)"),
+                QStringLiteral(
+                    "CREATE TABLE IF NOT EXISTS collections ("
+                    "id TEXT PRIMARY KEY NOT NULL, "
+                    "name TEXT NOT NULL UNIQUE, "
+                    "description TEXT NOT NULL DEFAULT '', "
+                    "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+                    "updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                    ")"),
+                QStringLiteral(
+                    "CREATE TABLE IF NOT EXISTS document_collections ("
+                    "document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE, "
+                    "collection_id TEXT NOT NULL REFERENCES collections(id) ON DELETE CASCADE, "
+                    "PRIMARY KEY(document_id, collection_id)"
+                    ")"),
+                QStringLiteral(
+                    "CREATE TABLE IF NOT EXISTS tags ("
+                    "id TEXT PRIMARY KEY NOT NULL, "
+                    "name TEXT NOT NULL UNIQUE, "
+                    "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                    ")"),
+                QStringLiteral(
+                    "CREATE TABLE IF NOT EXISTS document_tags ("
+                    "document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE, "
+                    "tag_id TEXT NOT NULL REFERENCES tags(id) ON DELETE CASCADE, "
+                    "PRIMARY KEY(document_id, tag_id)"
+                    ")"),
+                QStringLiteral(
+                    "CREATE TABLE IF NOT EXISTS highlights ("
+                    "id TEXT PRIMARY KEY NOT NULL, "
+                    "document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE, "
+                    "text TEXT NOT NULL, "
+                    "note TEXT NOT NULL DEFAULT '', "
+                    "color TEXT NOT NULL DEFAULT '#f6c945', "
+                    "style TEXT NOT NULL DEFAULT 'highlight', "
+                    "locator TEXT NOT NULL, "
+                    "context_before TEXT NOT NULL DEFAULT '', "
+                    "context_after TEXT NOT NULL DEFAULT '', "
+                    "page INTEGER NOT NULL DEFAULT 0, "
+                    "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+                    "updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                    ")"),
+                QStringLiteral(
+                    "CREATE INDEX IF NOT EXISTS highlights_document_idx "
+                    "ON highlights(document_id, page)"),
+                QStringLiteral(
+                    "CREATE TABLE IF NOT EXISTS annotations ("
+                    "id TEXT PRIMARY KEY NOT NULL, "
+                    "document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE, "
+                    "text TEXT NOT NULL, "
+                    "kind TEXT NOT NULL DEFAULT 'note', "
+                    "locator TEXT NOT NULL, "
+                    "page INTEGER NOT NULL DEFAULT 0, "
+                    "x REAL NOT NULL DEFAULT 0.0, "
+                    "y REAL NOT NULL DEFAULT 0.0, "
+                    "width REAL NOT NULL DEFAULT 0.0, "
+                    "height REAL NOT NULL DEFAULT 0.0, "
+                    "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+                    "updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                    ")"),
+                QStringLiteral(
+                    "CREATE INDEX IF NOT EXISTS annotations_document_idx "
+                    "ON annotations(document_id, page)"),
+                QStringLiteral(
+                    "CREATE TABLE IF NOT EXISTS bookmarks ("
+                    "id TEXT PRIMARY KEY NOT NULL, "
+                    "document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE, "
+                    "label TEXT NOT NULL DEFAULT '', "
+                    "locator TEXT NOT NULL, "
+                    "page INTEGER NOT NULL DEFAULT 0, "
+                    "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                    ")"),
+                QStringLiteral(
+                    "CREATE INDEX IF NOT EXISTS bookmarks_document_idx "
+                    "ON bookmarks(document_id, page)"),
+                QStringLiteral(
+                    "CREATE TABLE IF NOT EXISTS reading_history ("
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                    "document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE, "
+                    "progress REAL NOT NULL, "
+                    "page INTEGER NOT NULL DEFAULT 0, "
+                    "recorded_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                    ")"),
+                QStringLiteral(
+                    "CREATE TABLE IF NOT EXISTS ocr_pages ("
+                    "document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE, "
+                    "page INTEGER NOT NULL, "
+                    "language TEXT NOT NULL DEFAULT '', "
+                    "text TEXT NOT NULL DEFAULT '', "
+                    "status TEXT NOT NULL DEFAULT 'pending', "
+                    "updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+                    "PRIMARY KEY(document_id, page)"
+                    ")"),
+                QStringLiteral(
+                    "CREATE TABLE IF NOT EXISTS search_history ("
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                    "query TEXT NOT NULL, "
+                    "scope TEXT NOT NULL, "
+                    "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                    ")"),
+                QStringLiteral(
+                    "CREATE TABLE IF NOT EXISTS dictionary_history ("
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                    "term TEXT NOT NULL, "
+                    "language TEXT NOT NULL DEFAULT '', "
+                    "provider TEXT NOT NULL DEFAULT 'local', "
+                    "result_json TEXT NOT NULL DEFAULT '{}', "
+                    "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                    ")"),
+                QStringLiteral(
+                    "CREATE TABLE IF NOT EXISTS translation_history ("
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                    "source_text TEXT NOT NULL, "
+                    "source_language TEXT NOT NULL DEFAULT '', "
+                    "target_language TEXT NOT NULL, "
+                    "provider TEXT NOT NULL DEFAULT 'local', "
+                    "translated_text TEXT NOT NULL DEFAULT '', "
+                    "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                    ")"),
+            },
+        },
     };
 }
 
