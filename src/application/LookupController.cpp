@@ -301,6 +301,74 @@ void LookupController::clearResult()
     resultTranslationFavorite_ = false;
 }
 
+bool LookupController::loadCachedDictionary(const QString &term, const QString &language)
+{
+    if (database_ == nullptr || !database_->isOpen()) {
+        return false;
+    }
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral(
+        "SELECT id, result_json, provider, is_favorite FROM dictionary_history "
+        "WHERE term = :term AND language = :language AND result_json <> '{}' "
+        "ORDER BY id DESC LIMIT 1"));
+    query.bindValue(QStringLiteral(":term"), term);
+    query.bindValue(QStringLiteral(":language"), language);
+    if (!query.exec() || !query.next()) {
+        return false;
+    }
+    QJsonParseError parseError;
+    const QJsonDocument document = QJsonDocument::fromJson(
+        query.value(1).toString().toUtf8(), &parseError);
+    if (parseError.error != QJsonParseError::NoError || !document.isArray()) {
+        return false;
+    }
+    QString pronunciation;
+    const QString body = dictionaryBody(document.array(), &pronunciation);
+    if (body.isEmpty()) {
+        return false;
+    }
+    busy_ = false;
+    resultTitle_ = term;
+    resultBody_ = body;
+    resultPronunciation_ = pronunciation;
+    resultSource_ = QStringLiteral("Saved locally · %1").arg(query.value(2).toString());
+    resultDictionaryHistoryId_ = query.value(0).toLongLong();
+    resultDictionaryFavorite_ = query.value(3).toBool();
+    lastError_.clear();
+    emit stateChanged();
+    return true;
+}
+
+bool LookupController::loadCachedTranslation(const QString &text,
+                                             const QString &sourceLanguage,
+                                             const QString &targetLanguage)
+{
+    if (database_ == nullptr || !database_->isOpen()) {
+        return false;
+    }
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral(
+        "SELECT id, translated_text, provider, is_favorite FROM translation_history "
+        "WHERE source_text = :text AND source_language = :source AND target_language = :target "
+        "AND trim(translated_text) <> '' ORDER BY id DESC LIMIT 1"));
+    query.bindValue(QStringLiteral(":text"), text);
+    query.bindValue(QStringLiteral(":source"), sourceLanguage);
+    query.bindValue(QStringLiteral(":target"), targetLanguage);
+    if (!query.exec() || !query.next()) {
+        return false;
+    }
+    busy_ = false;
+    resultTitle_ = QStringLiteral("%1 → %2").arg(sourceLanguage, targetLanguage);
+    resultBody_ = query.value(1).toString();
+    resultPronunciation_.clear();
+    resultSource_ = QStringLiteral("Saved locally · %1").arg(query.value(2).toString());
+    resultTranslationHistoryId_ = query.value(0).toLongLong();
+    resultTranslationFavorite_ = query.value(3).toBool();
+    lastError_.clear();
+    emit stateChanged();
+    return true;
+}
+
 void LookupController::fail(const QString &message)
 {
     busy_ = false;
@@ -527,15 +595,18 @@ bool LookupController::lookupDictionary(const QString &term, const QString &lang
         fail(QStringLiteral("Select a word first."));
         return false;
     }
+    const QString languageCode = normalizedLanguage(language, QStringLiteral("en"));
     if (activeReply_ != nullptr) {
         QNetworkReply *previous = activeReply_.data();
         activeReply_.clear();
         previous->abort();
         previous->deleteLater();
     }
+    if (loadCachedDictionary(normalizedTerm, languageCode)) {
+        return true;
+    }
 
     DictionaryApiProvider provider;
-    const QString languageCode = normalizedLanguage(language, QStringLiteral("en"));
     QNetworkRequest request(provider.lookupUrl(normalizedTerm, languageCode));
     request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("LuminaReader/%1").arg(LUMINA_VERSION));
     activeReply_ = networkManager_.get(request);
@@ -605,16 +676,19 @@ bool LookupController::translateText(const QString &text,
         fail(QStringLiteral("Select a word or passage first."));
         return false;
     }
+    const QString normalizedSource = normalizedLanguage(sourceLanguage, QStringLiteral("auto"));
+    const QString normalizedTarget = normalizedLanguage(targetLanguage, QStringLiteral("en"));
     if (activeReply_ != nullptr) {
         QNetworkReply *previous = activeReply_.data();
         activeReply_.clear();
         previous->abort();
         previous->deleteLater();
     }
+    if (loadCachedTranslation(normalizedText, normalizedSource, normalizedTarget)) {
+        return true;
+    }
 
     MyMemoryTranslationProvider provider;
-    const QString normalizedSource = normalizedLanguage(sourceLanguage, QStringLiteral("auto"));
-    const QString normalizedTarget = normalizedLanguage(targetLanguage, QStringLiteral("en"));
     QNetworkRequest request(provider.translationUrl(normalizedText,
                                                     normalizedSource,
                                                     normalizedTarget));

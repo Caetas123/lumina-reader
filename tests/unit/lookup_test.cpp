@@ -60,6 +60,46 @@ private slots:
         QCOMPARE(controller.dictionaryHistory().size(), 0);
         QCOMPARE(controller.translationHistory().size(), 0);
     }
+
+    void usesSavedLookupResultsOffline()
+    {
+        Lumina::Infrastructure::Database database;
+        Lumina::Domain::Error error;
+        QVERIFY2(database.open(QStringLiteral(":memory:"), &error),
+                 qPrintable(error.logMessage()));
+        QVERIFY2(database.migrate(&error), qPrintable(error.logMessage()));
+
+        QSqlQuery insert(database.connection());
+        insert.prepare(QStringLiteral(
+            "INSERT INTO dictionary_history (term, language, provider, result_json) "
+            "VALUES (:term, :language, :provider, :result)"));
+        insert.bindValue(QStringLiteral(":term"), QStringLiteral("luminous"));
+        insert.bindValue(QStringLiteral(":language"), QStringLiteral("en"));
+        insert.bindValue(QStringLiteral(":provider"), QStringLiteral("test"));
+        insert.bindValue(QStringLiteral(":result"), QStringLiteral(
+            "[{\"meanings\":[{\"partOfSpeech\":\"adjective\","
+            "\"definitions\":[{\"definition\":\"giving off light\"}]}]}]"));
+        QVERIFY(insert.exec());
+        insert.prepare(QStringLiteral(
+            "INSERT INTO translation_history "
+            "(source_text, source_language, target_language, provider, translated_text) "
+            "VALUES (:text, :source, :target, :provider, :translated)"));
+        insert.bindValue(QStringLiteral(":text"), QStringLiteral("hello"));
+        insert.bindValue(QStringLiteral(":source"), QStringLiteral("en"));
+        insert.bindValue(QStringLiteral(":target"), QStringLiteral("pt"));
+        insert.bindValue(QStringLiteral(":provider"), QStringLiteral("test"));
+        insert.bindValue(QStringLiteral(":translated"), QStringLiteral("olá"));
+        QVERIFY(insert.exec());
+
+        Lumina::Application::LookupController controller;
+        controller.setDatabase(&database);
+        QVERIFY(controller.lookupDictionary(QStringLiteral("luminous"), QStringLiteral("en")));
+        QVERIFY(controller.resultBody().contains(QStringLiteral("giving off light")));
+        QVERIFY(controller.resultSource().startsWith(QStringLiteral("Saved locally")));
+        QVERIFY(controller.translateText(QStringLiteral("hello"), QStringLiteral("en"), QStringLiteral("pt")));
+        QCOMPARE(controller.resultBody(), QStringLiteral("olá"));
+        QVERIFY(controller.resultSource().startsWith(QStringLiteral("Saved locally")));
+    }
 };
 
 QTEST_GUILESS_MAIN(LookupTest)

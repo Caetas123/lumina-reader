@@ -82,6 +82,10 @@ private:
     bool setHistoryFavorite(const QString &tableName, qint64 historyId, bool favorite);
     void clearResult();
     void fail(const QString &message);
+    bool loadCachedDictionary(const QString &term, const QString &language);
+    bool loadCachedTranslation(const QString &text,
+                               const QString &sourceLanguage,
+                               const QString &targetLanguage);
 
     Lumina::Infrastructure::Database *database_ = nullptr;
     QNetworkAccessManager networkManager_;
