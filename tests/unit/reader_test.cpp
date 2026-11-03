@@ -116,6 +116,9 @@ private slots:
         QVERIFY(reader.isImageDocument());
         const QString thumbnail = reader.thumbnailSource(0);
         QVERIFY(thumbnail.startsWith(QStringLiteral("data:image/png;base64,")));
+        const QString pageSource = reader.pageImageSource(0);
+        QVERIFY(pageSource.startsWith(QStringLiteral("data:image/png;base64,")));
+        QVERIFY(reader.pageImageSource(1).isEmpty());
         QVERIFY(reader.thumbnailSource(-1).isEmpty());
     }
 
