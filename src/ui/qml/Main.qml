@@ -2583,7 +2583,10 @@ ApplicationWindow {
                                      } else {
                                          appController.speech.speak(readerText.selectedText.length > 0
                                                                     ? readerText.selectedText
-                                                                    : appController.reader.textContent)
+                                                                    : (appController.settings.continuousReading
+                                                                       && appController.reader.continuousTextContent.length > 0
+                                                                       ? appController.reader.continuousTextContent
+                                                                       : appController.reader.textContent))
                                      }
                                  }
                              }
