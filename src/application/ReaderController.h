@@ -66,6 +66,7 @@ private:
     void clearState();
     void fail(const QString &message);
     [[nodiscard]] QString loadText(const QString &path) const;
+    void refreshTextPage();
     void persistProgress();
     [[nodiscard]] bool renderPdfPage();
 
@@ -76,6 +77,7 @@ private:
     QString filePath_;
     QString format_;
     QString contentType_;
+    QString fullTextContent_;
     QString textContent_;
     QString imageSource_;
     QString engineName_;

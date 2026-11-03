@@ -149,6 +149,18 @@ if(BUILD_TESTING)
     )
 
     add_test(NAME lumina_library_tests COMMAND lumina_library_tests)
+
+    qt_add_executable(lumina_reader_tests
+        tests/unit/reader_test.cpp
+    )
+
+    target_link_libraries(lumina_reader_tests
+        PRIVATE
+            lumina_core
+            Qt6::Test
+    )
+
+    add_test(NAME lumina_reader_tests COMMAND lumina_reader_tests)
 endif()
 
 include(GNUInstallDirs)

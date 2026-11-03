@@ -16,6 +16,8 @@
 
 namespace {
 
+constexpr int kTextCharactersPerPage = 5000;
+
 bool isTextFormat(const QString &format)
 {
     return format == QStringLiteral("txt") || format == QStringLiteral("rtf")
@@ -123,6 +125,7 @@ void ReaderController::clearState()
     filePath_.clear();
     format_.clear();
     contentType_.clear();
+    fullTextContent_.clear();
     textContent_.clear();
     imageSource_.clear();
     engineName_.clear();
@@ -145,6 +148,15 @@ QString ReaderController::loadText(const QString &path) const
         return {};
     }
     return QString::fromUtf8(file.readAll());
+}
+
+void ReaderController::refreshTextPage()
+{
+    if (!isTextFormat(format_)) {
+        return;
+    }
+    const qsizetype start = static_cast<qsizetype>(currentPage_) * kTextCharactersPerPage;
+    textContent_ = fullTextContent_.mid(start, kTextCharactersPerPage);
 }
 
 bool ReaderController::renderPdfPage()
@@ -223,15 +235,16 @@ bool ReaderController::openDocument(const QString &documentId)
         return false;
 #endif
     } else if (isTextFormat(format)) {
-        textContent_ = loadText(path);
-        if (textContent_.isEmpty() && QFileInfo(path).size() > 0) {
+        fullTextContent_ = loadText(path);
+        if (fullTextContent_.isEmpty() && QFileInfo(path).size() > 0) {
             fail(QStringLiteral("The text document could not be decoded."));
             return false;
         }
-        constexpr int charactersPerPage = 5000;
-        const int characterCount = static_cast<int>(textContent_.size());
-        pageCount_ = std::max(1, (characterCount + charactersPerPage - 1) / charactersPerPage);
+        const int characterCount = static_cast<int>(fullTextContent_.size());
+        pageCount_ = std::max(1, (characterCount + kTextCharactersPerPage - 1)
+                                      / kTextCharactersPerPage);
         currentPage_ = std::clamp(currentPage_, 0, pageCount_ - 1);
+        refreshTextPage();
         engineName_ = QStringLiteral("Text engine");
     } else {
         fail(QStringLiteral(
@@ -274,9 +287,14 @@ bool ReaderController::goToPage(int page)
     if (page == currentPage_) {
         return true;
     }
+    const int previousPage = currentPage_;
     currentPage_ = page;
+    if (isTextFormat(format_)) {
+        refreshTextPage();
+    }
 #ifdef LUMINA_HAS_QT_PDF
     if (format_ == QStringLiteral("pdf") && !renderPdfPage()) {
+        currentPage_ = previousPage;
         return false;
     }
 #endif
@@ -291,7 +309,10 @@ bool ReaderController::updateProgress(double progress)
         return false;
     }
     progress = std::clamp(progress, 0.0, 1.0);
-    currentPage_ = std::clamp(static_cast<int>(progress * pageCount_), 0, std::max(pageCount_ - 1, 0));
+    currentPage_ = std::clamp(static_cast<int>(progress * std::max(pageCount_ - 1, 0)),
+                              0,
+                              std::max(pageCount_ - 1, 0));
+    refreshTextPage();
     const bool success = library_ != nullptr
         && library_->updateProgress(documentId_, progress, currentPage_);
     if (success) {
