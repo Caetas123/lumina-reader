@@ -10,6 +10,7 @@ class QPdfDocument;
 #endif
 
 namespace Lumina::Infrastructure {
+class ArchiveReader;
 class LibraryStore;
 }
 
@@ -67,10 +68,12 @@ private:
     void fail(const QString &message);
     [[nodiscard]] QString loadText(const QString &path) const;
     void refreshTextPage();
+    [[nodiscard]] bool refreshArchivePage();
     void persistProgress();
     [[nodiscard]] bool renderPdfPage();
 
     Lumina::Infrastructure::LibraryStore *library_ = nullptr;
+    std::unique_ptr<Lumina::Infrastructure::ArchiveReader> archiveReader_;
     bool open_ = false;
     QString documentId_;
     QString title_;

@@ -1,5 +1,6 @@
 #include "application/ReaderController.h"
 
+#include "infrastructure/archive/ArchiveReader.h"
 #include "infrastructure/library/LibraryStore.h"
 
 #include <QFile>
@@ -29,6 +30,39 @@ bool isImageFormat(const QString &format)
     return format == QStringLiteral("jpg") || format == QStringLiteral("jpeg")
         || format == QStringLiteral("png") || format == QStringLiteral("webp")
         || format == QStringLiteral("avif") || format == QStringLiteral("gif");
+}
+
+bool isArchiveFormat(const QString &format)
+{
+    return format == QStringLiteral("cbz") || format == QStringLiteral("zip")
+        || format == QStringLiteral("epub");
+}
+
+QString imageMimeType(const QString &path)
+{
+    const QString suffix = path.section('.', -1).toLower();
+    if (suffix == QStringLiteral("jpg") || suffix == QStringLiteral("jpeg")) {
+        return QStringLiteral("image/jpeg");
+    }
+    if (suffix == QStringLiteral("png")) {
+        return QStringLiteral("image/png");
+    }
+    if (suffix == QStringLiteral("webp")) {
+        return QStringLiteral("image/webp");
+    }
+    if (suffix == QStringLiteral("gif")) {
+        return QStringLiteral("image/gif");
+    }
+    if (suffix == QStringLiteral("avif")) {
+        return QStringLiteral("image/avif");
+    }
+    return QStringLiteral("application/octet-stream");
+}
+
+QString imageDataUrl(const QString &path, const QByteArray &data)
+{
+    return imageMimeType(path) + QStringLiteral(";base64,")
+        + QString::fromLatin1(data.toBase64());
 }
 
 } // namespace
@@ -86,12 +120,14 @@ QString ReaderController::imageSource() const
 
 bool ReaderController::isImageDocument() const
 {
-    return isImageFormat(format_) || format_ == QStringLiteral("pdf");
+    return isImageFormat(format_) || format_ == QStringLiteral("pdf")
+        || (archiveReader_ != nullptr && archiveReader_->pageIsImage(currentPage_));
 }
 
 bool ReaderController::isTextDocument() const
 {
-    return isTextFormat(format_);
+    return isTextFormat(format_)
+        || (archiveReader_ != nullptr && !archiveReader_->pageIsImage(currentPage_));
 }
 
 QString ReaderController::engineName() const
@@ -116,6 +152,7 @@ int ReaderController::currentPage() const
 
 void ReaderController::clearState()
 {
+    archiveReader_.reset();
 #ifdef LUMINA_HAS_QT_PDF
     pdfDocument_.reset();
 #endif
@@ -157,6 +194,29 @@ void ReaderController::refreshTextPage()
     }
     const qsizetype start = static_cast<qsizetype>(currentPage_) * kTextCharactersPerPage;
     textContent_ = fullTextContent_.mid(start, kTextCharactersPerPage);
+}
+
+bool ReaderController::refreshArchivePage()
+{
+    if (archiveReader_ == nullptr || currentPage_ < 0 || currentPage_ >= pageCount_) {
+        return false;
+    }
+
+    if (archiveReader_->pageIsImage(currentPage_)) {
+        const QByteArray data = archiveReader_->pageData(currentPage_);
+        if (data.isEmpty()) {
+            return false;
+        }
+        imageSource_ = imageDataUrl(archiveReader_->pageName(currentPage_), data);
+        textContent_.clear();
+    } else {
+        textContent_ = archiveReader_->pageText(currentPage_);
+        if (textContent_.isEmpty() && !archiveReader_->pageData(currentPage_).isEmpty()) {
+            return false;
+        }
+        imageSource_.clear();
+    }
+    return true;
 }
 
 bool ReaderController::renderPdfPage()
@@ -246,6 +306,19 @@ bool ReaderController::openDocument(const QString &documentId)
         currentPage_ = std::clamp(currentPage_, 0, pageCount_ - 1);
         refreshTextPage();
         engineName_ = QStringLiteral("Text engine");
+    } else if (isArchiveFormat(format)) {
+        archiveReader_ = std::make_unique<Lumina::Infrastructure::ArchiveReader>();
+        if (!archiveReader_->open(path, format)) {
+            fail(QStringLiteral("This archive could not be opened. It may be damaged or unsupported."));
+            return false;
+        }
+        pageCount_ = archiveReader_->pageCount();
+        currentPage_ = std::clamp(currentPage_, 0, pageCount_ - 1);
+        if (!refreshArchivePage()) {
+            fail(QStringLiteral("The first archive page could not be read."));
+            return false;
+        }
+        engineName_ = QStringLiteral("Archive engine");
     } else {
         fail(QStringLiteral(
             "This format is registered in the library, but its reading engine is not available in this build yet."));
@@ -292,6 +365,11 @@ bool ReaderController::goToPage(int page)
     if (isTextFormat(format_)) {
         refreshTextPage();
     }
+    if (archiveReader_ != nullptr && !refreshArchivePage()) {
+        currentPage_ = previousPage;
+        refreshArchivePage();
+        return false;
+    }
 #ifdef LUMINA_HAS_QT_PDF
     if (format_ == QStringLiteral("pdf") && !renderPdfPage()) {
         currentPage_ = previousPage;
@@ -313,6 +391,14 @@ bool ReaderController::updateProgress(double progress)
                               0,
                               std::max(pageCount_ - 1, 0));
     refreshTextPage();
+    if (archiveReader_ != nullptr && !refreshArchivePage()) {
+        return false;
+    }
+#ifdef LUMINA_HAS_QT_PDF
+    if (format_ == QStringLiteral("pdf") && !renderPdfPage()) {
+        return false;
+    }
+#endif
     const bool success = library_ != nullptr
         && library_->updateProgress(documentId_, progress, currentPage_);
     if (success) {

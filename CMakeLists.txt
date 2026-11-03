@@ -22,6 +22,7 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS
 )
 
 find_package(Qt6 6.5 QUIET COMPONENTS Pdf)
+find_package(Qt6 6.5 QUIET COMPONENTS CorePrivate)
 
 qt_standard_project_setup(REQUIRES 6.5)
 
@@ -37,6 +38,8 @@ add_library(lumina_core STATIC
     src/domain/core/Error.h
     src/infrastructure/database/Database.cpp
     src/infrastructure/database/Database.h
+    src/infrastructure/archive/ArchiveReader.cpp
+    src/infrastructure/archive/ArchiveReader.h
     src/infrastructure/library/LibraryStore.cpp
     src/infrastructure/library/LibraryStore.h
     src/infrastructure/logging/Logging.cpp
@@ -64,6 +67,11 @@ target_link_libraries(lumina_core
 if(TARGET Qt6::Pdf)
     target_compile_definitions(lumina_core PUBLIC LUMINA_HAS_QT_PDF=1)
     target_link_libraries(lumina_core PUBLIC Qt6::Pdf)
+endif()
+
+if(TARGET Qt6::CorePrivate)
+    target_compile_definitions(lumina_core PUBLIC LUMINA_HAS_QT_ZIP=1)
+    target_link_libraries(lumina_core PUBLIC Qt6::CorePrivate)
 endif()
 
 qt_add_executable(lumina_reader
@@ -161,6 +169,18 @@ if(BUILD_TESTING)
     )
 
     add_test(NAME lumina_reader_tests COMMAND lumina_reader_tests)
+
+    qt_add_executable(lumina_archive_tests
+        tests/unit/archive_test.cpp
+    )
+
+    target_link_libraries(lumina_archive_tests
+        PRIVATE
+            lumina_core
+            Qt6::Test
+    )
+
+    add_test(NAME lumina_archive_tests COMMAND lumina_archive_tests)
 endif()
 
 include(GNUInstallDirs)
