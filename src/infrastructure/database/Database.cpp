@@ -249,6 +249,17 @@ QList<Migration> migrations()
                     "ON documents(is_favorite, last_opened_at DESC)"),
             },
         },
+        {
+            6,
+            {
+                QStringLiteral(
+                    "INSERT INTO knowledge_items_search "
+                    "(source_id, source_kind, document_id, text, note, page, locator, created_at) "
+                    "SELECT document_id || ':' || page, 'ocr', document_id, text, '', page, "
+                    "'ocr:' || page, updated_at FROM ocr_pages "
+                    "WHERE status = 'completed' AND text <> ''"),
+            },
+        },
     };
 }
 

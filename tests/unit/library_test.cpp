@@ -101,6 +101,17 @@ private slots:
                      .size(),
                  0);
 
+        QVERIFY(store.saveOcrPage(documentId,
+                                  3,
+                                  QStringLiteral("eng"),
+                                  QStringLiteral("Scanned democracy passage")));
+        QCOMPARE(store.ocrTextForPage(documentId, 3), QStringLiteral("Scanned democracy passage"));
+        const QVariantList ocrResults = store.knowledgeSearch(QStringLiteral("scanned"));
+        QCOMPARE(ocrResults.size(), 1);
+        QCOMPARE(ocrResults.first().toMap().value(QStringLiteral("kind")).toString(),
+                 QStringLiteral("ocr"));
+        QCOMPARE(ocrResults.first().toMap().value(QStringLiteral("page")).toInt(), 3);
+
         QVERIFY(store.addAnnotation(documentId,
                                      QStringLiteral("Review this argument later."),
                                      QStringLiteral("note"),

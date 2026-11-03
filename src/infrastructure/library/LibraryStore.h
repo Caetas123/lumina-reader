@@ -102,6 +102,12 @@ public:
                                    double width = 0.0,
                                    double height = 0.0);
     Q_INVOKABLE bool removeAnnotation(const QString &annotationId);
+    [[nodiscard]] QString ocrTextForPage(const QString &documentId, int page) const;
+    bool saveOcrPage(const QString &documentId,
+                     int page,
+                     const QString &language,
+                     const QString &text,
+                     const QString &status = QStringLiteral("completed"));
     Q_INVOKABLE QVariantList bookmarksForDocument(const QString &documentId) const;
     Q_INVOKABLE bool addBookmark(const QString &documentId,
                                  const QString &label,

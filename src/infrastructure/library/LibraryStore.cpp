@@ -1099,7 +1099,9 @@ QVariantList LibraryStore::knowledgeSearch(const QString &term,
     QSqlQuery query(database_->connection());
     QString statement = QStringLiteral(
         "SELECT ks.source_id, ks.source_kind, ks.document_id, d.title, d.author, d.format, ks.text, "
-        "COALESCE(h.note, ''), COALESCE(h.color, '#f6c945'), ks.page, ks.locator, "
+        "CASE WHEN ks.source_kind = 'highlight' THEN COALESCE(h.note, '') "
+        "WHEN ks.source_kind = 'annotation' THEN COALESCE(a.kind, '') ELSE '' END, "
+        "CASE WHEN ks.source_kind = 'highlight' THEN COALESCE(h.color, '#f6c945') ELSE '' END, ks.page, ks.locator, "
         "ks.created_at, COALESCE(a.kind, '') "
         "FROM knowledge_items_search ks JOIN documents d ON d.id = ks.document_id "
         "LEFT JOIN highlights h ON h.id = ks.source_id AND ks.source_kind = 'highlight' "
@@ -1380,6 +1382,86 @@ bool LibraryStore::removeAnnotation(const QString &annotationId)
         query.bindValue(QStringLiteral(":id"), annotationId);
         success = query.exec() && query.numRowsAffected() > 0;
     }
+    if (!success || !connection.commit()) {
+        connection.rollback();
+        return false;
+    }
+    return true;
+}
+
+QString LibraryStore::ocrTextForPage(const QString &documentId, int page) const
+{
+    if (!isReady() || documentId.trimmed().isEmpty() || page < 0) {
+        return {};
+    }
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral(
+        "SELECT text FROM ocr_pages WHERE document_id = :document AND page = :page "
+        "AND status = 'completed'"));
+    query.bindValue(QStringLiteral(":document"), documentId);
+    query.bindValue(QStringLiteral(":page"), page);
+    return query.exec() && query.next() ? query.value(0).toString() : QString();
+}
+
+bool LibraryStore::saveOcrPage(const QString &documentId,
+                               int page,
+                               const QString &language,
+                               const QString &text,
+                               const QString &status)
+{
+    if (!isReady() || documentId.trimmed().isEmpty() || documentDetails(documentId).isEmpty()
+        || page < 0) {
+        return false;
+    }
+    const QString normalizedStatus = status.trimmed().toLower();
+    if (normalizedStatus != QStringLiteral("pending")
+        && normalizedStatus != QStringLiteral("completed")
+        && normalizedStatus != QStringLiteral("failed")) {
+        return false;
+    }
+
+    const QString boundedText = text.left(4 * 1024 * 1024);
+    const QString sourceId = documentId + QStringLiteral(":") + QString::number(page);
+    QSqlDatabase connection = database_->connection();
+    if (!connection.transaction()) {
+        return false;
+    }
+
+    QSqlQuery pageQuery(connection);
+    pageQuery.prepare(QStringLiteral(
+        "INSERT INTO ocr_pages (document_id, page, language, text, status) "
+        "VALUES (:document, :page, :language, :text, :status) "
+        "ON CONFLICT(document_id, page) DO UPDATE SET language = excluded.language, "
+        "text = excluded.text, status = excluded.status, updated_at = CURRENT_TIMESTAMP"));
+    pageQuery.bindValue(QStringLiteral(":document"), documentId);
+    pageQuery.bindValue(QStringLiteral(":page"), page);
+    pageQuery.bindValue(QStringLiteral(":language"), language.trimmed());
+    pageQuery.bindValue(QStringLiteral(":text"), boundedText);
+    pageQuery.bindValue(QStringLiteral(":status"), normalizedStatus);
+    bool success = pageQuery.exec();
+
+    if (success) {
+        QSqlQuery removeSearch(connection);
+        removeSearch.prepare(QStringLiteral(
+            "DELETE FROM knowledge_items_search WHERE source_id = :source AND source_kind = 'ocr'"));
+        removeSearch.bindValue(QStringLiteral(":source"), sourceId);
+        success = removeSearch.exec();
+    }
+
+    if (success && normalizedStatus == QStringLiteral("completed") && !boundedText.trimmed().isEmpty()) {
+        QSqlQuery search(connection);
+        search.prepare(QStringLiteral(
+            "INSERT INTO knowledge_items_search "
+            "(source_id, source_kind, document_id, text, note, page, locator, created_at) "
+            "VALUES (:source, 'ocr', :document, :text, '', :page, :locator, CURRENT_TIMESTAMP)"));
+        search.bindValue(QStringLiteral(":source"), sourceId);
+        search.bindValue(QStringLiteral(":document"), documentId);
+        search.bindValue(QStringLiteral(":text"), boundedText);
+        search.bindValue(QStringLiteral(":page"), page);
+        search.bindValue(QStringLiteral(":locator"), QStringLiteral("ocr:") + QString::number(page));
+        success = search.exec();
+    }
+
     if (!success || !connection.commit()) {
         connection.rollback();
         return false;
