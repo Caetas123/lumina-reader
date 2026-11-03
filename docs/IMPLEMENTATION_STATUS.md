@@ -72,6 +72,7 @@ The graphical executable also stayed alive for more than ten seconds with `QT_QP
 - `f5caac7` — restore saved visual region annotations over page coordinates.
 - `c114061` — normalize optional highlight notes and cover cross-format Knowledge search.
 - `c8ee5bd` — cover visual page sources and annotated PDF export paths.
+- `b4d946c` — persist OCR word coordinates and restore OCR highlights over image regions.
 - `ce81667` — highlight the spoken word when the speech backend provides progress.
 - `c6ce6ad` — add single-page and two-page visual reading layouts.
 - `cb6511e` — add basic PDF export and system printing.
