@@ -23,6 +23,8 @@ ApplicationWindow {
     property bool listMode: false
     property real imageZoom: 1.0
     property string zoomDocumentId: ""
+    property var highlightColors: ["#f6c945", "#7acb8a", "#77a8e8", "#ed8fb3", "#aa8bd8"]
+    property var highlightStyles: ["highlight", "underline", "strike"]
 
     function applyTheme() {
         Theme.mode = appController.settings.highContrast ? "high-contrast" : appController.settings.theme
@@ -606,6 +608,73 @@ ApplicationWindow {
         onRejected: {
             regionAnnotationText.clear()
             imageRegionLayer.clearSelection()
+        }
+    }
+
+    Dialog {
+        id: textHighlightDialog
+        property string selectedText: ""
+        property int selectedPage: 0
+        property string selectedLocator: ""
+        modal: true
+        title: qsTr("Save passage with a comment")
+        width: Math.min(window.width - 80, 560)
+        standardButtons: Dialog.Ok | Dialog.Cancel
+
+        contentItem: ColumnLayout {
+            spacing: 12
+            Label {
+                Layout.fillWidth: true
+                text: qsTr("“%1”").arg(textHighlightDialog.selectedText)
+                color: Theme.textPrimary
+                wrapMode: Text.WordWrap
+                maximumLineCount: 4
+                elide: Text.ElideRight
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                ComboBox {
+                    id: textHighlightColor
+                    Layout.fillWidth: true
+                    model: [qsTr("Yellow"), qsTr("Green"), qsTr("Blue"), qsTr("Pink"), qsTr("Purple")]
+                }
+                ComboBox {
+                    id: textHighlightStyle
+                    Layout.fillWidth: true
+                    model: [qsTr("Highlight"), qsTr("Underline"), qsTr("Strikethrough")]
+                }
+            }
+            TextArea {
+                id: textHighlightNote
+                Layout.fillWidth: true
+                Layout.preferredHeight: 120
+                placeholderText: qsTr("Comment about this passage")
+                wrapMode: TextArea.Wrap
+            }
+        }
+
+        onOpened: textHighlightNote.forceActiveFocus()
+        onAccepted: {
+            var saved = textHighlightDialog.selectedText.trim().length > 0
+                && textHighlightNote.text.trim().length > 0
+                && appController.library.addHighlight(
+                    appController.reader.documentId,
+                    textHighlightDialog.selectedText,
+                    textHighlightDialog.selectedLocator,
+                    textHighlightDialog.selectedPage,
+                    window.highlightColors[textHighlightColor.currentIndex],
+                    textHighlightNote.text.trim(),
+                    window.highlightStyles[textHighlightStyle.currentIndex])
+            window.notification = saved
+                ? qsTr("Comment saved to the Knowledge center.")
+                : qsTr("The passage comment could not be saved.")
+            notificationTimer.restart()
+            textHighlightNote.clear()
+            readerText.deselect()
+        }
+        onRejected: {
+            textHighlightNote.clear()
+            readerText.deselect()
         }
     }
 
@@ -1778,6 +1847,16 @@ ApplicationWindow {
                                 RowLayout {
                                     anchors.fill: parent
                                     anchors.margins: 8
+                                    ComboBox {
+                                        id: selectionHighlightColor
+                                        Layout.preferredWidth: 110
+                                        model: [qsTr("Yellow"), qsTr("Green"), qsTr("Blue"), qsTr("Pink"), qsTr("Purple")]
+                                    }
+                                    ComboBox {
+                                        id: selectionHighlightStyle
+                                        Layout.preferredWidth: 120
+                                        model: [qsTr("Highlight"), qsTr("Underline"), qsTr("Strikethrough")]
+                                    }
                                     Button {
                                         text: qsTr("Highlight")
                                         onClicked: {
@@ -1785,10 +1864,23 @@ ApplicationWindow {
                                                                                readerText.selectedText,
                                                                                "text:" + appController.reader.currentPage,
                                                                                appController.reader.currentPage,
-                                                                               Theme.highlight)
+                                                                               window.highlightColors[selectionHighlightColor.currentIndex],
+                                                                               "",
+                                                                               window.highlightStyles[selectionHighlightStyle.currentIndex])
                                             readerText.deselect()
                                             notification = qsTr("Passage saved to the Knowledge center.")
                                             notificationTimer.restart()
+                                        }
+                                    }
+                                    Button {
+                                        text: qsTr("Comment")
+                                        onClicked: {
+                                            textHighlightDialog.selectedText = readerText.selectedText
+                                            textHighlightDialog.selectedPage = appController.reader.currentPage
+                                            textHighlightDialog.selectedLocator = "text:" + appController.reader.currentPage
+                                            textHighlightColor.currentIndex = selectionHighlightColor.currentIndex
+                                            textHighlightStyle.currentIndex = selectionHighlightStyle.currentIndex
+                                            textHighlightDialog.open()
                                         }
                                     }
                                     Button {

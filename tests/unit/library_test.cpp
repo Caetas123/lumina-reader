@@ -124,7 +124,10 @@ private slots:
                                    QStringLiteral("text:0:0"),
                                    0,
                                    QStringLiteral("#f6c945"),
-                                   QStringLiteral("Core concept")));
+                                   QStringLiteral("Core concept"),
+                                   QStringLiteral("underline")));
+        QCOMPARE(store.highlightsForDocument(documentId).first().toMap().value(QStringLiteral("style")).toString(),
+                 QStringLiteral("underline"));
         const QVariantList results = store.knowledgeSearch(QStringLiteral("democ"));
         QCOMPARE(results.size(), 1);
         QCOMPARE(results.first().toMap().value(QStringLiteral("documentId")).toString(), documentId);

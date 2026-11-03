@@ -1294,8 +1294,9 @@ QVariantList LibraryStore::knowledgeSearch(const QString &term,
         "SELECT ks.source_id, ks.source_kind, ks.document_id, d.title, d.author, d.format, ks.text, "
         "CASE WHEN ks.source_kind = 'highlight' THEN COALESCE(h.note, '') "
         "WHEN ks.source_kind = 'annotation' THEN COALESCE(a.kind, '') ELSE '' END, "
-        "CASE WHEN ks.source_kind = 'highlight' THEN COALESCE(h.color, '#f6c945') ELSE '' END, ks.page, ks.locator, "
-        "ks.created_at, COALESCE(a.kind, '') "
+        "CASE WHEN ks.source_kind = 'highlight' THEN COALESCE(h.color, '#f6c945') ELSE '' END, "
+        "CASE WHEN ks.source_kind = 'highlight' THEN COALESCE(h.style, 'highlight') ELSE '' END, "
+        "ks.page, ks.locator, ks.created_at, COALESCE(a.kind, '') "
         "FROM knowledge_items_search ks JOIN documents d ON d.id = ks.document_id "
         "LEFT JOIN highlights h ON h.id = ks.source_id AND ks.source_kind = 'highlight' "
         "LEFT JOIN annotations a ON a.id = ks.source_id AND ks.source_kind = 'annotation' "
@@ -1331,10 +1332,11 @@ QVariantList LibraryStore::knowledgeSearch(const QString &term,
             {QStringLiteral("text"), query.value(6)},
             {QStringLiteral("note"), query.value(7)},
             {QStringLiteral("color"), query.value(8)},
-            {QStringLiteral("page"), query.value(9)},
-            {QStringLiteral("locator"), query.value(10)},
-            {QStringLiteral("createdAt"), query.value(11)},
-            {QStringLiteral("annotationKind"), query.value(12)},
+            {QStringLiteral("style"), query.value(9)},
+            {QStringLiteral("page"), query.value(10)},
+            {QStringLiteral("locator"), query.value(11)},
+            {QStringLiteral("createdAt"), query.value(12)},
+            {QStringLiteral("annotationKind"), query.value(13)},
         });
     }
     return results;
@@ -1345,10 +1347,17 @@ bool LibraryStore::addHighlight(const QString &documentId,
                                 const QString &locator,
                                 int page,
                                 const QString &color,
-                                const QString &note)
+                                const QString &note,
+                                const QString &style)
 {
     if (!isReady() || documentDetails(documentId).isEmpty() || text.trimmed().isEmpty()
         || locator.trimmed().isEmpty()) {
+        return false;
+    }
+    const QString normalizedStyle = style.trimmed().toLower();
+    if (normalizedStyle != QStringLiteral("highlight")
+        && normalizedStyle != QStringLiteral("underline")
+        && normalizedStyle != QStringLiteral("strike")) {
         return false;
     }
     const QString id = QUuid::createUuid().toString(QUuid::WithoutBraces);
@@ -1359,13 +1368,14 @@ bool LibraryStore::addHighlight(const QString &documentId,
 
     QSqlQuery query(connection);
     query.prepare(QStringLiteral(
-        "INSERT INTO highlights (id, document_id, text, note, color, locator, page) "
-        "VALUES (:id, :document, :text, :note, :color, :locator, :page)"));
+        "INSERT INTO highlights (id, document_id, text, note, color, style, locator, page) "
+        "VALUES (:id, :document, :text, :note, :color, :style, :locator, :page)"));
     query.bindValue(QStringLiteral(":id"), id);
     query.bindValue(QStringLiteral(":document"), documentId);
     query.bindValue(QStringLiteral(":text"), text);
     query.bindValue(QStringLiteral(":note"), note);
     query.bindValue(QStringLiteral(":color"), color.isEmpty() ? QStringLiteral("#f6c945") : color);
+    query.bindValue(QStringLiteral(":style"), normalizedStyle);
     query.bindValue(QStringLiteral(":locator"), locator);
     query.bindValue(QStringLiteral(":page"), std::max(page, 0));
     bool success = query.exec();
