@@ -31,6 +31,8 @@ ApplicationWindow {
     property var annotationKindLabels: [qsTr("Note"), qsTr("Image region")]
     property var translationLanguageKeys: ["en", "pt", "es", "fr", "de", "ja", "ko", "zh"]
     property var translationLanguageLabels: [qsTr("English"), qsTr("Portuguese"), qsTr("Spanish"), qsTr("French"), qsTr("German"), qsTr("Japanese"), qsTr("Korean"), qsTr("Chinese")]
+    property var ocrLanguageKeys: ["eng", "por", "spa", "jpn", "kor", "chi_sim"]
+    property var ocrLanguageLabels: [qsTr("English"), qsTr("Portuguese"), qsTr("Spanish"), qsTr("Japanese"), qsTr("Korean"), qsTr("Chinese")]
     property var libraryBrowseOptions: []
     property var librarySortOptions: [
         { label: qsTr("Recently opened"), value: "recent" },
@@ -2539,13 +2541,23 @@ ApplicationWindow {
                                 onClicked: {
                                     if (appController.reader.showOcrText) {
                                         appController.reader.showOcrText = false
-                                    } else if (!appController.reader.startOcr("eng")) {
+                                    } else if (!appController.reader.startOcr(
+                                                   window.ocrLanguageKeys[ocrLanguageSelector.currentIndex])) {
                                         window.notification = appController.reader.ocrStatus
                                         notificationTimer.restart()
                                     }
                                 }
                                 ToolTip.visible: hovered
                                 ToolTip.text: qsTr("Recognize text without leaving the reader")
+                            }
+                            ComboBox {
+                                id: ocrLanguageSelector
+                                visible: appController.reader.open && appController.reader.imageDocument
+                                enabled: !appController.reader.ocrRunning
+                                Layout.preferredWidth: 112
+                                model: window.ocrLanguageLabels
+                                ToolTip.visible: hovered
+                                ToolTip.text: qsTr("OCR language")
                             }
                             Label {
                                 visible: appController.reader.open && appController.reader.ocrStatus.length > 0
