@@ -170,6 +170,16 @@ ApplicationWindow {
     }
 
     Shortcut {
+        sequence: StandardKey.Undo
+        onActivated: appController.library.undo()
+    }
+
+    Shortcut {
+        sequence: StandardKey.Redo
+        onActivated: appController.library.redo()
+    }
+
+    Shortcut {
         sequence: "F11"
         onActivated: window.toggleFullScreen()
     }
@@ -2207,6 +2217,20 @@ ApplicationWindow {
                     RowLayout {
                         Layout.fillWidth: true
                         Item { Layout.fillWidth: true }
+                        Button {
+                            text: qsTr("Undo")
+                            enabled: appController.library.canUndo
+                            onClicked: appController.library.undo()
+                            ToolTip.visible: hovered
+                            ToolTip.text: qsTr("Undo the last highlight or note (Ctrl+Z)")
+                        }
+                        Button {
+                            text: qsTr("Redo")
+                            enabled: appController.library.canRedo
+                            onClicked: appController.library.redo()
+                            ToolTip.visible: hovered
+                            ToolTip.text: qsTr("Redo the last highlight or note (Ctrl+Y)")
+                        }
                         Button {
                             text: qsTr("Export knowledge")
                             enabled: knowledgePage.results.length > 0

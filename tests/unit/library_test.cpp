@@ -49,6 +49,72 @@ private slots:
         QCOMPARE(store.searchHistory().size(), 0);
     }
 
+    void undoesAndRedoesKnowledgeEdits()
+    {
+        Lumina::Infrastructure::Database database;
+        Lumina::Domain::Error error;
+        QVERIFY2(database.open(QStringLiteral(":memory:"), &error),
+                 qPrintable(error.logMessage()));
+        QVERIFY2(database.migrate(&error), qPrintable(error.logMessage()));
+
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const QString filePath = directory.filePath(QStringLiteral("undo-notes.txt"));
+        QFile file(filePath);
+        QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Text));
+        QVERIFY(file.write("Undoable passage for the Knowledge center.\n") > 0);
+        file.close();
+
+        Lumina::Infrastructure::LibraryStore store;
+        store.setDatabase(&database);
+        QVERIFY(store.importFiles({filePath}));
+        const QString documentId = store.data(store.index(0, 0),
+                                              Lumina::Infrastructure::LibraryStore::IdRole)
+                                       .toString();
+        QVERIFY(!store.canUndo());
+
+        QVERIFY(store.addHighlight(documentId,
+                                   QStringLiteral("Undoable passage"),
+                                   QStringLiteral("text:0:0"),
+                                   0,
+                                   QStringLiteral("#f6c945"),
+                                   QStringLiteral("Original note")));
+        const QString highlightId = store.highlightsForDocument(documentId)
+                                        .first().toMap().value(QStringLiteral("id")).toString();
+        QVERIFY(store.canUndo());
+        QVERIFY(store.undo());
+        QCOMPARE(store.highlightsForDocument(documentId).size(), 0);
+        QVERIFY(store.canRedo());
+        QVERIFY(store.redo());
+        QCOMPARE(store.highlightsForDocument(documentId).size(), 1);
+        QVERIFY(store.updateHighlight(highlightId,
+                                      QStringLiteral("#7acb8a"),
+                                      QStringLiteral("Updated note"),
+                                      QStringLiteral("underline")));
+        QVERIFY(store.undo());
+        QCOMPARE(store.highlightsForDocument(documentId).first().toMap()
+                     .value(QStringLiteral("note")).toString(),
+                 QStringLiteral("Original note"));
+        QVERIFY(store.redo());
+        QCOMPARE(store.highlightsForDocument(documentId).first().toMap()
+                     .value(QStringLiteral("style")).toString(),
+                 QStringLiteral("underline"));
+
+        QVERIFY(store.addAnnotation(documentId,
+                                     QStringLiteral("A note to undo."),
+                                     QStringLiteral("note"),
+                                     QStringLiteral("text:0:5"),
+                                     0));
+        const QString annotationId = store.annotationsForDocument(documentId)
+                                         .first().toMap().value(QStringLiteral("id")).toString();
+        QVERIFY(store.removeAnnotation(annotationId));
+        QCOMPARE(store.annotationsForDocument(documentId).size(), 0);
+        QVERIFY(store.undo());
+        QCOMPARE(store.annotationsForDocument(documentId).size(), 1);
+        QVERIFY(store.redo());
+        QCOMPARE(store.annotationsForDocument(documentId).size(), 0);
+    }
+
     void importsTextAndRejectsDuplicate()
     {
         Lumina::Infrastructure::Database database;

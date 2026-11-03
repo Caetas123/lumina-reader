@@ -2,6 +2,7 @@
 
 #include <QAbstractListModel>
 #include <QFileSystemWatcher>
+#include <QList>
 #include <QSqlQuery>
 #include <QVariant>
 #include <QStringList>
@@ -18,6 +19,8 @@ class LibraryStore final : public QAbstractListModel {
     Q_PROPERTY(QString sortMode READ sortMode WRITE setSortMode NOTIFY sortModeChanged)
     Q_PROPERTY(int count READ count NOTIFY countChanged)
     Q_PROPERTY(QVariantList searchHistory READ searchHistory NOTIFY searchHistoryChanged)
+    Q_PROPERTY(bool canUndo READ canUndo NOTIFY historyChanged)
+    Q_PROPERTY(bool canRedo READ canRedo NOTIFY historyChanged)
 
 public:
     enum Role {
@@ -59,6 +62,8 @@ public:
     void setSortMode(const QString &mode);
     [[nodiscard]] int count() const;
     [[nodiscard]] QVariantList searchHistory() const;
+    [[nodiscard]] bool canUndo() const;
+    [[nodiscard]] bool canRedo() const;
 
     void setDatabase(Database *database);
     Q_INVOKABLE void refresh();
@@ -102,6 +107,8 @@ public:
     Q_INVOKABLE QVariantList searchHistoryForScope(const QString &scope) const;
     Q_INVOKABLE bool recordSearch(const QString &query, const QString &scope);
     Q_INVOKABLE bool clearSearchHistory(const QString &scope = {});
+    Q_INVOKABLE bool undo();
+    Q_INVOKABLE bool redo();
     Q_INVOKABLE QVariantList knowledgeSearch(const QString &term,
                                              const QString &format = {},
                                              const QString &color = {},
@@ -157,6 +164,7 @@ signals:
     void sortModeChanged();
     void countChanged();
     void searchHistoryChanged();
+    void historyChanged();
     void libraryChanged();
     void documentsImported(int count);
     void errorOccurred(const QString &message);
@@ -168,6 +176,25 @@ private:
     void setError(const QString &message);
     [[nodiscard]] QVariantMap recordFromQuery(const QSqlQuery &query) const;
 
+    struct KnowledgeAction {
+        QString kind;
+        QString operation;
+        QVariantMap before;
+        QVariantMap after;
+    };
+
+    void pushKnowledgeAction(const QString &kind,
+                             const QString &operation,
+                             const QVariantMap &before,
+                             const QVariantMap &after);
+    [[nodiscard]] bool applyKnowledgeAction(const KnowledgeAction &action, bool forward);
+    [[nodiscard]] bool restoreHighlight(const QVariantMap &record);
+    [[nodiscard]] bool deleteHighlightRecord(const QString &highlightId);
+    [[nodiscard]] bool updateHighlightRecord(const QVariantMap &record);
+    [[nodiscard]] bool restoreAnnotation(const QVariantMap &record);
+    [[nodiscard]] bool deleteAnnotationRecord(const QString &annotationId);
+    [[nodiscard]] bool updateAnnotationRecord(const QVariantMap &record);
+
     Database *database_ = nullptr;
     QList<QVariantMap> records_;
     QString query_;
@@ -175,6 +202,8 @@ private:
     QString sortMode_ = QStringLiteral("recent");
     QFileSystemWatcher *folderWatcher_ = nullptr;
     QStringList watchedFolders_;
+    QList<KnowledgeAction> undoStack_;
+    QList<KnowledgeAction> redoStack_;
 };
 
 } // namespace Lumina::Infrastructure
