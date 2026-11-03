@@ -19,6 +19,7 @@ ApplicationWindow {
     property int currentView: 0
     property string notification: ""
     property var themeKeys: ["light", "dark", "sepia", "paper", "gray", "high-contrast", "low-light"]
+    property bool focusMode: false
 
     function applyTheme() {
         Theme.mode = appController.settings.highContrast ? "high-contrast" : appController.settings.theme
@@ -31,6 +32,81 @@ ApplicationWindow {
         function onSettingsChanged() {
             window.applyTheme()
         }
+    }
+
+    Shortcut {
+        sequence: StandardKey.Open
+        onActivated: importDialog.open()
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Shift+O"
+        onActivated: importFolderDialog.open()
+    }
+
+    Shortcut {
+        sequence: StandardKey.Find
+        enabled: appController.reader.open
+        onActivated: window.focusDocumentSearch()
+    }
+
+    Shortcut {
+        sequence: "Escape"
+        enabled: appController.reader.open
+        onActivated: {
+            appController.reader.closeDocument()
+            window.currentView = 0
+            window.focusMode = false
+        }
+    }
+
+    Shortcut {
+        sequence: "Right"
+        enabled: window.currentView === 2 && appController.reader.open
+        onActivated: appController.reader.nextPage()
+    }
+
+    Shortcut {
+        sequence: "Left"
+        enabled: window.currentView === 2 && appController.reader.open
+        onActivated: appController.reader.previousPage()
+    }
+
+    Shortcut {
+        sequence: "Home"
+        enabled: window.currentView === 2 && appController.reader.open
+        onActivated: appController.reader.goToPage(0)
+    }
+
+    Shortcut {
+        sequence: "End"
+        enabled: window.currentView === 2 && appController.reader.open
+        onActivated: appController.reader.goToPage(appController.reader.pageCount - 1)
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Shift+B"
+        enabled: window.currentView === 2 && appController.reader.open
+        onActivated: appController.library.addBookmark(appController.reader.documentId,
+                                                        appController.reader.title,
+                                                        "page:" + appController.reader.currentPage,
+                                                        appController.reader.currentPage)
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Shift+F"
+        enabled: appController.reader.open
+        onActivated: window.focusMode = !window.focusMode
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Shift+T"
+        onActivated: window.cycleTheme()
+    }
+
+    Shortcut {
+        sequence: "F11"
+        onActivated: window.toggleFullScreen()
     }
 
     function localPath(url) {
@@ -66,6 +142,26 @@ ApplicationWindow {
     function setLibraryFilter(filter) {
         appController.library.viewFilter = filter
         window.currentView = 0
+    }
+
+    function toggleFullScreen() {
+        window.visibility = window.visibility === Window.FullScreen
+            ? Window.Windowed : Window.FullScreen
+    }
+
+    function focusDocumentSearch() {
+        if (!appController.reader.open) {
+            return
+        }
+        window.currentView = 2
+        documentSearch.forceActiveFocus()
+        documentSearch.selectAll()
+    }
+
+    function cycleTheme() {
+        var current = window.themeKeys.indexOf(appController.settings.theme)
+        var next = (current + 1) % window.themeKeys.length
+        appController.settings.theme = window.themeKeys[next]
     }
 
     function openMetadata(documentId) {
@@ -304,8 +400,10 @@ ApplicationWindow {
         spacing: 0
 
         Rectangle {
+            id: sidebar
             Layout.preferredWidth: 232
             Layout.fillHeight: true
+            visible: !window.focusMode
             color: Theme.sidebar
             border.color: Theme.border
             border.width: 1
@@ -875,6 +973,19 @@ ApplicationWindow {
                                 enabled: appController.reader.currentPage + 1 < appController.reader.pageCount
                                 onClicked: appController.reader.nextPage()
                             }
+                            Button {
+                                text: window.focusMode ? qsTr("Exit focus") : qsTr("Focus")
+                                enabled: appController.reader.open
+                                onClicked: window.focusMode = !window.focusMode
+                                ToolTip.visible: hovered
+                                ToolTip.text: qsTr("Ctrl+Shift+F")
+                            }
+                            Button {
+                                text: window.visibility === Window.FullScreen ? qsTr("Windowed") : qsTr("Full screen")
+                                onClicked: window.toggleFullScreen()
+                                ToolTip.visible: hovered
+                                ToolTip.text: qsTr("F11")
+                            }
                              Button {
                                  text: qsTr("Bookmark")
                                  enabled: appController.reader.open
@@ -936,9 +1047,9 @@ ApplicationWindow {
                                 color: Theme.readerText
                                 selectionColor: Theme.highlight
                                 selectedTextColor: Theme.textPrimary
-                                 font.pixelSize: appController.settings.fontSize
+                                font.pixelSize: appController.settings.fontSize
                                 font.family: Theme.readerFont
-                                 font.letterSpacing: (appController.settings.lineSpacing - 100) / 20
+                                font.letterSpacing: (appController.settings.lineSpacing - 100) / 20
                                 padding: 30
 
                                 background: Rectangle {
