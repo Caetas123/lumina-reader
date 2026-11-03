@@ -68,6 +68,7 @@ The graphical executable also stayed alive for more than ten seconds with `QT_QP
 
 ## Recent thematic commits
 
+- `cb6511e` — add basic PDF export and system printing.
 - `3d0acbb` — add document-wide OCR with progress and cancellation.
 - `06acb2a` — unify cross-platform release versions and tag validation.
 - `c5a1698` — export selectable document text safely.
