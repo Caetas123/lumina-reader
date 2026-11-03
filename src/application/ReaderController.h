@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QImage>
 #include <QList>
 #include <QString>
 
@@ -13,6 +14,7 @@ class QPdfDocument;
 namespace Lumina::Infrastructure {
 class ArchiveReader;
 class LibraryStore;
+class TesseractOcrProvider;
 }
 
 namespace Lumina::Application {
@@ -31,6 +33,10 @@ class ReaderController final : public QObject {
     Q_PROPERTY(bool textDocument READ isTextDocument NOTIFY stateChanged)
     Q_PROPERTY(QString engineName READ engineName NOTIFY stateChanged)
     Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY stateChanged)
+    Q_PROPERTY(bool ocrAvailable READ ocrAvailable NOTIFY stateChanged)
+    Q_PROPERTY(bool ocrRunning READ ocrRunning NOTIFY stateChanged)
+    Q_PROPERTY(QString ocrStatus READ ocrStatus NOTIFY stateChanged)
+    Q_PROPERTY(bool showOcrText READ showOcrText WRITE setShowOcrText NOTIFY stateChanged)
     Q_PROPERTY(int pageCount READ pageCount NOTIFY stateChanged)
     Q_PROPERTY(int currentPage READ currentPage NOTIFY stateChanged)
     Q_PROPERTY(QString searchQuery READ searchQuery NOTIFY stateChanged)
@@ -56,6 +62,11 @@ public:
     [[nodiscard]] bool isTextDocument() const;
     [[nodiscard]] QString engineName() const;
     [[nodiscard]] QString errorMessage() const;
+    [[nodiscard]] bool ocrAvailable() const;
+    [[nodiscard]] bool ocrRunning() const;
+    [[nodiscard]] QString ocrStatus() const;
+    [[nodiscard]] bool showOcrText() const;
+    void setShowOcrText(bool show);
     [[nodiscard]] int pageCount() const;
     [[nodiscard]] int currentPage() const;
     [[nodiscard]] QString searchQuery() const;
@@ -73,6 +84,8 @@ public:
     Q_INVOKABLE bool findInDocument(const QString &query);
     Q_INVOKABLE bool nextSearchMatch();
     Q_INVOKABLE bool previousSearchMatch();
+    Q_INVOKABLE bool startOcr(const QString &language = QStringLiteral("eng"));
+    Q_INVOKABLE void cancelOcr();
 
 signals:
     void stateChanged();
@@ -83,6 +96,8 @@ private:
     [[nodiscard]] QString loadText(const QString &path) const;
     void refreshTextPage();
     [[nodiscard]] bool refreshArchivePage();
+    void applyCachedOcr();
+    [[nodiscard]] QImage currentPageImage() const;
     void rebuildSearchMatches();
     [[nodiscard]] bool selectSearchMatch(int index);
     void persistProgress();
@@ -90,6 +105,7 @@ private:
 
     Lumina::Infrastructure::LibraryStore *library_ = nullptr;
     std::unique_ptr<Lumina::Infrastructure::ArchiveReader> archiveReader_;
+    std::unique_ptr<Lumina::Infrastructure::TesseractOcrProvider> ocrProvider_;
     bool open_ = false;
     QString documentId_;
     QString title_;
@@ -101,6 +117,11 @@ private:
     QString imageSource_;
     QString engineName_;
     QString errorMessage_;
+    QString ocrStatus_;
+    QString ocrDocumentId_;
+    QString ocrLanguage_;
+    int ocrPage_ = -1;
+    bool showOcrText_ = false;
     int pageCount_ = 0;
     int currentPage_ = 0;
     QString searchQuery_;

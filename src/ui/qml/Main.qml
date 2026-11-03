@@ -1308,6 +1308,33 @@ ApplicationWindow {
                                 ToolTip.visible: hovered
                                 ToolTip.text: qsTr("F11")
                             }
+                            Button {
+                                visible: appController.reader.open && appController.reader.imageDocument
+                                text: appController.reader.showOcrText
+                                    ? qsTr("Show page")
+                                    : appController.reader.ocrRunning
+                                        ? qsTr("Recognizing…")
+                                        : qsTr("Read image")
+                                enabled: !appController.reader.ocrRunning
+                                onClicked: {
+                                    if (appController.reader.showOcrText) {
+                                        appController.reader.showOcrText = false
+                                    } else if (!appController.reader.startOcr("eng")) {
+                                        window.notification = appController.reader.ocrStatus
+                                        notificationTimer.restart()
+                                    }
+                                }
+                                ToolTip.visible: hovered
+                                ToolTip.text: qsTr("Recognize text without leaving the reader")
+                            }
+                            Label {
+                                visible: appController.reader.open && appController.reader.ocrStatus.length > 0
+                                text: appController.reader.ocrStatus
+                                color: Theme.textSecondary
+                                font.pixelSize: 11
+                                elide: Text.ElideRight
+                                Layout.maximumWidth: 240
+                            }
                              Button {
                                  text: qsTr("Bookmark")
                                  enabled: appController.reader.open
@@ -1356,6 +1383,7 @@ ApplicationWindow {
                             anchors.fill: parent
                             anchors.margins: 28
                             visible: appController.reader.open && appController.reader.imageDocument
+                                && !appController.reader.showOcrText
                             source: appController.reader.imageSource
                             fillMode: Image.PreserveAspectFit
                             asynchronous: true
@@ -1365,6 +1393,7 @@ ApplicationWindow {
                             id: imageRegionLayer
                             anchors.fill: parent
                             visible: appController.reader.open && appController.reader.imageDocument
+                                && !appController.reader.showOcrText
                             z: 2
 
                             property real startX: 0

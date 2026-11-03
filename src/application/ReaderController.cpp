@@ -2,6 +2,7 @@
 
 #include "infrastructure/archive/ArchiveReader.h"
 #include "infrastructure/library/LibraryStore.h"
+#include "infrastructure/ocr/TesseractOcrProvider.h"
 #include "infrastructure/text/TextDecoder.h"
 
 #include <QFile>
@@ -75,10 +76,20 @@ ReaderController::ReaderController(Lumina::Infrastructure::LibraryStore *library
                                    QObject *parent)
     : QObject(parent)
     , library_(library)
+    , ocrProvider_(std::make_unique<Lumina::Infrastructure::TesseractOcrProvider>())
 {
+    // The provider is owned directly by the reader controller; its state is
+    // reported by the reader after each OCR request.
+    ocrProvider_->setObjectName(QStringLiteral("Lumina Tesseract OCR"));
 }
 
-ReaderController::~ReaderController() = default;
+ReaderController::~ReaderController()
+{
+    if (ocrProvider_ != nullptr && ocrProvider_->busy()) {
+        ocrProvider_->cancel();
+    }
+    ocrProvider_.reset();
+}
 
 bool ReaderController::isOpen() const
 {
@@ -142,6 +153,35 @@ QString ReaderController::errorMessage() const
     return errorMessage_;
 }
 
+bool ReaderController::ocrAvailable() const
+{
+    return ocrProvider_ != nullptr && ocrProvider_->isAvailable();
+}
+
+bool ReaderController::ocrRunning() const
+{
+    return ocrProvider_ != nullptr && ocrProvider_->busy();
+}
+
+QString ReaderController::ocrStatus() const
+{
+    return ocrStatus_;
+}
+
+bool ReaderController::showOcrText() const
+{
+    return showOcrText_;
+}
+
+void ReaderController::setShowOcrText(bool show)
+{
+    if (showOcrText_ == show) {
+        return;
+    }
+    showOcrText_ = show && !textContent_.isEmpty();
+    emit stateChanged();
+}
+
 int ReaderController::pageCount() const
 {
     return pageCount_;
@@ -179,6 +219,12 @@ int ReaderController::searchLength() const
 
 void ReaderController::clearState()
 {
+    ocrDocumentId_.clear();
+    ocrLanguage_.clear();
+    ocrPage_ = -1;
+    if (ocrProvider_ != nullptr && ocrProvider_->busy()) {
+        ocrProvider_->cancel();
+    }
     archiveReader_.reset();
 #ifdef LUMINA_HAS_QT_PDF
     pdfDocument_.reset();
@@ -194,6 +240,8 @@ void ReaderController::clearState()
     imageSource_.clear();
     engineName_.clear();
     errorMessage_.clear();
+    ocrStatus_.clear();
+    showOcrText_ = false;
     pageCount_ = 0;
     currentPage_ = 0;
     searchQuery_.clear();
@@ -247,6 +295,43 @@ bool ReaderController::refreshArchivePage()
     }
     rebuildSearchMatches();
     return true;
+}
+
+void ReaderController::applyCachedOcr()
+{
+    const bool imagePage = isImageFormat(format_) || format_ == QStringLiteral("pdf")
+        || (archiveReader_ != nullptr && archiveReader_->pageIsImage(currentPage_));
+    if (!imagePage || library_ == nullptr) {
+        showOcrText_ = false;
+        return;
+    }
+
+    const QString cachedText = library_->ocrTextForPage(documentId_, currentPage_);
+    if (cachedText.isEmpty()) {
+        showOcrText_ = false;
+        ocrStatus_.clear();
+        return;
+    }
+    textContent_ = cachedText;
+    showOcrText_ = true;
+    ocrStatus_ = QStringLiteral("Cached OCR text is available for this page.");
+    rebuildSearchMatches();
+}
+
+QImage ReaderController::currentPageImage() const
+{
+    if (isImageFormat(format_)) {
+        return QImage(filePath_);
+    }
+    if (archiveReader_ != nullptr && archiveReader_->pageIsImage(currentPage_)) {
+        return QImage::fromData(archiveReader_->pageData(currentPage_));
+    }
+#ifdef LUMINA_HAS_QT_PDF
+    if (format_ == QStringLiteral("pdf") && pdfDocument_ != nullptr) {
+        return pdfDocument_->render(currentPage_, QSize(2200, 3100));
+    }
+#endif
+    return {};
 }
 
 void ReaderController::rebuildSearchMatches()
@@ -395,6 +480,8 @@ bool ReaderController::openDocument(const QString &documentId)
         return false;
     }
 
+    applyCachedOcr();
+
     open_ = true;
     errorMessage_.clear();
     library_->setPageCount(documentId_, pageCount_);
@@ -438,7 +525,7 @@ bool ReaderController::goToPage(int page)
     }
     if (archiveReader_ != nullptr && !refreshArchivePage()) {
         currentPage_ = previousPage;
-        refreshArchivePage();
+        (void)refreshArchivePage();
         return false;
     }
 #ifdef LUMINA_HAS_QT_PDF
@@ -447,9 +534,100 @@ bool ReaderController::goToPage(int page)
         return false;
     }
 #endif
+    applyCachedOcr();
     persistProgress();
     emit stateChanged();
     return true;
+}
+
+bool ReaderController::startOcr(const QString &language)
+{
+    if (!open_ || ocrProvider_ == nullptr) {
+        return false;
+    }
+    if (ocrProvider_->busy()) {
+        return false;
+    }
+
+    const QImage image = currentPageImage();
+    if (image.isNull()) {
+        ocrStatus_ = QStringLiteral("OCR is only available for image-based pages.");
+        emit stateChanged();
+        return false;
+    }
+    if (!ocrProvider_->isAvailable()) {
+        ocrStatus_ = QStringLiteral(
+            "Tesseract OCR is not installed. Install it and make it available on PATH.");
+        emit stateChanged();
+        return false;
+    }
+
+    ocrDocumentId_ = documentId_;
+    ocrLanguage_ = language.trimmed().isEmpty() ? QStringLiteral("eng") : language.trimmed();
+    ocrPage_ = currentPage_;
+    ocrStatus_ = QStringLiteral("Recognizing text in this page…");
+    const bool started = ocrProvider_->recognize(
+        image,
+        language,
+        [this](const QString &text, const QString &error) {
+            const QString targetDocumentId = ocrDocumentId_;
+            const QString targetLanguage = ocrLanguage_;
+            const int targetPage = ocrPage_;
+            ocrDocumentId_.clear();
+            ocrLanguage_.clear();
+            ocrPage_ = -1;
+            if (targetDocumentId.isEmpty() || library_ == nullptr) {
+                return;
+            }
+            if (!error.isEmpty()) {
+                ocrStatus_ = error;
+                emit stateChanged();
+                return;
+            }
+            if (!library_->saveOcrPage(targetDocumentId,
+                                       targetPage,
+                                       targetLanguage,
+                                       text,
+                                       QStringLiteral("completed"))) {
+                ocrStatus_ = QStringLiteral("The recognized text could not be saved.");
+                emit stateChanged();
+                return;
+            }
+            if (targetDocumentId == documentId_ && targetPage == currentPage_) {
+                textContent_ = text;
+                showOcrText_ = !text.isEmpty();
+                rebuildSearchMatches();
+            }
+            ocrStatus_ = text.isEmpty()
+                ? QStringLiteral("No text was recognized on this page.")
+                : QStringLiteral("Text recognized and saved to the Knowledge center.");
+            emit stateChanged();
+        });
+    if (!started && ocrDocumentId_ == documentId_) {
+        ocrDocumentId_.clear();
+        ocrPage_ = -1;
+        if (ocrStatus_.isEmpty()) {
+            ocrStatus_ = QStringLiteral("OCR could not be started.");
+        }
+        emit stateChanged();
+    }
+    if (started) {
+        emit stateChanged();
+    }
+    return started;
+}
+
+void ReaderController::cancelOcr()
+{
+    if (ocrProvider_ == nullptr || !ocrProvider_->busy()) {
+        return;
+    }
+    ocrDocumentId_.clear();
+    ocrLanguage_.clear();
+    ocrPage_ = -1;
+    ocrProvider_->cancel();
+    ocrStatus_ = QStringLiteral("OCR was cancelled.");
+    emit stateChanged();
 }
 
 bool ReaderController::updateProgress(double progress)
