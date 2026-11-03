@@ -274,7 +274,37 @@ bool isValidViewFilter(const QString &filter)
         || (filter.startsWith(QStringLiteral("collection:")) && filter.size() > 11)
         || (filter.startsWith(QStringLiteral("tag:")) && filter.size() > 4)
         || (filter.startsWith(QStringLiteral("type:")) && filter.size() > 5)
-        || (filter.startsWith(QStringLiteral("genre:")) && filter.size() > 6);
+        || (filter.startsWith(QStringLiteral("genre:")) && filter.size() > 6)
+        || (filter.startsWith(QStringLiteral("language:")) && filter.size() > 9)
+        || (filter.startsWith(QStringLiteral("format:")) && filter.size() > 7);
+}
+
+bool isValidSortMode(const QString &mode)
+{
+    return mode == QStringLiteral("recent") || mode == QStringLiteral("added")
+        || mode == QStringLiteral("title") || mode == QStringLiteral("author")
+        || mode == QStringLiteral("progress") || mode == QStringLiteral("rating");
+}
+
+QString orderByForSortMode(const QString &mode)
+{
+    if (mode == QStringLiteral("added")) {
+        return QStringLiteral("ORDER BY d.added_at DESC, d.title COLLATE NOCASE");
+    }
+    if (mode == QStringLiteral("title")) {
+        return QStringLiteral("ORDER BY d.title COLLATE NOCASE, d.added_at DESC");
+    }
+    if (mode == QStringLiteral("author")) {
+        return QStringLiteral("ORDER BY d.author COLLATE NOCASE, d.title COLLATE NOCASE");
+    }
+    if (mode == QStringLiteral("progress")) {
+        return QStringLiteral("ORDER BY d.progress DESC, d.title COLLATE NOCASE");
+    }
+    if (mode == QStringLiteral("rating")) {
+        return QStringLiteral("ORDER BY d.rating DESC, d.title COLLATE NOCASE");
+    }
+    return QStringLiteral(
+        "ORDER BY COALESCE(d.last_opened_at, d.added_at) DESC, d.title COLLATE NOCASE");
 }
 
 QString viewFilterPredicate(const QString &filter)
@@ -448,6 +478,22 @@ void LibraryStore::setViewFilter(const QString &filter)
     reload();
 }
 
+QString LibraryStore::sortMode() const
+{
+    return sortMode_;
+}
+
+void LibraryStore::setSortMode(const QString &mode)
+{
+    const QString normalized = mode.trimmed().toLower();
+    if (!isValidSortMode(normalized) || normalized == sortMode_) {
+        return;
+    }
+    sortMode_ = normalized;
+    emit sortModeChanged();
+    reload();
+}
+
 int LibraryStore::count() const
 {
     return records_.size();
@@ -514,6 +560,10 @@ void LibraryStore::reload()
         dynamicFilterPredicate = QStringLiteral("d.content_type = :type_filter");
     } else if (normalizedFilter.startsWith(QStringLiteral("genre:"))) {
         dynamicFilterPredicate = QStringLiteral("lower(d.genre) = lower(:genre_filter)");
+    } else if (normalizedFilter.startsWith(QStringLiteral("language:"))) {
+        dynamicFilterPredicate = QStringLiteral("lower(d.language) = lower(:language_filter)");
+    } else if (normalizedFilter.startsWith(QStringLiteral("format:"))) {
+        dynamicFilterPredicate = QStringLiteral("lower(d.format) = lower(:format_filter)");
     }
     if (!dynamicFilterPredicate.isEmpty()) {
         predicates.append(dynamicFilterPredicate);
@@ -529,9 +579,9 @@ void LibraryStore::reload()
     if (!predicates.isEmpty()) {
         statement += QStringLiteral("WHERE ") + predicates.join(QStringLiteral(" AND ")) + QChar(' ');
     }
-    statement += query_.isEmpty()
-        ? QStringLiteral("ORDER BY COALESCE(d.last_opened_at, d.added_at) DESC, d.title COLLATE NOCASE")
-        : QStringLiteral("ORDER BY rank");
+    const QString libraryOrder = orderByForSortMode(sortMode_);
+    const QString orderBy = query_.isEmpty() ? libraryOrder : QStringLiteral("ORDER BY rank");
+    statement += orderBy;
     query.prepare(statement);
     if (!query_.isEmpty()) {
         query.bindValue(QStringLiteral(":match"), ftsPrefixQuery(query_));
@@ -544,6 +594,10 @@ void LibraryStore::reload()
         query.bindValue(QStringLiteral(":type_filter"), normalizedFilter.mid(5));
     } else if (normalizedFilter.startsWith(QStringLiteral("genre:"))) {
         query.bindValue(QStringLiteral(":genre_filter"), normalizedFilter.mid(6));
+    } else if (normalizedFilter.startsWith(QStringLiteral("language:"))) {
+        query.bindValue(QStringLiteral(":language_filter"), normalizedFilter.mid(9));
+    } else if (normalizedFilter.startsWith(QStringLiteral("format:"))) {
+        query.bindValue(QStringLiteral(":format_filter"), normalizedFilter.mid(7));
     }
 
     if (!query.exec()) {
@@ -558,9 +612,10 @@ void LibraryStore::reload()
             fallbackPredicates.append(QStringLiteral(
                 "(d.title LIKE :term OR d.author LIKE :term OR d.description LIKE :term)"));
             QSqlQuery fallback(database_->connection());
-            fallback.prepare(QStringLiteral("SELECT %1 FROM documents d WHERE %2 "
-                                           "ORDER BY COALESCE(d.last_opened_at, d.added_at) DESC")
-                                 .arg(columns, fallbackPredicates.join(QStringLiteral(" AND "))));
+            fallback.prepare(QStringLiteral("SELECT %1 FROM documents d WHERE %2 %3")
+                                 .arg(columns,
+                                      fallbackPredicates.join(QStringLiteral(" AND ")),
+                                      libraryOrder));
             fallback.bindValue(QStringLiteral(":term"), QStringLiteral("%") + query_ + QStringLiteral("%"));
             if (normalizedFilter.startsWith(QStringLiteral("collection:"))) {
                 fallback.bindValue(QStringLiteral(":collection_filter"), normalizedFilter.mid(11));
@@ -570,6 +625,10 @@ void LibraryStore::reload()
                 fallback.bindValue(QStringLiteral(":type_filter"), normalizedFilter.mid(5));
             } else if (normalizedFilter.startsWith(QStringLiteral("genre:"))) {
                 fallback.bindValue(QStringLiteral(":genre_filter"), normalizedFilter.mid(6));
+            } else if (normalizedFilter.startsWith(QStringLiteral("language:"))) {
+                fallback.bindValue(QStringLiteral(":language_filter"), normalizedFilter.mid(9));
+            } else if (normalizedFilter.startsWith(QStringLiteral("format:"))) {
+                fallback.bindValue(QStringLiteral(":format_filter"), normalizedFilter.mid(7));
             }
             if (fallback.exec()) {
                 while (fallback.next()) {
@@ -1342,6 +1401,42 @@ QStringList LibraryStore::genres() const
     if (!query.exec(QStringLiteral(
             "SELECT DISTINCT genre FROM documents WHERE trim(genre) <> '' "
             "ORDER BY genre COLLATE NOCASE"))) {
+        return results;
+    }
+    while (query.next()) {
+        results.append(query.value(0).toString());
+    }
+    return results;
+}
+
+QStringList LibraryStore::languages() const
+{
+    QStringList results;
+    if (!isReady()) {
+        return results;
+    }
+    QSqlQuery query(database_->connection());
+    if (!query.exec(QStringLiteral(
+            "SELECT DISTINCT language FROM documents WHERE trim(language) <> '' "
+            "ORDER BY language COLLATE NOCASE"))) {
+        return results;
+    }
+    while (query.next()) {
+        results.append(query.value(0).toString());
+    }
+    return results;
+}
+
+QStringList LibraryStore::formats() const
+{
+    QStringList results;
+    if (!isReady()) {
+        return results;
+    }
+    QSqlQuery query(database_->connection());
+    if (!query.exec(QStringLiteral(
+            "SELECT DISTINCT format FROM documents WHERE trim(format) <> '' "
+            "ORDER BY format COLLATE NOCASE"))) {
         return results;
     }
     while (query.next()) {

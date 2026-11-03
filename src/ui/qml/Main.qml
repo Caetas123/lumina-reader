@@ -32,6 +32,14 @@ ApplicationWindow {
     property var translationLanguageKeys: ["en", "pt", "es", "fr", "de", "ja", "ko", "zh"]
     property var translationLanguageLabels: [qsTr("English"), qsTr("Portuguese"), qsTr("Spanish"), qsTr("French"), qsTr("German"), qsTr("Japanese"), qsTr("Korean"), qsTr("Chinese")]
     property var libraryBrowseOptions: []
+    property var librarySortOptions: [
+        { label: qsTr("Recently opened"), value: "recent" },
+        { label: qsTr("Date added"), value: "added" },
+        { label: qsTr("Title"), value: "title" },
+        { label: qsTr("Author"), value: "author" },
+        { label: qsTr("Progress"), value: "progress" },
+        { label: qsTr("Rating"), value: "rating" }
+    ]
 
     function applyTheme() {
         Theme.mode = appController.settings.highContrast ? "high-contrast" : appController.settings.theme
@@ -60,6 +68,15 @@ ApplicationWindow {
             for (var index = 0; index < window.libraryBrowseOptions.length; ++index) {
                 if (window.libraryBrowseOptions[index].filter === filter) {
                     libraryBrowseFilter.currentIndex = index
+                    break
+                }
+            }
+        }
+        function onSortModeChanged() {
+            var mode = appController.library.sortMode
+            for (var index = 0; index < window.librarySortOptions.length; ++index) {
+                if (window.librarySortOptions[index].value === mode) {
+                    librarySort.currentIndex = index
                     break
                 }
             }
@@ -304,6 +321,20 @@ ApplicationWindow {
             options.push({
                 label: qsTr("Genre: %1").arg(genres[genreIndex]),
                 filter: "genre:" + genres[genreIndex]
+            })
+        }
+        var languages = appController.library.languages()
+        for (var languageIndex = 0; languageIndex < languages.length; ++languageIndex) {
+            options.push({
+                label: qsTr("Language: %1").arg(languages[languageIndex]),
+                filter: "language:" + languages[languageIndex]
+            })
+        }
+        var formats = appController.library.formats()
+        for (var formatIndex = 0; formatIndex < formats.length; ++formatIndex) {
+            options.push({
+                label: qsTr("Format: %1").arg(String(formats[formatIndex]).toUpperCase()),
+                filter: "format:" + formats[formatIndex]
             })
         }
         libraryBrowseOptions = options
@@ -1469,6 +1500,17 @@ ApplicationWindow {
                             textRole: "label"
                             valueRole: "filter"
                             onActivated: window.setLibraryFilter(currentValue)
+                        }
+                        ComboBox {
+                            id: librarySort
+                            Layout.preferredWidth: 150
+                            model: window.librarySortOptions
+                            textRole: "label"
+                            valueRole: "value"
+                            currentIndex: Math.max(0, window.librarySortOptions.findIndex(function(option) {
+                                return option.value === appController.library.sortMode
+                            }))
+                            onActivated: appController.library.sortMode = currentValue
                         }
                         TextField {
                             id: librarySearch

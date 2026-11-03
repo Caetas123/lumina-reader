@@ -87,9 +87,21 @@ private slots:
         QCOMPARE(store.documentDetails(documentId).value(QStringLiteral("genre")).toString(),
                  QStringLiteral("Philosophy"));
         QCOMPARE(store.genres(), QStringList({QStringLiteral("Philosophy")}));
+        QCOMPARE(store.languages(), QStringList({QStringLiteral("en")}));
+        QCOMPARE(store.formats(), QStringList({QStringLiteral("txt")}));
         store.setViewFilter(QStringLiteral("genre:philosophy"));
         QCOMPARE(store.count(), 1);
+        store.setViewFilter(QStringLiteral("language:EN"));
+        QCOMPARE(store.count(), 1);
+        store.setViewFilter(QStringLiteral("format:TXT"));
+        QCOMPARE(store.count(), 1);
         store.setViewFilter(QStringLiteral("all"));
+        QCOMPARE(store.sortMode(), QStringLiteral("recent"));
+        store.setSortMode(QStringLiteral("rating"));
+        QCOMPARE(store.sortMode(), QStringLiteral("rating"));
+        store.setSortMode(QStringLiteral("unsupported"));
+        QCOMPARE(store.sortMode(), QStringLiteral("rating"));
+        store.setSortMode(QStringLiteral("recent"));
         QVERIFY(!store.updateMetadata(documentId,
                                       QStringLiteral("Learning notes"),
                                       QStringLiteral("Lumina author"),

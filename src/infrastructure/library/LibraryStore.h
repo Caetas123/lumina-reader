@@ -15,6 +15,7 @@ class LibraryStore final : public QAbstractListModel {
     Q_OBJECT
     Q_PROPERTY(QString query READ query WRITE setQuery NOTIFY queryChanged)
     Q_PROPERTY(QString viewFilter READ viewFilter WRITE setViewFilter NOTIFY viewFilterChanged)
+    Q_PROPERTY(QString sortMode READ sortMode WRITE setSortMode NOTIFY sortModeChanged)
     Q_PROPERTY(int count READ count NOTIFY countChanged)
 
 public:
@@ -53,6 +54,8 @@ public:
     void setQuery(const QString &query);
     [[nodiscard]] QString viewFilter() const;
     void setViewFilter(const QString &filter);
+    [[nodiscard]] QString sortMode() const;
+    void setSortMode(const QString &mode);
     [[nodiscard]] int count() const;
 
     void setDatabase(Database *database);
@@ -90,6 +93,8 @@ public:
     Q_INVOKABLE QVariantList tags() const;
     Q_INVOKABLE QStringList tagsForDocument(const QString &documentId) const;
     Q_INVOKABLE QStringList genres() const;
+    Q_INVOKABLE QStringList languages() const;
+    Q_INVOKABLE QStringList formats() const;
     Q_INVOKABLE bool setTags(const QString &documentId, const QStringList &tags);
     Q_INVOKABLE QVariantList knowledgeDocumentOptions() const;
     Q_INVOKABLE QVariantList knowledgeSearch(const QString &term,
@@ -144,6 +149,7 @@ public:
 signals:
     void queryChanged();
     void viewFilterChanged();
+    void sortModeChanged();
     void countChanged();
     void libraryChanged();
     void documentsImported(int count);
@@ -160,6 +166,7 @@ private:
     QList<QVariantMap> records_;
     QString query_;
     QString viewFilter_;
+    QString sortMode_ = QStringLiteral("recent");
     QFileSystemWatcher *folderWatcher_ = nullptr;
     QStringList watchedFolders_;
 };
