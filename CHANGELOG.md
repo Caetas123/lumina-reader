@@ -29,6 +29,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Dictionary and translation history can now be reviewed, reopened, cleared, and marked as favorites from the lookup dialog.
 - Editable document genres with case-insensitive library filters and backup/restore support.
 - Optional DjVuLibre-backed DJVU/DJV reading with page rendering and hidden-text extraction.
+- Scoped local search history for the library, open document, and Knowledge center, with reopening and clearing.
+- Continuous text reading, chapter-aware Contents navigation, selectable extracted page text, OCR language selection, selected-passage notes, and Knowledge undo/redo.
 
 ### Changed
 
