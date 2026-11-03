@@ -283,6 +283,63 @@ ApplicationWindow {
         }
     }
 
+    Dialog {
+        id: regionAnnotationDialog
+        property real regionLeft: 0
+        property real regionTop: 0
+        property real regionWidth: 0
+        property real regionHeight: 0
+        modal: true
+        title: qsTr("Annotate selected region")
+        width: Math.min(window.width - 80, 560)
+        standardButtons: Dialog.Ok | Dialog.Cancel
+
+        contentItem: ColumnLayout {
+            spacing: 12
+
+            Label {
+                text: qsTr("This page has no selectable text. Add a note describing the selected region.")
+                color: Theme.textSecondary
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+            TextArea {
+                id: regionAnnotationText
+                Layout.fillWidth: true
+                Layout.preferredHeight: 130
+                placeholderText: qsTr("Write a note for this region")
+                wrapMode: TextArea.Wrap
+            }
+        }
+
+        onOpened: regionAnnotationText.forceActiveFocus()
+        onAccepted: {
+            var note = regionAnnotationText.text.trim()
+            var locator = "region:%1,%2,%3,%4".arg(regionLeft.toFixed(6))
+                    .arg(regionTop.toFixed(6)).arg(regionWidth.toFixed(6)).arg(regionHeight.toFixed(6))
+            var saved = note.length > 0 && appController.library.addAnnotation(
+                appController.reader.documentId,
+                note,
+                "region",
+                locator,
+                appController.reader.currentPage,
+                regionLeft,
+                regionTop,
+                regionWidth,
+                regionHeight)
+            window.notification = saved
+                ? qsTr("Region annotation saved to the Knowledge center.")
+                : qsTr("The region annotation could not be saved.")
+            notificationTimer.restart()
+            regionAnnotationText.clear()
+            imageRegionLayer.clearSelection()
+        }
+        onRejected: {
+            regionAnnotationText.clear()
+            imageRegionLayer.clearSelection()
+        }
+    }
+
     FileDialog {
         id: knowledgeExportDialog
         title: qsTr("Export knowledge")
@@ -1022,12 +1079,96 @@ ApplicationWindow {
                         color: Theme.readerBackground
 
                         Image {
+                            id: readerImage
                             anchors.fill: parent
                             anchors.margins: 28
                             visible: appController.reader.open && appController.reader.imageDocument
                             source: appController.reader.imageSource
                             fillMode: Image.PreserveAspectFit
                             asynchronous: true
+                        }
+
+                        Item {
+                            id: imageRegionLayer
+                            anchors.fill: parent
+                            visible: appController.reader.open && appController.reader.imageDocument
+                            z: 2
+
+                            property real startX: 0
+                            property real startY: 0
+                            property real currentX: 0
+                            property real currentY: 0
+                            property bool selecting: false
+
+                            function clearSelection() {
+                                selecting = false
+                                startX = 0
+                                startY = 0
+                                currentX = 0
+                                currentY = 0
+                            }
+
+                            function clamp(value, minimum, maximum) {
+                                return Math.max(minimum, Math.min(maximum, value))
+                            }
+
+                            function openAnnotationForSelection() {
+                                var left = Math.min(startX, currentX)
+                                var top = Math.min(startY, currentY)
+                                var right = Math.max(startX, currentX)
+                                var bottom = Math.max(startY, currentY)
+                                var imageLeft = readerImage.x
+                                    + (readerImage.width - readerImage.paintedWidth) / 2
+                                var imageTop = readerImage.y
+                                    + (readerImage.height - readerImage.paintedHeight) / 2
+                                var imageWidth = Math.max(readerImage.paintedWidth, 1)
+                                var imageHeight = Math.max(readerImage.paintedHeight, 1)
+                                var normalizedLeft = clamp((left - imageLeft) / imageWidth, 0, 1)
+                                var normalizedTop = clamp((top - imageTop) / imageHeight, 0, 1)
+                                var normalizedRight = clamp((right - imageLeft) / imageWidth, 0, 1)
+                                var normalizedBottom = clamp((bottom - imageTop) / imageHeight, 0, 1)
+                                var normalizedWidth = normalizedRight - normalizedLeft
+                                var normalizedHeight = normalizedBottom - normalizedTop
+                                if (normalizedWidth < 0.01 || normalizedHeight < 0.01) {
+                                    clearSelection()
+                                    return
+                                }
+                                regionAnnotationDialog.regionLeft = normalizedLeft
+                                regionAnnotationDialog.regionTop = normalizedTop
+                                regionAnnotationDialog.regionWidth = normalizedWidth
+                                regionAnnotationDialog.regionHeight = normalizedHeight
+                                regionAnnotationDialog.open()
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                acceptedButtons: Qt.LeftButton
+                                onPressed: {
+                                    imageRegionLayer.startX = mouse.x
+                                    imageRegionLayer.startY = mouse.y
+                                    imageRegionLayer.currentX = mouse.x
+                                    imageRegionLayer.currentY = mouse.y
+                                    imageRegionLayer.selecting = true
+                                }
+                                onPositionChanged: {
+                                    if (imageRegionLayer.selecting) {
+                                        imageRegionLayer.currentX = mouse.x
+                                        imageRegionLayer.currentY = mouse.y
+                                    }
+                                }
+                                onReleased: imageRegionLayer.openAnnotationForSelection()
+                            }
+
+                            Rectangle {
+                                visible: imageRegionLayer.selecting
+                                x: Math.min(imageRegionLayer.startX, imageRegionLayer.currentX)
+                                y: Math.min(imageRegionLayer.startY, imageRegionLayer.currentY)
+                                width: Math.abs(imageRegionLayer.currentX - imageRegionLayer.startX)
+                                height: Math.abs(imageRegionLayer.currentY - imageRegionLayer.startY)
+                                color: Qt.rgba(0.31, 0.27, 0.89, 0.18)
+                                border.color: Theme.accent
+                                border.width: 2
+                            }
                         }
 
                         ScrollView {

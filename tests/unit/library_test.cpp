@@ -102,6 +102,21 @@ private slots:
                  QStringLiteral("annotation"));
         QCOMPARE(store.annotationsForDocument(documentId).size(), 1);
 
+        QVERIFY(store.addAnnotation(documentId,
+                                     QStringLiteral("A selected image region."),
+                                     QStringLiteral("region"),
+                                     QStringLiteral("region:0.1,0.2,0.3,0.4"),
+                                     1,
+                                     0.1,
+                                     0.2,
+                                     0.3,
+                                     0.4));
+        const QVariantList annotations = store.annotationsForDocument(documentId);
+        QCOMPARE(annotations.size(), 2);
+        QCOMPARE(annotations.last().toMap().value(QStringLiteral("kind")).toString(),
+                 QStringLiteral("region"));
+        QCOMPARE(annotations.last().toMap().value(QStringLiteral("width")).toDouble(), 0.3);
+
         QVERIFY(store.addBookmark(documentId,
                                    QStringLiteral("Revisit"),
                                    QStringLiteral("text:0:20"),
