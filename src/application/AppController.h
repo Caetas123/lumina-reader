@@ -15,6 +15,7 @@ namespace Lumina::Application {
 
 class ReaderController;
 class SettingsController;
+class BackupController;
 
 class AppController final : public QObject {
     Q_OBJECT
@@ -25,6 +26,7 @@ class AppController final : public QObject {
     Q_PROPERTY(Lumina::Infrastructure::LibraryStore *library READ library CONSTANT)
     Q_PROPERTY(QObject *reader READ reader CONSTANT)
     Q_PROPERTY(QObject *settings READ settings CONSTANT)
+    Q_PROPERTY(QObject *backup READ backup CONSTANT)
 
 public:
     explicit AppController(QObject *parent = nullptr);
@@ -37,6 +39,7 @@ public:
     [[nodiscard]] Lumina::Infrastructure::LibraryStore *library() const;
     [[nodiscard]] QObject *reader() const;
     [[nodiscard]] QObject *settings() const;
+    [[nodiscard]] QObject *backup() const;
 
     Q_INVOKABLE void retryInitialization();
 
@@ -50,6 +53,7 @@ private:
     std::unique_ptr<Lumina::Infrastructure::LibraryStore> library_;
     std::unique_ptr<ReaderController> reader_;
     std::unique_ptr<SettingsController> settings_;
+    std::unique_ptr<BackupController> backup_;
     bool databaseReady_ = false;
     QString startupError_;
 };

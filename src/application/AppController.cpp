@@ -1,4 +1,5 @@
 #include "application/AppController.h"
+#include "application/BackupController.h"
 #include "application/ReaderController.h"
 #include "application/SettingsController.h"
 
@@ -20,6 +21,7 @@ AppController::AppController(QObject *parent)
     , library_(std::make_unique<Lumina::Infrastructure::LibraryStore>())
     , reader_(std::make_unique<ReaderController>(library_.get()))
     , settings_(std::make_unique<SettingsController>())
+    , backup_(std::make_unique<BackupController>())
 {
     initializeDatabase();
 }
@@ -65,6 +67,7 @@ void AppController::initializeDatabase()
     databaseReady_ = true;
     library_->setDatabase(database_.get());
     settings_->setDatabase(database_.get());
+    backup_->setDatabase(database_.get());
     qCInfo(luminaApp) << "Local database initialized";
     emit databaseStateChanged();
 }
@@ -102,6 +105,11 @@ QObject *AppController::reader() const
 QObject *AppController::settings() const
 {
     return settings_.get();
+}
+
+QObject *AppController::backup() const
+{
+    return backup_.get();
 }
 
 void AppController::retryInitialization()

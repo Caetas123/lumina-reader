@@ -80,6 +80,53 @@ ApplicationWindow {
         onAccepted: window.openImportedFiles(selectedFiles)
     }
 
+    FileDialog {
+        id: knowledgeExportDialog
+        title: qsTr("Export knowledge")
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "md"
+        nameFilters: [qsTr("Markdown (*.md)"), qsTr("JSON (*.json)"), qsTr("Plain text (*.txt)")]
+        onAccepted: {
+            var path = window.localPath(selectedFile)
+            var lower = path.toLower()
+            var format = lower.endsWith(".json") ? "json" : lower.endsWith(".txt") ? "txt" : "markdown"
+            if (appController.backup.exportKnowledge(path, format)) {
+                window.notification = qsTr("Knowledge exported successfully.")
+            } else {
+                window.notification = appController.backup.lastError
+            }
+            notificationTimer.restart()
+        }
+    }
+
+    FileDialog {
+        id: libraryExportDialog
+        title: qsTr("Export library")
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "json"
+        nameFilters: [qsTr("Lumina library JSON (*.json)")]
+        onAccepted: {
+            var path = window.localPath(selectedFile)
+            window.notification = appController.backup.exportLibrary(path)
+                ? qsTr("Library exported successfully.") : appController.backup.lastError
+            notificationTimer.restart()
+        }
+    }
+
+    FileDialog {
+        id: databaseBackupDialog
+        title: qsTr("Create database backup")
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "db"
+        nameFilters: [qsTr("Lumina database backup (*.db)")]
+        onAccepted: {
+            var path = window.localPath(selectedFile)
+            window.notification = appController.backup.backupDatabase(path)
+                ? qsTr("Database backup created.") : appController.backup.lastError
+            notificationTimer.restart()
+        }
+    }
+
     header: ToolBar {
         contentHeight: 64
         background: Rectangle {
@@ -425,6 +472,15 @@ ApplicationWindow {
                         text: qsTr("Find the ideas, passages, and notes you saved across your library.")
                         color: Theme.textSecondary
                         font.pixelSize: 15
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Item { Layout.fillWidth: true }
+                        Button {
+                            text: qsTr("Export knowledge")
+                            enabled: knowledgePage.results.length > 0
+                            onClicked: knowledgeExportDialog.open()
+                        }
                     }
                     TextField {
                         id: knowledgeSearch
@@ -795,6 +851,18 @@ ApplicationWindow {
                         color: Theme.textSecondary
                         wrapMode: Text.WordWrap
                         Layout.fillWidth: true
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Button {
+                            text: qsTr("Export library")
+                            onClicked: libraryExportDialog.open()
+                        }
+                        Button {
+                            text: qsTr("Create database backup")
+                            onClicked: databaseBackupDialog.open()
+                        }
+                        Item { Layout.fillWidth: true }
                     }
                     Item { Layout.fillHeight: true }
                 }
