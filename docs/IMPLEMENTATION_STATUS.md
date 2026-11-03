@@ -1,7 +1,8 @@
 # Implementation status
 
 Audit date: 2026-11-03  
-Branch: `feature/complete-reader`
+Branch: `main`
+Release candidate: `0.2.1`
 
 This report describes the behavior implemented in the repository, not only the controls visible in QML. Optional capabilities are marked as conditional instead of being presented as universally available.
 
@@ -44,6 +45,20 @@ lumina_performance_tests
 The graphical executable also stayed alive for more than ten seconds with `QT_QPA_PLATFORM=offscreen` after each clean build used for the latest changes. The process was then stopped as a test cleanup operation.
 
 The performance target uses Qt Test benchmarks for library refresh, Knowledge search, large-text decoding, and representative image-page decoding. These are repeatable local micro-benchmarks rather than claims about every machine or every optional engine.
+
+## GUI validation performed on Windows
+
+The rebuilt executable was exercised through the native GUI, including the Windows file picker and reader controls, rather than being judged from compilation alone:
+
+- imported and opened TXT, RTF, HTML, FB2, PNG, EPUB, CBZ, and ZIP comic fixtures;
+- opened EPUB text and navigated a two-page CBZ, including the next-page action;
+- searched the library, opened History, saved a highlight, and confirmed the saved item in Knowledge center;
+- opened documents from both grid and list views;
+- verified the Settings sections, the `Back to library` action, and the localized installer progress copy;
+- resized the application to 980×620 and verified the library, reader toolbar wrapping, and Settings pages without horizontal clipping; the normal 1100×700 and maximized states were also checked;
+- invoked OCR from the reader and verified the honest fallback message because Tesseract is not installed on this Windows host.
+
+The detailed requirement matrix and evidence boundaries are in [AUDIT_CHECKLIST_2026-11-03.md](AUDIT_CHECKLIST_2026-11-03.md). A ZIP containing only a text file was deliberately tested and rejected by the comic archive reader; ZIP support in this project is for image-page archives, as documented in `FORMAT_SUPPORT.md`.
 
 ## Platform and dependency matrix
 
@@ -97,4 +112,4 @@ The performance target uses Qt Test benchmarks for library refresh, Knowledge se
 - `b33707f` — add library metadata filters and sorting.
 - `7e91a7f` — add optional DjVu engine.
 
-No push or release publication was performed by this work.
+Release publication is performed only after the versioned commits are pushed and all tag-triggered GitHub Actions jobs have completed successfully. The final handoff must report those remote run and asset checks separately from this local report.

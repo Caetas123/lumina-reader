@@ -1,0 +1,4 @@
+Lumina Reader audit fixture
+
+This plain-text document verifies import, pagination, search, and reading progress.
+The keyword aurora appears here for the GUI search check.

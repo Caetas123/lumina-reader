@@ -4,6 +4,23 @@ All notable changes to Lumina Reader will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows Semantic Versioning where a public release version exists.
 
+## [0.2.1] - 2026-11-03
+
+This release completes the responsive dark Lumina design pass, repairs saved Knowledge center refresh and OCR command construction, and records the GUI-based cross-format audit. Windows, Linux, and macOS packages are published from the same tag by GitHub Actions.
+
+### Fixed
+
+- Settings sections now use the available page width and expose a clear way back to the library at compact window sizes.
+- The reader toolbar wraps its controls instead of clipping them on narrow windows.
+- Saved Knowledge center items refresh after navigation and an empty-term view lists saved items correctly.
+- Tesseract receives its standard language option (`-l`) and reports a clear local-dependency message when it is not installed.
+- Installer progress copy now describes the product operation instead of exposing an internal file name.
+
+### Added
+
+- Responsive dark/purple UI components and the empty-library artwork used by the validated Windows UI.
+- Audit fixtures and a complete requirement-by-requirement validation checklist.
+
 ## [0.2.0] - 2026-11-03
 
 This release includes the complete local-library restore flow, scoped reader preferences, offline reuse of saved lookups, performance benchmarks, and the repaired graphical Windows installer. Windows, Linux, and macOS packages are published from the same tag by GitHub Actions.
