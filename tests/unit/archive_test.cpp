@@ -63,6 +63,30 @@ private slots:
         QVERIFY(!reader.pageIsImage(0));
 #endif
     }
+
+    void rejectsPathTraversal()
+    {
+#ifndef LUMINA_HAS_QT_ZIP
+        QSKIP("Qt archive support is unavailable in this build.");
+#else
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const QString path = directory.filePath(QStringLiteral("unsafe.epub"));
+
+        QZipWriter writer(path);
+        writer.addFile(QStringLiteral("META-INF/container.xml"),
+                       QByteArray("<container><rootfiles><rootfile full-path=\"OEBPS/content.opf\"/></rootfiles></container>"));
+        writer.addFile(QStringLiteral("OEBPS/content.opf"),
+                       QByteArray("<package><manifest><item id=\"chapter\" href=\"../chapter.xhtml\" "
+                                  "media-type=\"application/xhtml+xml\"/></manifest><spine>"
+                                  "<itemref idref=\"chapter\"/></spine></package>"));
+        writer.addFile(QStringLiteral("chapter.xhtml"), QByteArray("<p>outside</p>"));
+        writer.close();
+
+        Lumina::Infrastructure::ArchiveReader reader;
+        QVERIFY(!reader.open(path, QStringLiteral("epub")));
+#endif
+    }
 };
 
 QTEST_GUILESS_MAIN(ArchiveTest)

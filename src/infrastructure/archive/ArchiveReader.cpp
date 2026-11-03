@@ -11,6 +11,9 @@
 
 namespace {
 
+constexpr int kMaximumArchiveEntries = 4096;
+constexpr qint64 kMaximumArchiveBytes = 512LL * 1024LL * 1024LL;
+
 bool isImagePath(const QString &path)
 {
     const QString suffix = path.section('.', -1).toLower();
@@ -22,6 +25,9 @@ bool isImagePath(const QString &path)
 QString normalizedArchivePath(QString path)
 {
     path.replace(QChar('\\'), QChar('/'));
+    if (path.startsWith(QChar('/')) || path.contains(QRegularExpression(QStringLiteral(R"(^[A-Za-z]:)")))) {
+        return {};
+    }
     const QStringList parts = path.split(QChar('/'), Qt::SkipEmptyParts);
     QStringList normalized;
     for (const QString &part : parts) {
@@ -29,10 +35,7 @@ QString normalizedArchivePath(QString path)
             continue;
         }
         if (part == QStringLiteral("..")) {
-            if (!normalized.isEmpty()) {
-                normalized.removeLast();
-            }
-            continue;
+            return {};
         }
         normalized.append(part);
     }
@@ -116,6 +119,21 @@ bool ArchiveReader::open(const QString &path, const QString &format)
         return false;
     }
 
+    const QList<QZipReader::FileInfo> entries = zip_->fileInfoList();
+    if (entries.size() > kMaximumArchiveEntries) {
+        clear();
+        return false;
+    }
+    qint64 totalBytes = 0;
+    for (const QZipReader::FileInfo &entry : entries) {
+        if (entry.isSymLink || normalizedArchivePath(entry.filePath).isEmpty()
+            || entry.size < 0 || entry.size > kMaximumArchiveBytes - totalBytes) {
+            clear();
+            return false;
+        }
+        totalBytes += entry.size;
+    }
+
     const bool success = format_ == QStringLiteral("epub") ? openEpub() : openComic();
     if (!success) {
         clear();
@@ -177,7 +195,8 @@ bool ArchiveReader::openComic()
 {
 #ifdef LUMINA_HAS_QT_ZIP
     for (const QZipReader::FileInfo &entry : zip_->fileInfoList()) {
-        if (entry.isFile && isImagePath(entry.filePath)) {
+        if (entry.isFile && !entry.isSymLink && !normalizedArchivePath(entry.filePath).isEmpty()
+            && isImagePath(entry.filePath)) {
             pages_.append(Page{entry.filePath, true});
         }
     }
@@ -222,7 +241,10 @@ bool ArchiveReader::openEpub()
         if (!id.isEmpty() && !href.isEmpty()
             && (mediaType == QStringLiteral("application/xhtml+xml")
                 || mediaType == QStringLiteral("text/html"))) {
-            manifest.insert(id, archiveJoin(opfDirectory, href));
+            const QString path = archiveJoin(opfDirectory, href);
+            if (!path.isEmpty()) {
+                manifest.insert(id, path);
+            }
         }
     }
 
