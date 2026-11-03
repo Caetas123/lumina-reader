@@ -13,7 +13,7 @@ Every public release gets a new Git tag in the form `vMAJOR.MINOR.PATCH`. Existi
 1. Choose the next version and update the `project(...)` version in `CMakeLists.txt`.
 2. Update `CHANGELOG.md` with the release date and user-visible changes.
 3. Build and test the application on the supported platforms.
-4. Build the Windows installer when Windows artifacts are part of the release. The Linux AppImage is built by GitHub Actions from the release tag.
+4. Build the Windows installer with `packaging/windows/build-installer.ps1` when Windows artifacts are part of the release. The Linux AppImage is built by GitHub Actions from the release tag.
 5. Update the platform-specific download links in `README.md` to the new tag.
 6. Commit the versioned changes and push the release tag. GitHub Actions publishes the Linux AppImage and its workflow artifact; upload any additional platform artifacts to the same release.
 

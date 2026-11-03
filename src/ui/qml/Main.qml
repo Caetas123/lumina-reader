@@ -13,6 +13,7 @@ ApplicationWindow {
     minimumWidth: 720
     minimumHeight: 480
     title: appController.applicationName
+    icon: "qrc:/qt/qml/LuminaReader/assets/lumina-logo.png"
     color: Theme.windowBackground
 
     header: ToolBar {

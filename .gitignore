@@ -45,6 +45,10 @@ Desktop.ini
 *.exe
 *.app/
 
+# .NET packaging intermediates
+**/bin/
+**/obj/
+
 # Packaging and installers
 *.msi
 *.dmg

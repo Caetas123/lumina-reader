@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(LuminaReader VERSION 0.1.5 LANGUAGES CXX)
+project(LuminaReader VERSION 0.1.6 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -73,6 +73,16 @@ qt_add_qml_module(lumina_reader
     RESOURCES
         assets/lumina-logo.png
 )
+
+if(WIN32)
+    set(LUMINA_WINDOWS_ICON_PATH "${CMAKE_CURRENT_SOURCE_DIR}/assets/lumina-reader.ico")
+    configure_file(
+        packaging/windows/lumina-reader.rc.in
+        "${CMAKE_CURRENT_BINARY_DIR}/lumina-reader.rc"
+        @ONLY
+    )
+    target_sources(lumina_reader PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/lumina-reader.rc")
+endif()
 
 target_link_libraries(lumina_reader
     PRIVATE

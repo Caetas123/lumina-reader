@@ -16,14 +16,14 @@ Ready-to-run builds are published on [GitHub Releases](https://github.com/Caetas
 
 | Platform | Download | Notes |
 | --- | --- | --- |
-| Windows x64 | [Download installer EXE (`v0.1.4`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.1.4/LuminaReader-Setup-windows-x64.exe) | Recommended. Run it to install the application and its Qt dependencies. |
+| Windows x64 | [Download installer EXE (`v0.1.6`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.1.6/LuminaReader-Setup-windows-x64.exe) | Recommended. Run it to install the application and its Qt dependencies. |
 | macOS | Not packaged yet | [Build from source](docs/BUILDING.md). |
-| Linux x86_64 | [Download AppImage (`v0.1.5`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.1.5/LuminaReader-linux-x86_64.AppImage) | Make it executable with `chmod +x`, then run it. No installation or Qt setup is required. |
+| Linux x86_64 | [Download AppImage (`v0.1.6`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.1.6/LuminaReader-linux-x86_64.AppImage) | Make it executable with `chmod +x`, then run it. No installation or Qt setup is required. |
 
 The Windows installer is a self-contained `.exe` that installs the Qt runtime and platform plugins before launching Lumina Reader.
 The Linux AppImage is a self-contained executable for 64-bit Linux systems and includes the Qt runtime required by Lumina Reader.
 
-See the [Linux v0.1.5 release notes](https://github.com/Caetas123/lumina-reader/releases/tag/v0.1.5) for the AppImage and its SHA-256 checksum. Windows artifacts remain available in the [v0.1.4 release](https://github.com/Caetas123/lumina-reader/releases/tag/v0.1.4).
+See the [v0.1.6 release notes](https://github.com/Caetas123/lumina-reader/releases/tag/v0.1.6) for the current Windows and Linux packages and their SHA-256 checksums.
 
 ## Principles
 

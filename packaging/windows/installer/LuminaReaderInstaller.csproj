@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <ApplicationIcon>..\lumina-reader.ico</ApplicationIcon>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <PublishTrimmed>false</PublishTrimmed>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <ApplicationPackage Condition="'$(ApplicationPackage)' == ''">LuminaReader-windows-x64.zip</ApplicationPackage>
+    <LogoPath Condition="'$(LogoPath)' == ''">$(MSBuildThisFileDirectory)..\..\..\assets\lumina-logo.png</LogoPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="$(ApplicationPackage)" LogicalName="LuminaReader-windows-x64.zip" />
+    <EmbeddedResource Include="$(LogoPath)" LogicalName="lumina-logo.png" />
+  </ItemGroup>
+</Project>
