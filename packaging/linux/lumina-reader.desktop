@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Lumina Reader
+Comment=A calm, local-first space for reading and organizing PDFs
+X-AppImage-Version=@VERSION@
+Exec=lumina_reader
+Icon=lumina-reader
+Terminal=false
+Categories=Office;Viewer;
+StartupWMClass=lumina_reader
