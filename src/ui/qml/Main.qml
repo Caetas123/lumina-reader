@@ -897,6 +897,60 @@ ApplicationWindow {
     }
 
     Dialog {
+        id: textAnnotationDialog
+        property string selectedText: ""
+        property int selectedPage: 0
+        property string selectedLocator: ""
+        modal: true
+        title: qsTr("Add note to selected passage")
+        width: Math.min(window.width - 80, 560)
+        standardButtons: Dialog.Ok | Dialog.Cancel
+
+        contentItem: ColumnLayout {
+            spacing: 12
+
+            Label {
+                Layout.fillWidth: true
+                text: qsTr("Selected passage: “%1”").arg(textAnnotationDialog.selectedText)
+                color: Theme.textPrimary
+                wrapMode: Text.WordWrap
+                maximumLineCount: 4
+                elide: Text.ElideRight
+            }
+            TextArea {
+                id: textAnnotationText
+                Layout.fillWidth: true
+                Layout.preferredHeight: 140
+                placeholderText: qsTr("Write your note")
+                wrapMode: TextArea.Wrap
+            }
+        }
+
+        onOpened: textAnnotationText.forceActiveFocus()
+        onAccepted: {
+            var note = textAnnotationText.text.trim()
+            var saved = note.length > 0 && appController.library.addAnnotation(
+                appController.reader.documentId,
+                note,
+                "note",
+                textAnnotationDialog.selectedLocator,
+                textAnnotationDialog.selectedPage)
+            window.notification = saved
+                ? qsTr("Note saved to the Knowledge center.")
+                : qsTr("The note could not be saved.")
+            notificationTimer.restart()
+            textAnnotationText.clear()
+            textAnnotationDialog.selectedText = ""
+            readerText.deselect()
+        }
+        onRejected: {
+            textAnnotationText.clear()
+            textAnnotationDialog.selectedText = ""
+            readerText.deselect()
+        }
+    }
+
+    Dialog {
         id: searchHistoryDialog
         property string scope: "library"
         property var entries: []
@@ -2836,6 +2890,15 @@ ApplicationWindow {
                                             textHighlightColor.currentIndex = selectionHighlightColor.currentIndex
                                             textHighlightStyle.currentIndex = selectionHighlightStyle.currentIndex
                                             textHighlightDialog.open()
+                                        }
+                                    }
+                                    Button {
+                                        text: qsTr("Note")
+                                        onClicked: {
+                                            textAnnotationDialog.selectedText = readerText.selectedText
+                                            textAnnotationDialog.selectedPage = appController.reader.currentPage
+                                            textAnnotationDialog.selectedLocator = "text:" + appController.reader.currentPage
+                                            textAnnotationDialog.open()
                                         }
                                     }
                                     Button {
