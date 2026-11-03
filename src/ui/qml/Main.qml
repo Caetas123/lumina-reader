@@ -20,6 +20,7 @@ ApplicationWindow {
     property string notification: ""
     property var themeKeys: ["light", "dark", "sepia", "paper", "gray", "high-contrast", "low-light"]
     property bool focusMode: false
+    property bool listMode: false
 
     function applyTheme() {
         Theme.mode = appController.settings.highContrast ? "high-contrast" : appController.settings.theme
@@ -781,6 +782,10 @@ ApplicationWindow {
                             text: qsTr("Watch folder")
                             onClicked: watchFolderDialog.open()
                         }
+                        Button {
+                            text: window.listMode ? qsTr("Grid view") : qsTr("List view")
+                            onClicked: window.listMode = !window.listMode
+                        }
                     }
 
                     RowLayout {
@@ -811,6 +816,7 @@ ApplicationWindow {
                             anchors.fill: parent
                             anchors.margins: 18
                             clip: true
+                            visible: !window.listMode
                             cellWidth: 238
                             cellHeight: 246
                             model: appController.library
@@ -928,6 +934,113 @@ ApplicationWindow {
                                          display: AbstractButton.TextOnly
                                          onClicked: window.openMetadata(documentId)
                                      }
+                                }
+                            }
+
+                            Label {
+                                anchors.centerIn: parent
+                                visible: appController.library.count === 0
+                                text: librarySearch.text.length > 0
+                                    ? qsTr("No documents match your search.")
+                                    : qsTr("Your library is empty. Drop documents here or choose Add documents.")
+                                color: Theme.textSecondary
+                                font.pixelSize: 15
+                                horizontalAlignment: Text.AlignHCenter
+                                wrapMode: Text.WordWrap
+                                width: Math.min(parent.width - 80, 420)
+                            }
+                        }
+
+                        ListView {
+                            id: libraryList
+                            anchors.fill: parent
+                            anchors.margins: 18
+                            clip: true
+                            visible: window.listMode
+                            spacing: 8
+                            model: appController.library
+
+                            delegate: Rectangle {
+                                width: libraryList.width
+                                height: 94
+                                radius: 12
+                                color: listMouse.containsMouse ? Theme.surfaceRaised : Theme.surfaceMuted
+                                border.color: listMouse.containsMouse ? Theme.accentSoft : Theme.border
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.margins: 12
+                                    spacing: 12
+
+                                    Image {
+                                        Layout.preferredWidth: 54
+                                        Layout.preferredHeight: 70
+                                        source: model.coverPath && String(model.coverPath).length > 0
+                                            ? window.fileUrl(model.coverPath)
+                                            : "qrc:/qt/qml/LuminaReader/assets/lumina-logo.png"
+                                        sourceSize.width: 70
+                                        sourceSize.height: 70
+                                        fillMode: Image.PreserveAspectFit
+                                    }
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 3
+                                        Label {
+                                            text: model.title
+                                            color: Theme.textPrimary
+                                            font.pixelSize: 15
+                                            font.weight: Font.DemiBold
+                                            elide: Text.ElideRight
+                                            Layout.fillWidth: true
+                                        }
+                                        Label {
+                                            text: (model.author && String(model.author).length > 0
+                                                   ? model.author + " · " : "")
+                                                + String(model.format).toUpperCase()
+                                            color: Theme.textSecondary
+                                            font.pixelSize: 12
+                                            elide: Text.ElideRight
+                                            Layout.fillWidth: true
+                                        }
+                                        ProgressBar {
+                                            Layout.fillWidth: true
+                                            value: model.progress
+                                        }
+                                    }
+
+                                    Label {
+                                        text: window.statusLabel(model.status)
+                                        color: Theme.textSecondary
+                                        font.pixelSize: 12
+                                        Layout.preferredWidth: 72
+                                    }
+
+                                    ToolButton {
+                                        z: 2
+                                        text: model.isFavorite ? "★" : "☆"
+                                        font.pixelSize: 20
+                                        display: AbstractButton.TextOnly
+                                        onClicked: appController.library.setFavorite(model.id, !model.isFavorite)
+                                    }
+                                    ToolButton {
+                                        z: 2
+                                        text: "✎"
+                                        font.pixelSize: 17
+                                        display: AbstractButton.TextOnly
+                                        onClicked: window.openMetadata(model.id)
+                                    }
+                                }
+
+                                MouseArea {
+                                    id: listMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    onClicked: {
+                                        if (appController.reader.openDocument(model.id)) {
+                                            window.currentView = 2
+                                        }
+                                    }
                                 }
                             }
 
