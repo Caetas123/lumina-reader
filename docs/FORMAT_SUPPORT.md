@@ -36,6 +36,24 @@ This document describes the behavior of the code that is currently shipped. A fi
 | AVIF | Available when the Qt image plugin is present | Available as a single image | Not available without OCR | Progress and page bookmarks are available | Depends on the Qt image plugin shipped with the package |
 | GIF | Available when the Qt image plugin is present | Available as a single image | Not available without OCR | Progress and page bookmarks are available | Animated content is shown through the Qt image pipeline |
 
+## Functional parity matrix
+
+The matrix below describes the user-visible study workflow. **Conditional** means that the reader is included only when the optional engine is available; **OCR** means that selectable text, search, lookup, speech, and text highlights require local Tesseract recognition; **manual region** means that an image can still receive a coordinate-based annotation without OCR.
+
+| Format | Read and navigate | Select and search | Highlights and notes | OCR and image regions | Bookmarks and progress | Knowledge search | Dictionary, translation, Google, speech | Export and print |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| TXT | Yes | Yes | Yes | Not needed | Yes | Yes | Yes | Text/PDF |
+| RTF | Yes | Yes | Yes | Not needed | Yes | Yes | Yes | Text/PDF |
+| HTML/HTM | Yes, as safe text | Yes | Yes | Not needed | Yes | Yes | Yes | Text/PDF |
+| FB2 | Yes | Yes | Yes | Not needed | Yes | Yes | Yes | Text/PDF |
+| EPUB | Conditional | Yes for extracted chapter text | Yes | Not needed for text chapters | Yes | Yes | Yes | Text/PDF |
+| PDF | Conditional | Extracted text or OCR | Yes | OCR for scanned pages; manual regions | Yes | Text/OCR | Text/OCR | PDF/print |
+| MOBI/AZW/AZW3 | Yes for unencrypted PalmDOC-compatible files | Yes for decoded text | Yes | Not needed for decoded text | Yes | Yes | Yes | Text/PDF |
+| CBZ/ZIP | Conditional | OCR | Yes | OCR plus manual regions | Yes | OCR/annotations | OCR | PDF/print |
+| CBR/CB7/CBT/RAR/7Z | Conditional on libarchive | OCR | Yes | OCR plus manual regions | Yes | OCR/annotations | OCR | PDF/print |
+| DJVU/DJV | Conditional on DjVuLibre | Hidden text or OCR | Yes | OCR plus manual regions | Yes | Text/OCR | Text/OCR | PDF/print |
+| JPG/JPEG/PNG/WEBP/AVIF/GIF | Yes as visual pages | OCR | Yes | OCR plus manual regions | Yes | OCR/annotations | OCR | PDF/print |
+
 ## Shared capabilities
 
 The following capabilities are format-independent when the underlying content provides text or a stable page location:
