@@ -101,6 +101,33 @@ private slots:
         QCOMPARE(Lumina::Infrastructure::TextDecoder::readFile(path, QStringLiteral("mobi")),
                  QStringLiteral("PalmDOC text"));
     }
+
+    void rejectsMalformedPalmDocRecordTable()
+    {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const QString path = directory.filePath(QStringLiteral("malformed.mobi"));
+
+        QByteArray data(94, '\0');
+        data[76] = 0;
+        data[77] = 2;
+        data[78] = 0;
+        data[79] = 0;
+        data[80] = 0;
+        data[81] = 94;
+        data[86] = 0;
+        data[87] = 0;
+        data[88] = 0;
+        data[89] = 93;
+        data.append(QByteArray(16, '\0'));
+
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        QVERIFY(file.write(data) == data.size());
+        file.close();
+
+        QVERIFY(Lumina::Infrastructure::TextDecoder::readFile(path, QStringLiteral("mobi")).isEmpty());
+    }
 };
 
 QTEST_GUILESS_MAIN(ReaderTest)

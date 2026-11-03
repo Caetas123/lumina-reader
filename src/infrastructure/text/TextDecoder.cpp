@@ -175,14 +175,14 @@ QByteArray decompressPalmDoc(const QByteArray &compressed)
 QString decodePalmDocument(const QByteArray &data)
 {
     constexpr qsizetype minimumHeaderSize = 86;
+    constexpr quint16 maximumRecordCount = 4096;
     if (data.size() < minimumHeaderSize) {
         return {};
     }
 
     const quint16 recordCount = readBigEndian16(data, 76);
-    const quint32 firstRecordOffset = readBigEndian32(data, 78);
-    if (recordCount == 0 || firstRecordOffset < minimumHeaderSize
-        || firstRecordOffset >= static_cast<quint32>(data.size())) {
+    const qsizetype recordTableEnd = 78 + static_cast<qsizetype>(recordCount) * 8;
+    if (recordCount == 0 || recordCount > maximumRecordCount || recordTableEnd > data.size()) {
         return {};
     }
 
@@ -193,9 +193,21 @@ QString decodePalmDocument(const QByteArray &data)
         if (recordInfoOffset + 3 >= data.size()) {
             return {};
         }
-        offsets.append(readBigEndian32(data, recordInfoOffset));
+        const quint32 offset = readBigEndian32(data, recordInfoOffset);
+        if (offset < static_cast<quint32>(recordTableEnd)
+            || offset >= static_cast<quint32>(data.size())
+            || (!offsets.isEmpty() && offset < offsets.constLast())) {
+            return {};
+        }
+        offsets.append(offset);
     }
     offsets.append(static_cast<quint32>(data.size()));
+
+    for (qsizetype index = 0; index + 1 < offsets.size(); ++index) {
+        if (offsets.at(index + 1) < offsets.at(index)) {
+            return {};
+        }
+    }
 
     const QByteArray firstRecord = data.mid(offsets.at(0), offsets.at(1) - offsets.at(0));
     if (firstRecord.size() < 16) {
@@ -261,6 +273,10 @@ QString TextDecoder::readFile(const QString &path, const QString &format)
 {
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
+        return {};
+    }
+    constexpr qint64 maximumInputBytes = 512LL * 1024LL * 1024LL;
+    if (file.size() < 0 || file.size() > maximumInputBytes) {
         return {};
     }
     const QByteArray data = file.readAll();
