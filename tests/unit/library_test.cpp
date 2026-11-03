@@ -54,6 +54,18 @@ private slots:
         QVERIFY(store.documentDetails(documentId).value(QStringLiteral("isFavorite")).toBool());
         QCOMPARE(store.documentDetails(documentId).value(QStringLiteral("rating")).toInt(), 5);
 
+        const QString secondPath = directory.filePath(QStringLiteral("second-note.txt"));
+        QFile secondFile(secondPath);
+        QVERIFY(secondFile.open(QIODevice::WriteOnly | QIODevice::Text));
+        QVERIFY(secondFile.write("A second document for the folder import test.\n") > 0);
+        secondFile.close();
+        QVERIFY(store.importFolder(directory.path(), false));
+        QCOMPARE(store.count(), 2);
+        store.setViewFilter(QStringLiteral("favorites"));
+        QCOMPARE(store.count(), 1);
+        store.setViewFilter(QStringLiteral("all"));
+        QCOMPARE(store.count(), 2);
+
         QVERIFY(store.addHighlight(documentId,
                                    QStringLiteral("Democracy"),
                                    QStringLiteral("text:0:0"),
@@ -86,12 +98,15 @@ private slots:
         QVERIFY(store.updateProgress(documentId, 0.5, 2));
         QCOMPARE(store.documentDetails(documentId).value(QStringLiteral("status")).toString(),
                  QStringLiteral("reading"));
+        store.setViewFilter(QStringLiteral("reading"));
+        QCOMPARE(store.count(), 1);
+        store.setViewFilter(QStringLiteral("all"));
         QVERIFY(store.setStatus(documentId, QStringLiteral("read")));
         QCOMPARE(store.documentDetails(documentId).value(QStringLiteral("status")).toString(),
                  QStringLiteral("read"));
 
         QVERIFY(store.removeDocument(documentId));
-        QCOMPARE(store.count(), 0);
+        QCOMPARE(store.count(), 1);
     }
 };
 

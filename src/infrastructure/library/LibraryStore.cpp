@@ -5,8 +5,11 @@
 #include "infrastructure/logging/Logging.h"
 
 #include <QCryptographicHash>
+#include <QDir>
+#include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
+#include <QFileSystemWatcher>
 #include <QImageReader>
 #include <QRegularExpression>
 #include <QSqlError>
@@ -172,6 +175,26 @@ QString ftsPrefixQuery(const QString &value)
     return tokens.join(QStringLiteral(" AND "));
 }
 
+bool isValidViewFilter(const QString &filter)
+{
+    return filter.isEmpty() || filter == QStringLiteral("all")
+        || filter == QStringLiteral("favorites") || filter == QStringLiteral("to_read")
+        || filter == QStringLiteral("reading") || filter == QStringLiteral("read")
+        || filter == QStringLiteral("abandoned");
+}
+
+QString viewFilterPredicate(const QString &filter)
+{
+    if (filter == QStringLiteral("favorites")) {
+        return QStringLiteral("d.is_favorite = 1");
+    }
+    if (filter == QStringLiteral("to_read") || filter == QStringLiteral("reading")
+        || filter == QStringLiteral("read") || filter == QStringLiteral("abandoned")) {
+        return QStringLiteral("d.status = '%1'").arg(filter);
+    }
+    return {};
+}
+
 void setError(Lumina::Domain::Error *error,
               Lumina::Domain::ErrorCode code,
               const QString &userMessage,
@@ -189,6 +212,14 @@ namespace Lumina::Infrastructure {
 LibraryStore::LibraryStore(QObject *parent)
     : QAbstractListModel(parent)
 {
+    folderWatcher_ = new QFileSystemWatcher(this);
+    connect(folderWatcher_, &QFileSystemWatcher::directoryChanged, this, [this](const QString &) {
+        for (const QString &root : watchedFolders_) {
+            if (QDir(root).exists()) {
+                importFolder(root, true);
+            }
+        }
+    });
 }
 
 int LibraryStore::rowCount(const QModelIndex &parent) const
@@ -247,6 +278,22 @@ void LibraryStore::setQuery(const QString &query)
     reload();
 }
 
+QString LibraryStore::viewFilter() const
+{
+    return viewFilter_.isEmpty() ? QStringLiteral("all") : viewFilter_;
+}
+
+void LibraryStore::setViewFilter(const QString &filter)
+{
+    const QString normalized = filter.trimmed().toLower();
+    if (!isValidViewFilter(normalized) || normalized == viewFilter()) {
+        return;
+    }
+    viewFilter_ = normalized == QStringLiteral("all") ? QString() : normalized;
+    emit viewFilterChanged();
+    reload();
+}
+
 int LibraryStore::count() const
 {
     return records_.size();
@@ -289,27 +336,42 @@ void LibraryStore::reload()
         "d.progress, d.current_page, d.page_count, d.cover_path, d.file_size, "
         "d.added_at, COALESCE(d.last_opened_at, ''), d.description, d.language, "
         "d.is_favorite, d.rating");
-    if (query_.isEmpty()) {
-        query.prepare(QStringLiteral("SELECT %1 FROM documents d "
-                                     "ORDER BY COALESCE(d.last_opened_at, d.added_at) DESC, d.title COLLATE NOCASE")
-                          .arg(columns));
-    } else {
-        query.prepare(QStringLiteral(
-                          "SELECT %1 FROM documents d "
-                          "JOIN document_search ON document_search.document_id = d.id "
-                          "WHERE document_search MATCH :match "
-                          "ORDER BY rank")
-                          .arg(columns));
+    QStringList predicates;
+    const QString filterPredicate = viewFilterPredicate(viewFilter_);
+    if (!filterPredicate.isEmpty()) {
+        predicates.append(filterPredicate);
+    }
+    if (!query_.isEmpty()) {
+        predicates.append(QStringLiteral("document_search MATCH :match"));
+    }
+
+    QString statement = QStringLiteral("SELECT %1 FROM documents d ").arg(columns);
+    if (!query_.isEmpty()) {
+        statement += QStringLiteral("JOIN document_search ON document_search.document_id = d.id ");
+    }
+    if (!predicates.isEmpty()) {
+        statement += QStringLiteral("WHERE ") + predicates.join(QStringLiteral(" AND ")) + QChar(' ');
+    }
+    statement += query_.isEmpty()
+        ? QStringLiteral("ORDER BY COALESCE(d.last_opened_at, d.added_at) DESC, d.title COLLATE NOCASE")
+        : QStringLiteral("ORDER BY rank");
+    query.prepare(statement);
+    if (!query_.isEmpty()) {
         query.bindValue(QStringLiteral(":match"), ftsPrefixQuery(query_));
     }
 
     if (!query.exec()) {
         if (!query_.isEmpty()) {
+            QStringList fallbackPredicates;
+            if (!filterPredicate.isEmpty()) {
+                fallbackPredicates.append(filterPredicate);
+            }
+            fallbackPredicates.append(QStringLiteral(
+                "(d.title LIKE :term OR d.author LIKE :term OR d.description LIKE :term)"));
             QSqlQuery fallback(database_->connection());
-            fallback.prepare(QStringLiteral(
-                "SELECT %1 FROM documents d WHERE d.title LIKE :term OR d.author LIKE :term "
-                "OR d.description LIKE :term ORDER BY COALESCE(d.last_opened_at, d.added_at) DESC")
-                                  .arg(columns));
+            fallback.prepare(QStringLiteral("SELECT %1 FROM documents d WHERE %2 "
+                                           "ORDER BY COALESCE(d.last_opened_at, d.added_at) DESC")
+                                 .arg(columns, fallbackPredicates.join(QStringLiteral(" AND "))));
             fallback.bindValue(QStringLiteral(":term"), QStringLiteral("%") + query_ + QStringLiteral("%"));
             if (fallback.exec()) {
                 while (fallback.next()) {
@@ -373,6 +435,75 @@ bool LibraryStore::importFiles(const QStringList &filePaths)
         emit documentsImported(imported);
     }
     return imported > 0;
+}
+
+bool LibraryStore::importFolder(const QString &folderPath, bool recursive)
+{
+    if (!isReady()) {
+        setError(QStringLiteral("The local library is not ready yet."));
+        return false;
+    }
+
+    const QFileInfo folderInfo(folderPath);
+    if (!folderInfo.exists() || !folderInfo.isDir() || !folderInfo.isReadable()) {
+        setError(QStringLiteral("The selected folder could not be read."));
+        return false;
+    }
+
+    const QDirIterator::IteratorFlags flags = recursive
+        ? QDirIterator::Subdirectories
+        : QDirIterator::NoIteratorFlags;
+    QDirIterator iterator(folderInfo.absoluteFilePath(),
+                          supportedExtensions(),
+                          QDir::Files | QDir::Readable,
+                          flags);
+    QStringList files;
+    while (iterator.hasNext()) {
+        files.append(iterator.next());
+    }
+    if (files.isEmpty()) {
+        return false;
+    }
+    return importFiles(files);
+}
+
+bool LibraryStore::watchFolder(const QString &folderPath, bool recursive)
+{
+    const QFileInfo folderInfo(folderPath);
+    if (!folderInfo.exists() || !folderInfo.isDir() || !folderInfo.isReadable()) {
+        setError(QStringLiteral("The selected folder could not be watched."));
+        return false;
+    }
+
+    const QString root = normalizedPath(folderPath);
+    if (!watchedFolders_.contains(root)) {
+        watchedFolders_.append(root);
+    }
+    QStringList directories{root};
+    if (recursive) {
+        QDirIterator iterator(root, QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+        while (iterator.hasNext()) {
+            directories.append(iterator.next());
+        }
+    }
+    folderWatcher_->addPaths(directories);
+    importFolder(root, recursive);
+    return true;
+}
+
+bool LibraryStore::unwatchFolder(const QString &folderPath)
+{
+    const QString root = normalizedPath(folderPath);
+    if (!watchedFolders_.removeOne(root)) {
+        return false;
+    }
+    const QStringList paths = folderWatcher_->directories();
+    for (const QString &path : paths) {
+        if (path == root || path.startsWith(root + QDir::separator())) {
+            folderWatcher_->removePath(path);
+        }
+    }
+    return true;
 }
 
 bool LibraryStore::importSingle(const QString &filePath)

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QAbstractListModel>
+#include <QFileSystemWatcher>
 #include <QSqlQuery>
 #include <QVariant>
 #include <QStringList>
@@ -13,6 +14,7 @@ class Database;
 class LibraryStore final : public QAbstractListModel {
     Q_OBJECT
     Q_PROPERTY(QString query READ query WRITE setQuery NOTIFY queryChanged)
+    Q_PROPERTY(QString viewFilter READ viewFilter WRITE setViewFilter NOTIFY viewFilterChanged)
     Q_PROPERTY(int count READ count NOTIFY countChanged)
 
 public:
@@ -46,11 +48,16 @@ public:
 
     [[nodiscard]] QString query() const;
     void setQuery(const QString &query);
+    [[nodiscard]] QString viewFilter() const;
+    void setViewFilter(const QString &filter);
     [[nodiscard]] int count() const;
 
     void setDatabase(Database *database);
 
     Q_INVOKABLE bool importFiles(const QStringList &filePaths);
+    Q_INVOKABLE bool importFolder(const QString &folderPath, bool recursive = true);
+    Q_INVOKABLE bool watchFolder(const QString &folderPath, bool recursive = true);
+    Q_INVOKABLE bool unwatchFolder(const QString &folderPath);
     Q_INVOKABLE bool removeDocument(const QString &documentId, bool deleteOriginal = false);
     Q_INVOKABLE bool setStatus(const QString &documentId, const QString &status);
     Q_INVOKABLE bool setPageCount(const QString &documentId, int pageCount);
@@ -93,6 +100,7 @@ public:
 
 signals:
     void queryChanged();
+    void viewFilterChanged();
     void countChanged();
     void libraryChanged();
     void documentsImported(int count);
@@ -108,6 +116,9 @@ private:
     Database *database_ = nullptr;
     QList<QVariantMap> records_;
     QString query_;
+    QString viewFilter_;
+    QFileSystemWatcher *folderWatcher_ = nullptr;
+    QStringList watchedFolders_;
 };
 
 } // namespace Lumina::Infrastructure
