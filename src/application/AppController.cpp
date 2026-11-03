@@ -2,6 +2,7 @@
 #include "application/BackupController.h"
 #include "application/ReaderController.h"
 #include "application/SettingsController.h"
+#include "application/SpeechController.h"
 
 #include "domain/core/Error.h"
 #include "infrastructure/database/Database.h"
@@ -22,6 +23,7 @@ AppController::AppController(QObject *parent)
     , reader_(std::make_unique<ReaderController>(library_.get()))
     , settings_(std::make_unique<SettingsController>())
     , backup_(std::make_unique<BackupController>())
+    , speech_(std::make_unique<SpeechController>())
 {
     initializeDatabase();
 }
@@ -110,6 +112,11 @@ QObject *AppController::settings() const
 QObject *AppController::backup() const
 {
     return backup_.get();
+}
+
+QObject *AppController::speech() const
+{
+    return speech_.get();
 }
 
 void AppController::retryInitialization()

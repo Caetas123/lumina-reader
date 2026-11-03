@@ -16,6 +16,7 @@ namespace Lumina::Application {
 class ReaderController;
 class SettingsController;
 class BackupController;
+class SpeechController;
 
 class AppController final : public QObject {
     Q_OBJECT
@@ -27,6 +28,7 @@ class AppController final : public QObject {
     Q_PROPERTY(QObject *reader READ reader CONSTANT)
     Q_PROPERTY(QObject *settings READ settings CONSTANT)
     Q_PROPERTY(QObject *backup READ backup CONSTANT)
+    Q_PROPERTY(QObject *speech READ speech CONSTANT)
 
 public:
     explicit AppController(QObject *parent = nullptr);
@@ -40,6 +42,7 @@ public:
     [[nodiscard]] QObject *reader() const;
     [[nodiscard]] QObject *settings() const;
     [[nodiscard]] QObject *backup() const;
+    [[nodiscard]] QObject *speech() const;
 
     Q_INVOKABLE void retryInitialization();
 
@@ -54,6 +57,7 @@ private:
     std::unique_ptr<ReaderController> reader_;
     std::unique_ptr<SettingsController> settings_;
     std::unique_ptr<BackupController> backup_;
+    std::unique_ptr<SpeechController> speech_;
     bool databaseReady_ = false;
     QString startupError_;
 };

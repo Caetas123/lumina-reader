@@ -671,6 +671,20 @@ ApplicationWindow {
                                      }
                                  }
                              }
+                             Button {
+                                 text: appController.speech.speaking ? qsTr("Stop") : qsTr("Read aloud")
+                                 enabled: appController.reader.open && appController.reader.textDocument
+                                     && appController.speech.available
+                                 onClicked: {
+                                     if (appController.speech.speaking) {
+                                         appController.speech.stop()
+                                     } else {
+                                         appController.speech.speak(readerText.selectedText.length > 0
+                                                                    ? readerText.selectedText
+                                                                    : appController.reader.textContent)
+                                     }
+                                 }
+                             }
                         }
                     }
 
@@ -769,6 +783,33 @@ ApplicationWindow {
                                         text: qsTr("Copy")
                                         onClicked: readerText.copy()
                                     }
+                                     Button {
+                                         text: qsTr("Google")
+                                         onClicked: {
+                                             window.notification = qsTr("Opening your browser for this search.")
+                                             notificationTimer.restart()
+                                             Qt.openUrlExternally("https://www.google.com/search?q="
+                                                                  + encodeURIComponent(readerText.selectedText))
+                                         }
+                                     }
+                                     Button {
+                                         text: qsTr("Dictionary")
+                                         onClicked: {
+                                             window.notification = qsTr("Opening the online dictionary in your browser.")
+                                             notificationTimer.restart()
+                                             Qt.openUrlExternally("https://www.google.com/search?q=define%3A"
+                                                                  + encodeURIComponent(readerText.selectedText))
+                                         }
+                                     }
+                                     Button {
+                                         text: qsTr("Translate")
+                                         onClicked: {
+                                             window.notification = qsTr("Opening the online translator in your browser.")
+                                             notificationTimer.restart()
+                                             Qt.openUrlExternally("https://translate.google.com/?sl=auto&tl=en&text="
+                                                                  + encodeURIComponent(readerText.selectedText))
+                                         }
+                                     }
                                     Item { Layout.fillWidth: true }
                                 }
                             }

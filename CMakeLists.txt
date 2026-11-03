@@ -23,6 +23,7 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS
 
 find_package(Qt6 6.5 QUIET COMPONENTS Pdf)
 find_package(Qt6 6.5 QUIET COMPONENTS CorePrivate)
+find_package(Qt6 6.5 QUIET COMPONENTS TextToSpeech)
 
 qt_standard_project_setup(REQUIRES 6.5)
 
@@ -39,6 +40,8 @@ add_library(lumina_core STATIC
     src/application/ReaderController.h
     src/application/SettingsController.cpp
     src/application/SettingsController.h
+    src/application/SpeechController.cpp
+    src/application/SpeechController.h
     src/domain/core/Error.h
     src/infrastructure/database/Database.cpp
     src/infrastructure/database/Database.h
@@ -76,6 +79,11 @@ endif()
 if(TARGET Qt6::CorePrivate)
     target_compile_definitions(lumina_core PUBLIC LUMINA_HAS_QT_ZIP=1)
     target_link_libraries(lumina_core PUBLIC Qt6::CorePrivate)
+endif()
+
+if(TARGET Qt6::TextToSpeech)
+    target_compile_definitions(lumina_core PUBLIC LUMINA_HAS_QT_SPEECH=1)
+    target_link_libraries(lumina_core PUBLIC Qt6::TextToSpeech)
 endif()
 
 qt_add_executable(lumina_reader
