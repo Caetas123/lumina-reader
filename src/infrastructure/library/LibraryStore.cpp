@@ -1483,6 +1483,61 @@ QVariantList LibraryStore::highlightsForDocument(const QString &documentId) cons
     return results;
 }
 
+bool LibraryStore::updateHighlight(const QString &highlightId,
+                                   const QString &color,
+                                   const QString &note,
+                                   const QString &style)
+{
+    if (!isReady() || highlightId.trimmed().isEmpty()) {
+        return false;
+    }
+    const QString normalizedStyle = style.trimmed().toLower();
+    if (normalizedStyle != QStringLiteral("highlight")
+        && normalizedStyle != QStringLiteral("underline")
+        && normalizedStyle != QStringLiteral("strike")) {
+        return false;
+    }
+    const QString normalizedColor = color.trimmed().isEmpty()
+        ? QStringLiteral("#f6c945")
+        : color.trimmed();
+    QSqlDatabase connection = database_->connection();
+    if (!connection.transaction()) {
+        return false;
+    }
+
+    QSqlQuery query(connection);
+    query.prepare(QStringLiteral(
+        "UPDATE highlights SET color = :color, note = :note, style = :style, "
+        "updated_at = CURRENT_TIMESTAMP WHERE id = :id"));
+    query.bindValue(QStringLiteral(":color"), normalizedColor);
+    query.bindValue(QStringLiteral(":note"), note.trimmed());
+    query.bindValue(QStringLiteral(":style"), normalizedStyle);
+    query.bindValue(QStringLiteral(":id"), highlightId);
+    bool success = query.exec() && query.numRowsAffected() > 0;
+    if (success) {
+        QSqlQuery legacy(connection);
+        legacy.prepare(QStringLiteral(
+            "UPDATE knowledge_search SET note = :note WHERE highlight_id = :id"));
+        legacy.bindValue(QStringLiteral(":note"), note.trimmed());
+        legacy.bindValue(QStringLiteral(":id"), highlightId);
+        success = legacy.exec();
+    }
+    if (success) {
+        QSqlQuery search(connection);
+        search.prepare(QStringLiteral(
+            "UPDATE knowledge_items_search SET note = :note "
+            "WHERE source_id = :id AND source_kind = 'highlight'"));
+        search.bindValue(QStringLiteral(":note"), note.trimmed());
+        search.bindValue(QStringLiteral(":id"), highlightId);
+        success = search.exec();
+    }
+    if (!success || !connection.commit()) {
+        connection.rollback();
+        return false;
+    }
+    return true;
+}
+
 bool LibraryStore::removeHighlight(const QString &highlightId)
 {
     if (!isReady() || highlightId.trimmed().isEmpty()) {

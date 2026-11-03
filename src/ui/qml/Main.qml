@@ -665,11 +665,12 @@ ApplicationWindow {
 
     Dialog {
         id: textHighlightDialog
+        property string editingId: ""
         property string selectedText: ""
         property int selectedPage: 0
         property string selectedLocator: ""
         modal: true
-        title: qsTr("Save passage with a comment")
+        title: editingId.length > 0 ? qsTr("Edit saved passage") : qsTr("Save passage with a comment")
         width: Math.min(window.width - 80, 560)
         standardButtons: Dialog.Ok | Dialog.Cancel
 
@@ -707,26 +708,75 @@ ApplicationWindow {
 
         onOpened: textHighlightNote.forceActiveFocus()
         onAccepted: {
-            var saved = textHighlightDialog.selectedText.trim().length > 0
-                && textHighlightNote.text.trim().length > 0
-                && appController.library.addHighlight(
-                    appController.reader.documentId,
-                    textHighlightDialog.selectedText,
-                    textHighlightDialog.selectedLocator,
-                    textHighlightDialog.selectedPage,
-                    window.highlightColors[textHighlightColor.currentIndex],
-                    textHighlightNote.text.trim(),
-                    window.highlightStyles[textHighlightStyle.currentIndex])
+            var saved = false
+            if (textHighlightDialog.editingId.length > 0) {
+                saved = textHighlightNote.text.trim().length > 0
+                    && appController.library.updateHighlight(
+                        textHighlightDialog.editingId,
+                        window.highlightColors[textHighlightColor.currentIndex],
+                        textHighlightNote.text.trim(),
+                        window.highlightStyles[textHighlightStyle.currentIndex])
+            } else {
+                saved = textHighlightDialog.selectedText.trim().length > 0
+                    && textHighlightNote.text.trim().length > 0
+                    && appController.library.addHighlight(
+                        appController.reader.documentId,
+                        textHighlightDialog.selectedText,
+                        textHighlightDialog.selectedLocator,
+                        textHighlightDialog.selectedPage,
+                        window.highlightColors[textHighlightColor.currentIndex],
+                        textHighlightNote.text.trim(),
+                        window.highlightStyles[textHighlightStyle.currentIndex])
+            }
             window.notification = saved
-                ? qsTr("Comment saved to the Knowledge center.")
-                : qsTr("The passage comment could not be saved.")
+                ? (textHighlightDialog.editingId.length > 0
+                    ? qsTr("Passage updated.")
+                    : qsTr("Comment saved to the Knowledge center."))
+                : (textHighlightDialog.editingId.length > 0
+                    ? qsTr("The passage could not be updated.")
+                    : qsTr("The passage comment could not be saved."))
             notificationTimer.restart()
+            textHighlightDialog.editingId = ""
             textHighlightNote.clear()
             readerText.deselect()
         }
         onRejected: {
+            textHighlightDialog.editingId = ""
             textHighlightNote.clear()
             readerText.deselect()
+        }
+    }
+
+    Dialog {
+        id: knowledgeDeleteDialog
+        property string pendingId: ""
+        property string pendingKind: ""
+        modal: true
+        title: qsTr("Remove saved item?")
+        width: Math.min(window.width - 80, 480)
+        standardButtons: Dialog.Yes | Dialog.No
+
+        contentItem: Label {
+            text: qsTr("This removes the saved item from the Knowledge center. The original document will not be changed.")
+            color: Theme.textSecondary
+            wrapMode: Text.WordWrap
+        }
+
+        onAccepted: {
+            var removed = pendingKind === "highlight"
+                ? appController.library.removeHighlight(pendingId)
+                : appController.library.removeAnnotation(pendingId)
+            window.notification = removed
+                ? qsTr("Saved item removed.")
+                : qsTr("The saved item could not be removed.")
+            notificationTimer.restart()
+            knowledgePage.refreshResults()
+            pendingId = ""
+            pendingKind = ""
+        }
+        onRejected: {
+            pendingId = ""
+            pendingKind = ""
         }
     }
 
@@ -1483,6 +1533,7 @@ ApplicationWindow {
 
                                 ColumnLayout {
                                     id: resultColumn
+                                    z: 1
                                     anchors.left: parent.left
                                     anchors.right: parent.right
                                     anchors.top: parent.top
@@ -1514,10 +1565,45 @@ ApplicationWindow {
                                          color: Theme.textSecondary
                                          font.pixelSize: 11
                                      }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 8
+                                        Label {
+                                            text: modelData.author.length > 0
+                                                ? qsTr("Author: %1 · %2").arg(modelData.author).arg(modelData.createdAt)
+                                                : modelData.createdAt
+                                            color: Theme.textSecondary
+                                            font.pixelSize: 11
+                                            Layout.fillWidth: true
+                                        }
+                                        Button {
+                                            visible: modelData.kind === "highlight"
+                                            text: qsTr("Edit")
+                                            onClicked: {
+                                                textHighlightDialog.editingId = modelData.id
+                                                textHighlightDialog.selectedText = modelData.text
+                                                textHighlightDialog.selectedPage = Number(modelData.page)
+                                                textHighlightDialog.selectedLocator = modelData.locator
+                                                textHighlightColor.currentIndex = Math.max(0, window.highlightColors.indexOf(modelData.color))
+                                                textHighlightStyle.currentIndex = Math.max(0, window.highlightStyles.indexOf(modelData.style))
+                                                textHighlightNote.text = modelData.note || ""
+                                                textHighlightDialog.open()
+                                            }
+                                        }
+                                        Button {
+                                            text: qsTr("Delete")
+                                            onClicked: {
+                                                knowledgeDeleteDialog.pendingId = modelData.id
+                                                knowledgeDeleteDialog.pendingKind = modelData.kind
+                                                knowledgeDeleteDialog.open()
+                                            }
+                                        }
+                                    }
                                 }
 
                                  MouseArea {
                                      anchors.fill: parent
+                                     z: 0
                                      onClicked: {
                                          if (appController.reader.openDocument(modelData.documentId)) {
                                              appController.reader.goToPage(Number(modelData.page))
@@ -1948,6 +2034,7 @@ ApplicationWindow {
                                     Button {
                                         text: qsTr("Comment")
                                         onClicked: {
+                                            textHighlightDialog.editingId = ""
                                             textHighlightDialog.selectedText = readerText.selectedText
                                             textHighlightDialog.selectedPage = appController.reader.currentPage
                                             textHighlightDialog.selectedLocator = "text:" + appController.reader.currentPage

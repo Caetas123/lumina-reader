@@ -133,21 +133,37 @@ private slots:
                                    QStringLiteral("#f6c945"),
                                    QStringLiteral("Core concept"),
                                    QStringLiteral("underline")));
+        const QString highlightId = store.highlightsForDocument(documentId)
+                                        .first().toMap().value(QStringLiteral("id")).toString();
         QCOMPARE(store.highlightsForDocument(documentId).first().toMap().value(QStringLiteral("style")).toString(),
                  QStringLiteral("underline"));
+        QVERIFY(store.updateHighlight(highlightId,
+                                      QStringLiteral("#7acb8a"),
+                                      QStringLiteral("Updated concept"),
+                                      QStringLiteral("strike")));
+        const QVariantMap updatedHighlight = store.highlightsForDocument(documentId).first().toMap();
+        QCOMPARE(updatedHighlight.value(QStringLiteral("color")).toString(), QStringLiteral("#7acb8a"));
+        QCOMPARE(updatedHighlight.value(QStringLiteral("note")).toString(), QStringLiteral("Updated concept"));
+        QCOMPARE(updatedHighlight.value(QStringLiteral("style")).toString(), QStringLiteral("strike"));
+        QVERIFY(!store.updateHighlight(highlightId,
+                                       QStringLiteral("#7acb8a"),
+                                       QStringLiteral("Invalid"),
+                                       QStringLiteral("dotted")));
         const QVariantList results = store.knowledgeSearch(QStringLiteral("democ"));
         QCOMPARE(results.size(), 1);
         QCOMPARE(results.first().toMap().value(QStringLiteral("documentId")).toString(), documentId);
         QCOMPARE(results.first().toMap().value(QStringLiteral("kind")).toString(),
                  QStringLiteral("highlight"));
+        QCOMPARE(results.first().toMap().value(QStringLiteral("note")).toString(),
+                 QStringLiteral("Updated concept"));
         QCOMPARE(store.knowledgeSearch(QStringLiteral("democ"),
                                        QStringLiteral("txt"),
-                                       QStringLiteral("#f6c945"))
+                                       QStringLiteral("#7acb8a"))
                      .size(),
                  1);
         QCOMPARE(store.knowledgeSearch(QStringLiteral("democ"),
                                        QStringLiteral("epub"),
-                                       QStringLiteral("#f6c945"))
+                                       QStringLiteral("#7acb8a"))
                      .size(),
                  0);
 

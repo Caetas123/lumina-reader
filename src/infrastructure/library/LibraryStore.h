@@ -99,6 +99,10 @@ public:
                                   const QString &color,
                                   const QString &note = {},
                                   const QString &style = QStringLiteral("highlight"));
+    Q_INVOKABLE bool updateHighlight(const QString &highlightId,
+                                     const QString &color,
+                                     const QString &note,
+                                     const QString &style);
     Q_INVOKABLE QVariantList annotationsForDocument(const QString &documentId) const;
     Q_INVOKABLE bool addAnnotation(const QString &documentId,
                                    const QString &text,
