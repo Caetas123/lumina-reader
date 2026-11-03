@@ -45,6 +45,7 @@ The current application provides:
 - generated or personalized covers, page rotation for visual documents, and backup/restoration of that reading metadata;
 - TXT, RTF, FB2, unencrypted PalmDOC-compatible MOBI/AZW/AZW3, raster-image, EPUB, CBZ, and ZIP reading when the matching Qt capabilities are present;
 - optional PDF rendering through Qt PDF in the CI/release build;
+- optional in-process CBR, CB7, CBT, RAR, and 7Z reading when libarchive is available at configure time;
 - optional asynchronous page OCR through Tesseract when it is installed on the system;
 - in-document search for text pages and EPUB chapters;
 - persistent highlights, annotations, bookmarks, and a global FTS5 Knowledge center;
@@ -62,6 +63,7 @@ The exact capability set depends on the Qt modules present in the build. See [th
 - CMake 3.24 or newer;
 - Qt 6.5 or newer with `Core`, `Gui`, `Qml`, `Quick`, `QuickControls2`, `Sql`, and `Test`;
 - optional `Pdf`, `TextToSpeech`, and `CorePrivate` modules enable PDF rendering, system speech, and EPUB/CBZ/ZIP reading respectively;
+- optional libarchive headers and library enable CBR/CB7/CBT/RAR/7Z reading;
 - Tesseract OCR is optional at runtime; when available on `PATH`, image-based pages can be recognized without uploading documents;
 - Ninja, or another generator configured through a user preset.
 

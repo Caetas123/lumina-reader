@@ -53,6 +53,10 @@ QStringList supportedFormats()
 #ifdef LUMINA_HAS_QT_ZIP
     formats << QStringLiteral("epub") << QStringLiteral("cbz") << QStringLiteral("zip");
 #endif
+#ifdef LUMINA_HAS_LIBARCHIVE
+    formats << QStringLiteral("cbr") << QStringLiteral("cb7") << QStringLiteral("cbt")
+            << QStringLiteral("rar") << QStringLiteral("7z");
+#endif
     return formats;
 }
 
@@ -127,11 +131,17 @@ bool hasExpectedSignature(const QString &path, const QString &format)
             | static_cast<quint32>(static_cast<uchar>(palm.at(5)));
         return records > 0 && firstRecord >= 86 && firstRecord < static_cast<quint32>(file.size());
     }
-    if (format == QStringLiteral("rar")) {
+    if (format == QStringLiteral("rar") || format == QStringLiteral("cbr")) {
         return header.startsWith("Rar!\x1A\x07");
     }
-    if (format == QStringLiteral("7z")) {
+    if (format == QStringLiteral("7z") || format == QStringLiteral("cb7")) {
         return header.startsWith("7z\xBC\xAF\x27\x1C");
+    }
+    if (format == QStringLiteral("cbt")) {
+        if (!file.seek(257)) {
+            return false;
+        }
+        return file.read(5) == QByteArrayLiteral("ustar");
     }
     if (format == QStringLiteral("epub") || format == QStringLiteral("cbz")
         || format == QStringLiteral("zip")) {
@@ -260,7 +270,10 @@ QString generatedCoverPath(const QString &path, const QString &format, const QSt
         }
     }
 #endif
-    else if (format == QStringLiteral("cbz") || format == QStringLiteral("zip")) {
+    else if (format == QStringLiteral("cbz") || format == QStringLiteral("zip")
+             || format == QStringLiteral("cbr") || format == QStringLiteral("cb7")
+             || format == QStringLiteral("cbt") || format == QStringLiteral("rar")
+             || format == QStringLiteral("7z")) {
         Lumina::Infrastructure::ArchiveReader archive;
         if (archive.open(path, format) && archive.pageCount() > 0 && archive.pageIsImage(0)) {
             image = QImage::fromData(archive.pageData(0));

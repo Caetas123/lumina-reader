@@ -315,7 +315,13 @@ createDocumentEngine(const QString &format)
         return std::make_unique<TextEngine>(normalized);
     }
     if (normalized == QStringLiteral("epub") || normalized == QStringLiteral("cbz")
-        || normalized == QStringLiteral("zip")) {
+        || normalized == QStringLiteral("zip")
+#ifdef LUMINA_HAS_LIBARCHIVE
+        || normalized == QStringLiteral("cbr") || normalized == QStringLiteral("cb7")
+        || normalized == QStringLiteral("cbt") || normalized == QStringLiteral("rar")
+        || normalized == QStringLiteral("7z")
+#endif
+    ) {
         return std::make_unique<ArchiveEngine>(normalized);
     }
 #ifdef LUMINA_HAS_QT_PDF

@@ -32,7 +32,7 @@ Contains product concepts and rules independent of Qt Quick, SQLite, and operati
 
 Provides persistence, migrations, filesystem access, caches, indexing, OCR, dictionary providers, text-to-speech adapters, backup, and export. Infrastructure implementations are replaceable behind interfaces where external behavior is involved.
 
-The current concrete services include `Database`, `LibraryStore`, `ArchiveReader`, `TextDecoder`, `DocumentEngineFactory`, `TesseractOcrProvider`, `BackupController`, `SettingsController`, and the optional `SpeechController`. `LibraryStore` owns the C++ model exposed to QML; it also owns import validation, duplicate detection, cover generation, FTS5 updates, collections, tags, favorites, annotations, bookmarks, OCR page text, page rotation, and reading history.
+The current concrete services include `Database`, `LibraryStore`, `ArchiveReader`, `TextDecoder`, `DocumentEngineFactory`, the optional libarchive adapter, `TesseractOcrProvider`, `BackupController`, `SettingsController`, and the optional `SpeechController`. `LibraryStore` owns the C++ model exposed to QML; it also owns import validation, duplicate detection, cover generation, FTS5 updates, collections, tags, favorites, annotations, bookmarks, OCR page text, page rotation, and reading history.
 
 ### `reader engines`
 

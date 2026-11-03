@@ -24,6 +24,8 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS
 find_package(Qt6 6.5 QUIET COMPONENTS Pdf)
 find_package(Qt6 6.5 QUIET COMPONENTS CorePrivate)
 find_package(Qt6 6.5 QUIET COMPONENTS TextToSpeech)
+find_path(LUMINA_LIBARCHIVE_INCLUDE_DIR NAMES archive.h)
+find_library(LUMINA_LIBARCHIVE_LIBRARY NAMES archive libarchive)
 
 qt_standard_project_setup(REQUIRES 6.5)
 
@@ -95,6 +97,12 @@ endif()
 if(TARGET Qt6::TextToSpeech)
     target_compile_definitions(lumina_core PUBLIC LUMINA_HAS_QT_SPEECH=1)
     target_link_libraries(lumina_core PUBLIC Qt6::TextToSpeech)
+endif()
+
+if(LUMINA_LIBARCHIVE_INCLUDE_DIR AND LUMINA_LIBARCHIVE_LIBRARY)
+    target_compile_definitions(lumina_core PUBLIC LUMINA_HAS_LIBARCHIVE=1)
+    target_include_directories(lumina_core PUBLIC "${LUMINA_LIBARCHIVE_INCLUDE_DIR}")
+    target_link_libraries(lumina_core PUBLIC "${LUMINA_LIBARCHIVE_LIBRARY}")
 endif()
 
 qt_add_executable(lumina_reader

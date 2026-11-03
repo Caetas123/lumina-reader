@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QByteArray>
+#include <QHash>
 #include <QList>
 #include <QString>
 
@@ -37,12 +38,18 @@ private:
     void clear();
     [[nodiscard]] bool openComic();
     [[nodiscard]] bool openEpub();
+#ifdef LUMINA_HAS_LIBARCHIVE
+    [[nodiscard]] bool openLibArchive(const QString &path);
+#endif
 
 #ifdef LUMINA_HAS_QT_ZIP
     std::unique_ptr<QZipReader> zip_;
 #endif
     QList<Page> pages_;
     QString format_;
+#ifdef LUMINA_HAS_LIBARCHIVE
+    QHash<QString, QByteArray> libArchiveData_;
+#endif
 };
 
 } // namespace Lumina::Infrastructure

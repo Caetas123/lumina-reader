@@ -1,5 +1,6 @@
 #include "infrastructure/archive/ArchiveReader.h"
 
+#include <QFile>
 #include <QRegularExpression>
 #include <QTextDocument>
 
@@ -7,6 +8,11 @@
 
 #ifdef LUMINA_HAS_QT_ZIP
 #include <QtCore/private/qzipreader_p.h>
+#endif
+
+#ifdef LUMINA_HAS_LIBARCHIVE
+#include <archive.h>
+#include <archive_entry.h>
 #endif
 
 namespace {
@@ -20,6 +26,13 @@ bool isImagePath(const QString &path)
     return suffix == QStringLiteral("jpg") || suffix == QStringLiteral("jpeg")
         || suffix == QStringLiteral("png") || suffix == QStringLiteral("webp")
         || suffix == QStringLiteral("gif") || suffix == QStringLiteral("avif");
+}
+
+bool isLibArchiveFormat(const QString &format)
+{
+    return format == QStringLiteral("cbr") || format == QStringLiteral("cb7")
+        || format == QStringLiteral("cbt") || format == QStringLiteral("rar")
+        || format == QStringLiteral("7z");
 }
 
 QString normalizedArchivePath(QString path)
@@ -100,12 +113,25 @@ void ArchiveReader::clear()
 #endif
     pages_.clear();
     format_.clear();
+#ifdef LUMINA_HAS_LIBARCHIVE
+    libArchiveData_.clear();
+#endif
 }
 
 bool ArchiveReader::open(const QString &path, const QString &format)
 {
     clear();
     format_ = format.toLower();
+
+#ifdef LUMINA_HAS_LIBARCHIVE
+    if (isLibArchiveFormat(format_)) {
+        if (!openLibArchive(path)) {
+            clear();
+            return false;
+        }
+        return true;
+    }
+#endif
 
 #ifdef LUMINA_HAS_QT_ZIP
     if (format_ != QStringLiteral("cbz") && format_ != QStringLiteral("zip")
@@ -149,7 +175,14 @@ bool ArchiveReader::open(const QString &path, const QString &format)
 bool ArchiveReader::isOpen() const
 {
 #ifdef LUMINA_HAS_QT_ZIP
-    return zip_ != nullptr && !pages_.isEmpty();
+    if (zip_ != nullptr && !pages_.isEmpty()) {
+        return true;
+    }
+#else
+    Q_UNUSED(format_)
+#endif
+#ifdef LUMINA_HAS_LIBARCHIVE
+    return !libArchiveData_.isEmpty() && !pages_.isEmpty();
 #else
     return false;
 #endif
@@ -173,10 +206,18 @@ QString ArchiveReader::pageName(int page) const
 QByteArray ArchiveReader::pageData(int page) const
 {
 #ifdef LUMINA_HAS_QT_ZIP
-    if (zip_ == nullptr || page < 0 || page >= pages_.size()) {
+    if (zip_ != nullptr) {
+        if (page < 0 || page >= pages_.size()) {
+            return {};
+        }
+        return zip_->fileData(pages_.at(page).name);
+    }
+#endif
+#ifdef LUMINA_HAS_LIBARCHIVE
+    if (page < 0 || page >= pages_.size()) {
         return {};
     }
-    return zip_->fileData(pages_.at(page).name);
+    return libArchiveData_.value(pages_.at(page).name);
 #else
     Q_UNUSED(page)
     return {};
@@ -208,6 +249,100 @@ bool ArchiveReader::openComic()
     return false;
 #endif
 }
+
+#ifdef LUMINA_HAS_LIBARCHIVE
+bool ArchiveReader::openLibArchive(const QString &path)
+{
+    struct archive *reader = archive_read_new();
+    if (reader == nullptr) {
+        return false;
+    }
+
+    bool success = archive_read_support_filter_all(reader) >= ARCHIVE_WARN
+        && archive_read_support_format_all(reader) >= ARCHIVE_WARN;
+    const QByteArray nativePath = QFile::encodeName(path);
+    if (success) {
+        success = archive_read_open_filename(reader, nativePath.constData(), 10240) >= ARCHIVE_WARN;
+    }
+
+    qint64 totalBytes = 0;
+    int entryCount = 0;
+    while (success) {
+        struct archive_entry *entry = nullptr;
+        const int headerStatus = archive_read_next_header(reader, &entry);
+        if (headerStatus == ARCHIVE_EOF) {
+            break;
+        }
+        if (headerStatus < ARCHIVE_WARN || entry == nullptr) {
+            success = false;
+            break;
+        }
+        if (++entryCount > kMaximumArchiveEntries) {
+            success = false;
+            break;
+        }
+
+        const char *rawName = archive_entry_pathname(entry);
+        const QString name = rawName == nullptr ? QString() : QString::fromUtf8(rawName);
+        const QString normalized = normalizedArchivePath(name);
+        const qint64 entrySize = archive_entry_size(entry);
+        const auto fileType = archive_entry_filetype(entry);
+        if (normalized.isEmpty() || entrySize < 0
+            || (fileType != AE_IFREG && fileType != AE_IFDIR)
+            || archive_entry_hardlink(entry) != nullptr
+            || entrySize > kMaximumArchiveBytes - totalBytes) {
+            success = false;
+            break;
+        }
+        if (fileType == AE_IFDIR) {
+            if (archive_read_data_skip(reader) < ARCHIVE_WARN) {
+                success = false;
+            }
+            continue;
+        }
+        totalBytes += entrySize;
+
+        if (!isImagePath(normalized)) {
+            if (archive_read_data_skip(reader) < ARCHIVE_WARN) {
+                success = false;
+            }
+            continue;
+        }
+
+        QByteArray data;
+        data.reserve(static_cast<int>(std::min<qint64>(entrySize, 16 * 1024 * 1024)));
+        char buffer[64 * 1024];
+        while (true) {
+            const la_ssize_t bytes = archive_read_data(reader, buffer, sizeof(buffer));
+            if (bytes == 0) {
+                break;
+            }
+            if (bytes < 0 || data.size() > kMaximumArchiveBytes - bytes) {
+                success = false;
+                break;
+            }
+            data.append(buffer, static_cast<qsizetype>(bytes));
+        }
+        if (!success) {
+            break;
+        }
+        libArchiveData_.insert(normalized, data);
+        pages_.append(Page{normalized, true});
+    }
+
+    archive_read_close(reader);
+    archive_read_free(reader);
+    if (!success || pages_.isEmpty()) {
+        libArchiveData_.clear();
+        pages_.clear();
+        return false;
+    }
+    std::sort(pages_.begin(), pages_.end(), [](const Page &left, const Page &right) {
+        return left.name.toLower() < right.name.toLower();
+    });
+    return true;
+}
+#endif
 
 bool ArchiveReader::openEpub()
 {
