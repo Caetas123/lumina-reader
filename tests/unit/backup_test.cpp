@@ -50,9 +50,23 @@ private slots:
         const QString markdownPath = directory.filePath(QStringLiteral("knowledge.md"));
         const QString jsonPath = directory.filePath(QStringLiteral("knowledge.json"));
         const QString libraryPath = directory.filePath(QStringLiteral("library.json"));
+        const QString settingsPath = directory.filePath(QStringLiteral("settings.json"));
         QVERIFY(backup.exportKnowledge(markdownPath, QStringLiteral("markdown")));
         QVERIFY(backup.exportKnowledge(jsonPath, QStringLiteral("json")));
         QVERIFY(backup.exportLibrary(libraryPath));
+
+        QSqlQuery settings(database.connection());
+        settings.prepare(QStringLiteral(
+            "INSERT INTO app_settings (key, value) VALUES ('theme', 'sepia') "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value"));
+        QVERIFY(settings.exec());
+        QVERIFY(backup.exportSettings(settingsPath));
+        QVERIFY(settings.exec(QStringLiteral(
+            "UPDATE app_settings SET value = 'dark' WHERE key = 'theme'")));
+        QVERIFY(backup.restoreSettings(settingsPath));
+        QVERIFY(settings.exec(QStringLiteral("SELECT value FROM app_settings WHERE key = 'theme'")));
+        QVERIFY(settings.next());
+        QCOMPARE(settings.value(0).toString(), QStringLiteral("sepia"));
 
         QVERIFY(library.updateMetadata(documentId,
                                        QStringLiteral("Changed title"),

@@ -27,6 +27,7 @@ public:
     [[nodiscard]] bool highContrast() const;
 
     void setDatabase(Lumina::Infrastructure::Database *database);
+    Q_INVOKABLE void reload();
 
 public slots:
     void setTheme(const QString &theme);

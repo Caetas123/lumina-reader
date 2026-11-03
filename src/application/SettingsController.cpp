@@ -59,6 +59,11 @@ void SettingsController::setDatabase(Lumina::Infrastructure::Database *database)
     load();
 }
 
+void SettingsController::reload()
+{
+    load();
+}
+
 void SettingsController::setTheme(const QString &theme)
 {
     const QString normalized = theme.trimmed().toLower();

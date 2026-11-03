@@ -480,6 +480,38 @@ ApplicationWindow {
     }
 
     FileDialog {
+        id: settingsExportDialog
+        title: qsTr("Export reading preferences")
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "json"
+        nameFilters: [qsTr("Lumina settings JSON (*.json)")]
+        onAccepted: {
+            var path = window.localPath(selectedFile)
+            window.notification = appController.backup.exportSettings(path)
+                ? qsTr("Reading preferences exported successfully.") : appController.backup.lastError
+            notificationTimer.restart()
+        }
+    }
+
+    FileDialog {
+        id: settingsRestoreDialog
+        title: qsTr("Restore reading preferences")
+        fileMode: FileDialog.OpenFile
+        nameFilters: [qsTr("Lumina settings JSON (*.json)"), qsTr("All files (*)")]
+        onAccepted: {
+            var path = window.localPath(selectedFile)
+            if (appController.backup.restoreSettings(path)) {
+                appController.settings.reload()
+                appController.speech.reload()
+                window.notification = qsTr("Reading preferences restored successfully.")
+            } else {
+                window.notification = appController.backup.lastError
+            }
+            notificationTimer.restart()
+        }
+    }
+
+    FileDialog {
         id: databaseBackupDialog
         title: qsTr("Create database backup")
         fileMode: FileDialog.SaveFile
@@ -1553,6 +1585,14 @@ ApplicationWindow {
                         Button {
                             text: qsTr("Restore library")
                             onClicked: libraryRestoreDialog.open()
+                        }
+                        Button {
+                            text: qsTr("Export preferences")
+                            onClicked: settingsExportDialog.open()
+                        }
+                        Button {
+                            text: qsTr("Restore preferences")
+                            onClicked: settingsRestoreDialog.open()
                         }
                         Button {
                             text: qsTr("New collection")

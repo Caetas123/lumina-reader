@@ -11,6 +11,7 @@
 #include <QJsonObject>
 #include <QSaveFile>
 #include <QSqlQuery>
+#include <QStringList>
 #include <QTextStream>
 
 #include <algorithm>
@@ -21,6 +22,27 @@ bool isValidStatus(const QString &status)
 {
     return status == QStringLiteral("to_read") || status == QStringLiteral("reading")
         || status == QStringLiteral("read") || status == QStringLiteral("abandoned");
+}
+
+bool isKnownSetting(const QString &key)
+{
+    static const QStringList keys = {
+        QStringLiteral("theme"), QStringLiteral("font_size"),
+        QStringLiteral("line_spacing"), QStringLiteral("continuous_reading"),
+        QStringLiteral("high_contrast"), QStringLiteral("speech_rate"),
+        QStringLiteral("speech_volume"),
+    };
+    return keys.contains(key);
+}
+
+bool isValidTheme(const QString &theme)
+{
+    static const QStringList themes = {
+        QStringLiteral("light"), QStringLiteral("dark"), QStringLiteral("sepia"),
+        QStringLiteral("paper"), QStringLiteral("gray"), QStringLiteral("high-contrast"),
+        QStringLiteral("low-light"),
+    };
+    return themes.contains(theme);
 }
 
 } // namespace
@@ -227,6 +249,44 @@ bool BackupController::exportLibrary(const QString &path)
     return writeFile(path, QJsonDocument(root).toJson(QJsonDocument::Indented));
 }
 
+bool BackupController::exportSettings(const QString &path)
+{
+    if (!validatePath(path)) {
+        return false;
+    }
+
+    QSqlQuery query(database_->connection());
+    if (!query.exec(QStringLiteral("SELECT key, value FROM app_settings ORDER BY key"))) {
+        fail(QStringLiteral("The reading preferences could not be read for export."));
+        return false;
+    }
+
+    QJsonObject settings;
+    while (query.next()) {
+        const QString key = query.value(0).toString();
+        if (!isKnownSetting(key)) {
+            continue;
+        }
+        const QString value = query.value(1).toString();
+        if (key == QStringLiteral("continuous_reading") || key == QStringLiteral("high_contrast")) {
+            settings.insert(key, value == QStringLiteral("1"));
+        } else if (key == QStringLiteral("font_size") || key == QStringLiteral("line_spacing")
+                   || key == QStringLiteral("speech_rate") || key == QStringLiteral("speech_volume")) {
+            settings.insert(key, value.toInt());
+        } else {
+            settings.insert(key, value);
+        }
+    }
+
+    const QJsonObject root{
+        {QStringLiteral("format"), QStringLiteral("lumina-settings")},
+        {QStringLiteral("version"), 1},
+        {QStringLiteral("exportedAt"), QDateTime::currentDateTimeUtc().toString(Qt::ISODate)},
+        {QStringLiteral("settings"), settings},
+    };
+    return writeFile(path, QJsonDocument(root).toJson(QJsonDocument::Indented));
+}
+
 bool BackupController::restoreLibrary(const QString &path)
 {
     if (!validateSourcePath(path)) {
@@ -338,6 +398,101 @@ bool BackupController::restoreLibrary(const QString &path)
     }
     if (restored == 0) {
         fail(QStringLiteral("No documents from this export matched the current library."));
+        return false;
+    }
+    lastError_.clear();
+    emit stateChanged();
+    return true;
+}
+
+bool BackupController::restoreSettings(const QString &path)
+{
+    if (!validateSourcePath(path)) {
+        return false;
+    }
+
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly) || file.size() > 4 * 1024 * 1024) {
+        fail(QStringLiteral("The selected settings export could not be read."));
+        return false;
+    }
+    QJsonParseError parseError;
+    const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &parseError);
+    if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
+        fail(QStringLiteral("The selected file is not a valid Lumina settings export."));
+        return false;
+    }
+    const QJsonObject root = document.object();
+    if (root.value(QStringLiteral("format")).toString() != QStringLiteral("lumina-settings")
+        || !root.value(QStringLiteral("settings")).isObject()) {
+        fail(QStringLiteral("The selected file is not a Lumina settings export."));
+        return false;
+    }
+
+    QSqlDatabase connection = database_->connection();
+    if (!connection.transaction()) {
+        fail(QStringLiteral("The reading preferences restore could not be started."));
+        return false;
+    }
+
+    int restored = 0;
+    const QJsonObject settings = root.value(QStringLiteral("settings")).toObject();
+    for (auto iterator = settings.constBegin(); iterator != settings.constEnd(); ++iterator) {
+        const QString key = iterator.key();
+        const QJsonValue value = iterator.value();
+        if (!isKnownSetting(key)) {
+            continue;
+        }
+
+        QString normalized;
+        if (key == QStringLiteral("theme")) {
+            normalized = value.toString().trimmed().toLower();
+            if (!isValidTheme(normalized)) {
+                continue;
+            }
+        } else if (key == QStringLiteral("continuous_reading")
+                   || key == QStringLiteral("high_contrast")) {
+            if (!value.isBool()) {
+                continue;
+            }
+            normalized = value.toBool() ? QStringLiteral("1") : QStringLiteral("0");
+        } else {
+            if (!value.isDouble()) {
+                continue;
+            }
+            const int number = value.toInt();
+            if (key == QStringLiteral("font_size") && (number < 12 || number > 32)) {
+                continue;
+            }
+            if (key == QStringLiteral("line_spacing") && (number < 100 || number > 220)) {
+                continue;
+            }
+            if (key == QStringLiteral("speech_rate") && (number < 50 || number > 200)) {
+                continue;
+            }
+            if (key == QStringLiteral("speech_volume") && (number < 0 || number > 100)) {
+                continue;
+            }
+            normalized = QString::number(number);
+        }
+
+        QSqlQuery query(connection);
+        query.prepare(QStringLiteral(
+            "INSERT INTO app_settings (key, value, updated_at) VALUES (:key, :value, CURRENT_TIMESTAMP) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP"));
+        query.bindValue(QStringLiteral(":key"), key);
+        query.bindValue(QStringLiteral(":value"), normalized);
+        if (!query.exec()) {
+            connection.rollback();
+            fail(QStringLiteral("The reading preferences restore could not be completed."));
+            return false;
+        }
+        ++restored;
+    }
+
+    if (restored == 0 || !connection.commit()) {
+        connection.rollback();
+        fail(QStringLiteral("No valid reading preferences were found in this export."));
         return false;
     }
     lastError_.clear();

@@ -39,6 +39,7 @@ public:
     void setRate(int rate);
     void setVolume(int volume);
     void setDatabase(Lumina::Infrastructure::Database *database);
+    Q_INVOKABLE void reload();
 
     Q_INVOKABLE bool speak(const QString &text);
     Q_INVOKABLE void stop();

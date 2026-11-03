@@ -69,6 +69,11 @@ void SpeechController::setDatabase(Lumina::Infrastructure::Database *database)
     load();
 }
 
+void SpeechController::reload()
+{
+    load();
+}
+
 void SpeechController::setRate(int rate)
 {
     const int normalized = std::clamp(rate, 50, 200);
