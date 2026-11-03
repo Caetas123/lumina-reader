@@ -47,6 +47,7 @@ add_library(lumina_core STATIC
     src/domain/core/Error.h
     src/domain/lookup/LookupProvider.h
     src/domain/ocr/OcrProvider.h
+    src/domain/reader/DocumentEngine.h
     src/infrastructure/database/Database.cpp
     src/infrastructure/database/Database.h
     src/infrastructure/archive/ArchiveReader.cpp
@@ -57,6 +58,8 @@ add_library(lumina_core STATIC
     src/infrastructure/logging/Logging.h
     src/infrastructure/ocr/TesseractOcrProvider.cpp
     src/infrastructure/ocr/TesseractOcrProvider.h
+    src/infrastructure/reader/DocumentEngineFactory.cpp
+    src/infrastructure/reader/DocumentEngineFactory.h
     src/infrastructure/text/TextDecoder.cpp
     src/infrastructure/text/TextDecoder.h
     src/pdf/PdfEngine.h

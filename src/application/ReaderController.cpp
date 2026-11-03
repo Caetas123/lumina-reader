@@ -1,71 +1,26 @@
 #include "application/ReaderController.h"
 
-#include "infrastructure/archive/ArchiveReader.h"
+#include "domain/reader/DocumentEngine.h"
 #include "infrastructure/library/LibraryStore.h"
 #include "infrastructure/ocr/TesseractOcrProvider.h"
-#include "infrastructure/text/TextDecoder.h"
+#include "infrastructure/reader/DocumentEngineFactory.h"
 
-#include <QFile>
-#include <QFileInfo>
 #include <QBuffer>
+#include <QFileInfo>
 #include <QImage>
-#include <QUrl>
-
-#ifdef LUMINA_HAS_QT_PDF
-#include <QPdfDocument>
-#endif
 
 #include <algorithm>
 
 namespace {
 
-constexpr int kTextCharactersPerPage = 5000;
-
-bool isTextFormat(const QString &format)
+QString imageDataUrl(const QImage &image)
 {
-    return format == QStringLiteral("txt") || format == QStringLiteral("rtf")
-        || format == QStringLiteral("fb2") || format == QStringLiteral("mobi")
-        || format == QStringLiteral("azw") || format == QStringLiteral("azw3");
-}
-
-bool isImageFormat(const QString &format)
-{
-    return format == QStringLiteral("jpg") || format == QStringLiteral("jpeg")
-        || format == QStringLiteral("png") || format == QStringLiteral("webp")
-        || format == QStringLiteral("avif") || format == QStringLiteral("gif");
-}
-
-bool isArchiveFormat(const QString &format)
-{
-    return format == QStringLiteral("cbz") || format == QStringLiteral("zip")
-        || format == QStringLiteral("epub");
-}
-
-QString imageMimeType(const QString &path)
-{
-    const QString suffix = path.section('.', -1).toLower();
-    if (suffix == QStringLiteral("jpg") || suffix == QStringLiteral("jpeg")) {
-        return QStringLiteral("image/jpeg");
+    QByteArray encoded;
+    QBuffer buffer(&encoded);
+    if (!buffer.open(QIODevice::WriteOnly) || !image.save(&buffer, "PNG")) {
+        return {};
     }
-    if (suffix == QStringLiteral("png")) {
-        return QStringLiteral("image/png");
-    }
-    if (suffix == QStringLiteral("webp")) {
-        return QStringLiteral("image/webp");
-    }
-    if (suffix == QStringLiteral("gif")) {
-        return QStringLiteral("image/gif");
-    }
-    if (suffix == QStringLiteral("avif")) {
-        return QStringLiteral("image/avif");
-    }
-    return QStringLiteral("application/octet-stream");
-}
-
-QString imageDataUrl(const QString &path, const QByteArray &data)
-{
-    return imageMimeType(path) + QStringLiteral(";base64,")
-        + QString::fromLatin1(data.toBase64());
+    return QStringLiteral("data:image/png;base64,") + QString::fromLatin1(encoded.toBase64());
 }
 
 } // namespace
@@ -133,14 +88,15 @@ QString ReaderController::imageSource() const
 
 bool ReaderController::isImageDocument() const
 {
-    return isImageFormat(format_) || format_ == QStringLiteral("pdf")
-        || (archiveReader_ != nullptr && archiveReader_->pageIsImage(currentPage_));
+    return documentEngine_ != nullptr
+        && documentEngine_->pageKind(currentPage_) == Lumina::Domain::Reader::PageKind::Image;
 }
 
 bool ReaderController::isTextDocument() const
 {
-    return isTextFormat(format_)
-        || (archiveReader_ != nullptr && !archiveReader_->pageIsImage(currentPage_));
+    return showOcrText_
+        || (documentEngine_ != nullptr
+            && documentEngine_->pageKind(currentPage_) == Lumina::Domain::Reader::PageKind::Text);
 }
 
 QString ReaderController::engineName() const
@@ -225,17 +181,16 @@ void ReaderController::clearState()
     if (ocrProvider_ != nullptr && ocrProvider_->busy()) {
         ocrProvider_->cancel();
     }
-    archiveReader_.reset();
-#ifdef LUMINA_HAS_QT_PDF
-    pdfDocument_.reset();
-#endif
+    if (documentEngine_ != nullptr) {
+        documentEngine_->close();
+        documentEngine_.reset();
+    }
     open_ = false;
     documentId_.clear();
     title_.clear();
     filePath_.clear();
     format_.clear();
     contentType_.clear();
-    fullTextContent_.clear();
     textContent_.clear();
     imageSource_.clear();
     engineName_.clear();
@@ -258,37 +213,27 @@ void ReaderController::fail(const QString &message)
     emit stateChanged();
 }
 
-QString ReaderController::loadText(const QString &path) const
+bool ReaderController::refreshPage()
 {
-    return Lumina::Infrastructure::TextDecoder::readFile(path, format_);
-}
-
-void ReaderController::refreshTextPage()
-{
-    if (!isTextFormat(format_)) {
-        return;
-    }
-    const qsizetype start = static_cast<qsizetype>(currentPage_) * kTextCharactersPerPage;
-    textContent_ = fullTextContent_.mid(start, kTextCharactersPerPage);
-    rebuildSearchMatches();
-}
-
-bool ReaderController::refreshArchivePage()
-{
-    if (archiveReader_ == nullptr || currentPage_ < 0 || currentPage_ >= pageCount_) {
+    if (documentEngine_ == nullptr || currentPage_ < 0 || currentPage_ >= pageCount_) {
         return false;
     }
 
-    if (archiveReader_->pageIsImage(currentPage_)) {
-        const QByteArray data = archiveReader_->pageData(currentPage_);
-        if (data.isEmpty()) {
+    Lumina::Domain::Error error;
+    if (documentEngine_->pageKind(currentPage_)
+        == Lumina::Domain::Reader::PageKind::Image) {
+        const QImage image = documentEngine_->renderPage(currentPage_, QSize(2200, 3100), &error);
+        if (image.isNull()) {
             return false;
         }
-        imageSource_ = imageDataUrl(archiveReader_->pageName(currentPage_), data);
-        textContent_.clear();
+        imageSource_ = imageDataUrl(image);
+        if (imageSource_.isEmpty()) {
+            return false;
+        }
+        textContent_ = documentEngine_->textPage(currentPage_, &error);
     } else {
-        textContent_ = archiveReader_->pageText(currentPage_);
-        if (textContent_.isEmpty() && !archiveReader_->pageData(currentPage_).isEmpty()) {
+        textContent_ = documentEngine_->textPage(currentPage_, &error);
+        if (error.hasError()) {
             return false;
         }
         imageSource_.clear();
@@ -299,8 +244,7 @@ bool ReaderController::refreshArchivePage()
 
 void ReaderController::applyCachedOcr()
 {
-    const bool imagePage = isImageFormat(format_) || format_ == QStringLiteral("pdf")
-        || (archiveReader_ != nullptr && archiveReader_->pageIsImage(currentPage_));
+    const bool imagePage = isImageDocument();
     if (!imagePage || library_ == nullptr) {
         showOcrText_ = false;
         return;
@@ -320,17 +264,9 @@ void ReaderController::applyCachedOcr()
 
 QImage ReaderController::currentPageImage() const
 {
-    if (isImageFormat(format_)) {
-        return QImage(filePath_);
+    if (documentEngine_ != nullptr && isImageDocument()) {
+        return documentEngine_->renderPage(currentPage_, QSize(2200, 3100));
     }
-    if (archiveReader_ != nullptr && archiveReader_->pageIsImage(currentPage_)) {
-        return QImage::fromData(archiveReader_->pageData(currentPage_));
-    }
-#ifdef LUMINA_HAS_QT_PDF
-    if (format_ == QStringLiteral("pdf") && pdfDocument_ != nullptr) {
-        return pdfDocument_->render(currentPage_, QSize(2200, 3100));
-    }
-#endif
     return {};
 }
 
@@ -371,32 +307,6 @@ bool ReaderController::selectSearchMatch(int index)
     return true;
 }
 
-bool ReaderController::renderPdfPage()
-{
-#ifdef LUMINA_HAS_QT_PDF
-    if (pdfDocument_ == nullptr || currentPage_ < 0 || currentPage_ >= pageCount_) {
-        return false;
-    }
-    const QImage rendered = pdfDocument_->render(currentPage_, QSize(1500, 2100));
-    if (rendered.isNull()) {
-        return false;
-    }
-    QByteArray encoded;
-    QBuffer buffer(&encoded);
-    if (!buffer.open(QIODevice::WriteOnly) || !rendered.save(&buffer, "PNG")) {
-        return false;
-    }
-    imageSource_ = QStringLiteral("data:image/png;base64,")
-        + QString::fromLatin1(encoded.toBase64());
-    const auto selection = pdfDocument_->getAllText(currentPage_);
-    textContent_ = selection.isValid() ? selection.text() : QString();
-    rebuildSearchMatches();
-    return true;
-#else
-    return false;
-#endif
-}
-
 bool ReaderController::openDocument(const QString &documentId)
 {
     if (library_ == nullptr) {
@@ -425,58 +335,25 @@ bool ReaderController::openDocument(const QString &documentId)
     contentType_ = record.value(QStringLiteral("contentType")).toString();
     currentPage_ = std::max(record.value(QStringLiteral("currentPage")).toInt(), 0);
 
-    if (isImageFormat(format)) {
-        imageSource_ = QUrl::fromLocalFile(path).toString();
-        pageCount_ = 1;
-        currentPage_ = 0;
-        engineName_ = QStringLiteral("Image engine");
-    } else if (format == QStringLiteral("pdf")) {
-#ifdef LUMINA_HAS_QT_PDF
-        pdfDocument_ = std::make_unique<QPdfDocument>();
-        const QPdfDocument::Error error = pdfDocument_->load(path);
-        if (error != QPdfDocument::Error::None || pdfDocument_->pageCount() <= 0) {
-            fail(QStringLiteral("The PDF could not be opened. It may be damaged, encrypted, or unsupported."));
-            return false;
-        }
-        pageCount_ = pdfDocument_->pageCount();
-        currentPage_ = std::clamp(currentPage_, 0, pageCount_ - 1);
-        if (!renderPdfPage()) {
-            fail(QStringLiteral("The first PDF page could not be rendered."));
-            return false;
-        }
-        engineName_ = QStringLiteral("Qt PDF engine");
-#else
-        fail(QStringLiteral("PDF support is not included in this build."));
-        return false;
-#endif
-    } else if (isTextFormat(format)) {
-        fullTextContent_ = loadText(path);
-        if (fullTextContent_.isEmpty() && QFileInfo(path).size() > 0) {
-            fail(QStringLiteral("The text document could not be decoded."));
-            return false;
-        }
-        const int characterCount = static_cast<int>(fullTextContent_.size());
-        pageCount_ = std::max(1, (characterCount + kTextCharactersPerPage - 1)
-                                      / kTextCharactersPerPage);
-        currentPage_ = std::clamp(currentPage_, 0, pageCount_ - 1);
-        refreshTextPage();
-        engineName_ = QStringLiteral("Text engine");
-    } else if (isArchiveFormat(format)) {
-        archiveReader_ = std::make_unique<Lumina::Infrastructure::ArchiveReader>();
-        if (!archiveReader_->open(path, format)) {
-            fail(QStringLiteral("This archive could not be opened. It may be damaged or unsupported."));
-            return false;
-        }
-        pageCount_ = archiveReader_->pageCount();
-        currentPage_ = std::clamp(currentPage_, 0, pageCount_ - 1);
-        if (!refreshArchivePage()) {
-            fail(QStringLiteral("The first archive page could not be read."));
-            return false;
-        }
-        engineName_ = QStringLiteral("Archive engine");
-    } else {
+    documentEngine_ = Lumina::Infrastructure::createDocumentEngine(format);
+    if (documentEngine_ == nullptr) {
         fail(QStringLiteral(
             "This format is registered in the library, but its reading engine is not available in this build yet."));
+        return false;
+    }
+
+    Lumina::Domain::Error engineError;
+    if (!documentEngine_->open(path, &engineError) || documentEngine_->pageCount() <= 0) {
+        fail(engineError.hasError()
+                 ? engineError.userMessage()
+                 : QStringLiteral("The document could not be opened. It may be damaged or unsupported."));
+        return false;
+    }
+    pageCount_ = documentEngine_->pageCount();
+    currentPage_ = std::clamp(currentPage_, 0, pageCount_ - 1);
+    engineName_ = documentEngine_->name();
+    if (!refreshPage()) {
+        fail(QStringLiteral("The first page of this document could not be read."));
         return false;
     }
 
@@ -520,20 +397,11 @@ bool ReaderController::goToPage(int page)
     }
     const int previousPage = currentPage_;
     currentPage_ = page;
-    if (isTextFormat(format_)) {
-        refreshTextPage();
-    }
-    if (archiveReader_ != nullptr && !refreshArchivePage()) {
+    if (!refreshPage()) {
         currentPage_ = previousPage;
-        (void)refreshArchivePage();
+        (void)refreshPage();
         return false;
     }
-#ifdef LUMINA_HAS_QT_PDF
-    if (format_ == QStringLiteral("pdf") && !renderPdfPage()) {
-        currentPage_ = previousPage;
-        return false;
-    }
-#endif
     applyCachedOcr();
     persistProgress();
     emit stateChanged();
@@ -639,15 +507,10 @@ bool ReaderController::updateProgress(double progress)
     currentPage_ = std::clamp(static_cast<int>(progress * std::max(pageCount_ - 1, 0)),
                               0,
                               std::max(pageCount_ - 1, 0));
-    refreshTextPage();
-    if (archiveReader_ != nullptr && !refreshArchivePage()) {
+    if (!refreshPage()) {
         return false;
     }
-#ifdef LUMINA_HAS_QT_PDF
-    if (format_ == QStringLiteral("pdf") && !renderPdfPage()) {
-        return false;
-    }
-#endif
+    applyCachedOcr();
     const bool success = library_ != nullptr
         && library_->updateProgress(documentId_, progress, currentPage_);
     if (success) {

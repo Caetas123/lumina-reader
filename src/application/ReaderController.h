@@ -7,14 +7,13 @@
 
 #include <memory>
 
-#ifdef LUMINA_HAS_QT_PDF
-class QPdfDocument;
-#endif
-
 namespace Lumina::Infrastructure {
-class ArchiveReader;
 class LibraryStore;
 class TesseractOcrProvider;
+}
+
+namespace Lumina::Domain::Reader {
+class DocumentEngine;
 }
 
 namespace Lumina::Application {
@@ -93,18 +92,15 @@ signals:
 private:
     void clearState();
     void fail(const QString &message);
-    [[nodiscard]] QString loadText(const QString &path) const;
-    void refreshTextPage();
-    [[nodiscard]] bool refreshArchivePage();
+    [[nodiscard]] bool refreshPage();
     void applyCachedOcr();
     [[nodiscard]] QImage currentPageImage() const;
     void rebuildSearchMatches();
     [[nodiscard]] bool selectSearchMatch(int index);
     void persistProgress();
-    [[nodiscard]] bool renderPdfPage();
 
     Lumina::Infrastructure::LibraryStore *library_ = nullptr;
-    std::unique_ptr<Lumina::Infrastructure::ArchiveReader> archiveReader_;
+    std::unique_ptr<Lumina::Domain::Reader::DocumentEngine> documentEngine_;
     std::unique_ptr<Lumina::Infrastructure::TesseractOcrProvider> ocrProvider_;
     bool open_ = false;
     QString documentId_;
@@ -112,7 +108,6 @@ private:
     QString filePath_;
     QString format_;
     QString contentType_;
-    QString fullTextContent_;
     QString textContent_;
     QString imageSource_;
     QString engineName_;
@@ -130,9 +125,6 @@ private:
     int searchStart_ = -1;
     int searchLength_ = 0;
 
-#ifdef LUMINA_HAS_QT_PDF
-    std::unique_ptr<QPdfDocument> pdfDocument_;
-#endif
 };
 
 } // namespace Lumina::Application
