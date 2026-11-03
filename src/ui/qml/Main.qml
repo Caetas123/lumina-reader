@@ -23,6 +23,7 @@ ApplicationWindow {
     property bool listMode: false
     property bool twoPageMode: false
     property bool speechHighlightActive: false
+    property var savedReaderRegions: []
     property real imageZoom: 1.0
     property string zoomDocumentId: ""
     property var highlightColors: ["#f6c945", "#7acb8a", "#77a8e8", "#ed8fb3", "#aa8bd8"]
@@ -66,6 +67,7 @@ ApplicationWindow {
         function onLibraryChanged() {
             window.refreshLibraryBrowseOptions()
             knowledgePage.refreshDocumentOptions()
+            window.refreshReaderRegions()
         }
         function onViewFilterChanged() {
             var filter = appController.library.viewFilter
@@ -246,6 +248,23 @@ ApplicationWindow {
         var start = Math.max(0, Number(readerText.selectionStart) || 0)
         var end = Math.max(start, Number(readerText.selectionEnd) || start)
         return "text:%1:%2:%3".arg(appController.reader.currentPage).arg(start).arg(end)
+    }
+
+    function refreshReaderRegions() {
+        if (!appController.reader.open || !appController.reader.imageDocument) {
+            window.savedReaderRegions = []
+            return
+        }
+        var allAnnotations = appController.library.annotationsForDocument(appController.reader.documentId)
+        var regions = []
+        for (var index = 0; index < allAnnotations.length; ++index) {
+            var annotation = allAnnotations[index]
+            if (String(annotation.kind).toLowerCase() === "region"
+                    && Number(annotation.page) === appController.reader.currentPage) {
+                regions.push(annotation)
+            }
+        }
+        window.savedReaderRegions = regions
     }
 
     function setLibraryFilter(filter) {
@@ -776,6 +795,7 @@ ApplicationWindow {
             notificationTimer.restart()
             regionAnnotationText.clear()
             imageRegionLayer.clearSelection()
+            window.refreshReaderRegions()
         }
         onRejected: {
             regionAnnotationText.clear()
@@ -2490,11 +2510,13 @@ ApplicationWindow {
                         }
                         if (!appController.reader.open) {
                             documentSearch.text = ""
+                            window.refreshReaderRegions()
                             return
                         }
                         if (!appController.reader.imageDocument) {
                             window.twoPageMode = false
                         }
+                        window.refreshReaderRegions()
                         Qt.callLater(function() {
                             if (appController.reader.searchStart >= 0 && appController.reader.searchLength > 0) {
                                 readerText.select(appController.reader.searchStart,
@@ -2941,6 +2963,25 @@ ApplicationWindow {
                                 regionAnnotationDialog.regionWidth = normalizedWidth
                                 regionAnnotationDialog.regionHeight = normalizedHeight
                                 regionAnnotationDialog.open()
+                            }
+
+                            Repeater {
+                                model: window.savedReaderRegions
+                                delegate: Rectangle {
+                                    required property var modelData
+                                    x: readerImage.x
+                                        + (readerImage.width - readerImage.paintedWidth) / 2
+                                        + Number(modelData.x) * readerImage.paintedWidth
+                                    y: readerImage.y
+                                        + (readerImage.height - readerImage.paintedHeight) / 2
+                                        + Number(modelData.y) * readerImage.paintedHeight
+                                    width: Number(modelData.width) * readerImage.paintedWidth
+                                    height: Number(modelData.height) * readerImage.paintedHeight
+                                    color: Qt.rgba(0.96, 0.79, 0.2, 0.16)
+                                    border.color: "#d29b1d"
+                                    border.width: 2
+                                    z: 0
+                                }
                             }
 
                             MouseArea {

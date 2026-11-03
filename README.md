@@ -57,6 +57,7 @@ The current application provides:
 - a Contents panel for multi-page documents, with EPUB chapter labels when the source provides them;
 - scoped, local search history for the library, the open document, and the Knowledge center, with deduplication, retention, reopening, and clearing;
 - persistent highlights, annotations, bookmarks, and a global FTS5 Knowledge center;
+- saved image/PDF region annotations are restored as coordinate overlays when the page is reopened;
 - Knowledge center undo/redo for highlight and annotation creation, editing, and removal, with Ctrl+Z/Ctrl+Y shortcuts;
 - contextual copy, Google, integrated dictionary, translation, and highlight actions for selected text;
 - optional explicit online dictionary and translation results shown inside the app, with local lookup history, reopen/clear actions, lookup favorites, and copy actions;
