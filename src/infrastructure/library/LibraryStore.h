@@ -72,7 +72,8 @@ public:
                                     const QString &title,
                                     const QString &author,
                                     const QString &description,
-                                    const QString &language);
+                                    const QString &language,
+                                    const QString &contentType = {});
     Q_INVOKABLE bool setCoverPath(const QString &documentId, const QString &coverPath);
     Q_INVOKABLE bool setPageRotation(const QString &documentId, int rotation);
     Q_INVOKABLE bool updateProgress(const QString &documentId, double progress, int currentPage);

@@ -94,6 +94,18 @@ QString contentTypeForFormat(const QString &format)
     return QStringLiteral("text");
 }
 
+bool isValidContentType(const QString &contentType)
+{
+    static const QStringList types{
+        QStringLiteral("book"), QStringLiteral("manga"), QStringLiteral("manhwa"),
+        QStringLiteral("webtoon"), QStringLiteral("newspaper"), QStringLiteral("magazine"),
+        QStringLiteral("article"), QStringLiteral("academic"), QStringLiteral("handout"),
+        QStringLiteral("comic"), QStringLiteral("document"), QStringLiteral("image"),
+        QStringLiteral("text"), QStringLiteral("other"),
+    };
+    return types.contains(contentType);
+}
+
 bool hasSupportedFormat(const QString &format)
 {
     return supportedFormats().contains(format);
@@ -945,9 +957,14 @@ bool LibraryStore::updateMetadata(const QString &documentId,
                                   const QString &title,
                                   const QString &author,
                                   const QString &description,
-                                  const QString &language)
+                                  const QString &language,
+                                  const QString &contentType)
 {
     if (!isReady() || documentId.trimmed().isEmpty() || title.trimmed().isEmpty()) {
+        return false;
+    }
+    const QString normalizedContentType = contentType.trimmed().toLower();
+    if (!normalizedContentType.isEmpty() && !isValidContentType(normalizedContentType)) {
         return false;
     }
     QSqlDatabase connection = database_->connection();
@@ -957,11 +974,13 @@ bool LibraryStore::updateMetadata(const QString &documentId,
     QSqlQuery query(connection);
     query.prepare(QStringLiteral(
         "UPDATE documents SET title = :title, author = :author, description = :description, "
-        "language = :language, updated_at = CURRENT_TIMESTAMP WHERE id = :id"));
+        "language = :language, content_type = COALESCE(NULLIF(:content_type, ''), content_type), "
+        "updated_at = CURRENT_TIMESTAMP WHERE id = :id"));
     query.bindValue(QStringLiteral(":title"), title.trimmed());
     query.bindValue(QStringLiteral(":author"), author.trimmed());
     query.bindValue(QStringLiteral(":description"), description.trimmed());
     query.bindValue(QStringLiteral(":language"), language.trimmed());
+    query.bindValue(QStringLiteral(":content_type"), normalizedContentType);
     query.bindValue(QStringLiteral(":id"), documentId);
     bool success = query.exec() && query.numRowsAffected() > 0;
     if (success) {

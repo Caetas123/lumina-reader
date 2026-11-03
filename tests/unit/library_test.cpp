@@ -75,6 +75,20 @@ private slots:
         store.setViewFilter(QStringLiteral("type:text"));
         QCOMPARE(store.count(), 1);
         store.setViewFilter(QStringLiteral("all"));
+        QVERIFY(store.updateMetadata(documentId,
+                                     QStringLiteral("Learning notes"),
+                                     QStringLiteral("Lumina author"),
+                                     QStringLiteral("Personal study notes"),
+                                     QStringLiteral("en"),
+                                     QStringLiteral("academic")));
+        QCOMPARE(store.documentDetails(documentId).value(QStringLiteral("contentType")).toString(),
+                 QStringLiteral("academic"));
+        QVERIFY(!store.updateMetadata(documentId,
+                                      QStringLiteral("Learning notes"),
+                                      QStringLiteral("Lumina author"),
+                                      QStringLiteral("Personal study notes"),
+                                      QStringLiteral("en"),
+                                      QStringLiteral("unsupported-type")));
         QVERIFY(store.removeFromCollection(documentId, collectionId));
         QCOMPARE(store.collectionsForDocument(documentId).size(), 0);
         QVERIFY(store.deleteCollection(collectionId));

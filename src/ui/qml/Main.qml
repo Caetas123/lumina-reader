@@ -25,6 +25,8 @@ ApplicationWindow {
     property string zoomDocumentId: ""
     property var highlightColors: ["#f6c945", "#7acb8a", "#77a8e8", "#ed8fb3", "#aa8bd8"]
     property var highlightStyles: ["highlight", "underline", "strike"]
+    property var contentTypeKeys: ["book", "manga", "manhwa", "webtoon", "newspaper", "magazine", "article", "academic", "handout", "comic", "document", "image", "text", "other"]
+    property var contentTypeLabels: [qsTr("Book"), qsTr("Manga"), qsTr("Manhwa"), qsTr("Webtoon"), qsTr("Newspaper"), qsTr("Magazine"), qsTr("Article"), qsTr("Academic paper"), qsTr("Handout"), qsTr("Comic"), qsTr("Document"), qsTr("Image"), qsTr("Text"), qsTr("Other")]
     property var libraryBrowseOptions: []
 
     function applyTheme() {
@@ -231,6 +233,7 @@ ApplicationWindow {
         metadataDialog.coverPath = record.coverPath || ""
         metadataDialog.filePath = record.filePath || ""
         metadataDialog.fileAvailable = appController.library.documentAvailable(documentId)
+        metadataContentType.currentIndex = Math.max(0, window.contentTypeKeys.indexOf(record.contentType || "other"))
         metadataTitle.text = record.title || ""
         metadataAuthor.text = record.author || ""
         metadataLanguage.text = record.language || ""
@@ -269,13 +272,14 @@ ApplicationWindow {
             { label: qsTr("To read"), filter: "to_read" },
             { label: qsTr("Reading"), filter: "reading" },
             { label: qsTr("Finished"), filter: "read" },
-            { label: qsTr("Abandoned"), filter: "abandoned" },
-            { label: qsTr("Books"), filter: "type:book" },
-            { label: qsTr("Comics"), filter: "type:comic" },
-            { label: qsTr("Documents"), filter: "type:document" },
-            { label: qsTr("Text"), filter: "type:text" },
-            { label: qsTr("Images"), filter: "type:image" }
+            { label: qsTr("Abandoned"), filter: "abandoned" }
         ]
+        for (var typeIndex = 0; typeIndex < window.contentTypeKeys.length; ++typeIndex) {
+            options.push({
+                label: window.contentTypeLabels[typeIndex],
+                filter: "type:" + window.contentTypeKeys[typeIndex]
+            })
+        }
         var collections = appController.library.collections()
         for (var collectionIndex = 0; collectionIndex < collections.length; ++collectionIndex) {
             options.push({
@@ -408,6 +412,11 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 placeholderText: qsTr("Author")
             }
+            ComboBox {
+                id: metadataContentType
+                Layout.fillWidth: true
+                model: window.contentTypeLabels
+            }
             RowLayout {
                 Layout.fillWidth: true
                 TextField {
@@ -505,7 +514,8 @@ ApplicationWindow {
                                                               metadataTitle.text,
                                                               metadataAuthor.text,
                                                               metadataDescription.text,
-                                                              metadataLanguage.text)
+                                                              metadataLanguage.text,
+                                                              window.contentTypeKeys[metadataContentType.currentIndex])
             if (saved) {
                 var tags = metadataTags.text.split(",")
                 saved = appController.library.setTags(documentId, tags)
