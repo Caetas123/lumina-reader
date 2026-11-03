@@ -238,6 +238,12 @@ ApplicationWindow {
         return normalized.startsWith("/") ? "file://" + normalized : "file:///" + normalized
     }
 
+    function textSelectionLocator() {
+        var start = Math.max(0, Number(readerText.selectionStart) || 0)
+        var end = Math.max(start, Number(readerText.selectionEnd) || start)
+        return "text:%1:%2:%3".arg(appController.reader.currentPage).arg(start).arg(end)
+    }
+
     function setLibraryFilter(filter) {
         appController.library.viewFilter = filter
         window.currentView = 0
@@ -2894,7 +2900,7 @@ ApplicationWindow {
                                         onClicked: {
                                             appController.library.addHighlight(appController.reader.documentId,
                                                                                readerText.selectedText,
-                                                                               "text:" + appController.reader.currentPage,
+                                                                               window.textSelectionLocator(),
                                                                                appController.reader.currentPage,
                                                                                window.highlightColors[selectionHighlightColor.currentIndex],
                                                                                "",
@@ -2910,7 +2916,7 @@ ApplicationWindow {
                                             textHighlightDialog.editingId = ""
                                             textHighlightDialog.selectedText = readerText.selectedText
                                             textHighlightDialog.selectedPage = appController.reader.currentPage
-                                            textHighlightDialog.selectedLocator = "text:" + appController.reader.currentPage
+                                            textHighlightDialog.selectedLocator = window.textSelectionLocator()
                                             textHighlightColor.currentIndex = selectionHighlightColor.currentIndex
                                             textHighlightStyle.currentIndex = selectionHighlightStyle.currentIndex
                                             textHighlightDialog.open()
@@ -2921,7 +2927,7 @@ ApplicationWindow {
                                         onClicked: {
                                             textAnnotationDialog.selectedText = readerText.selectedText
                                             textAnnotationDialog.selectedPage = appController.reader.currentPage
-                                            textAnnotationDialog.selectedLocator = "text:" + appController.reader.currentPage
+                                            textAnnotationDialog.selectedLocator = window.textSelectionLocator()
                                             textAnnotationDialog.open()
                                         }
                                     }
