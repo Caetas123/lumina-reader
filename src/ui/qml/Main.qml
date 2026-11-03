@@ -175,6 +175,7 @@ ApplicationWindow {
         metadataLanguage.text = record.language || ""
         metadataDescription.text = record.description || ""
         metadataTags.text = appController.library.tagsForDocument(documentId).join(", ")
+        collectionSelector.model = appController.library.collections()
         metadataDialog.open()
     }
 
@@ -213,6 +214,20 @@ ApplicationWindow {
                 window.notification = qsTr("The folder was added to your library.")
             } else {
                 window.notification = qsTr("No supported documents were found in that folder.")
+            }
+            notificationTimer.restart()
+        }
+    }
+
+    FolderDialog {
+        id: watchFolderDialog
+        title: qsTr("Watch a folder for new documents")
+        onAccepted: {
+            var path = window.localPath(selectedFolder)
+            if (appController.library.watchFolder(path, true)) {
+                window.notification = qsTr("Lumina Reader will watch this folder for new documents.")
+            } else {
+                window.notification = qsTr("The selected folder could not be watched.")
             }
             notificationTimer.restart()
         }
@@ -258,6 +273,41 @@ ApplicationWindow {
                     placeholderText: qsTr("Tags, separated by commas")
                 }
             }
+            RowLayout {
+                Layout.fillWidth: true
+                ComboBox {
+                    id: collectionSelector
+                    Layout.fillWidth: true
+                    textRole: "name"
+                    valueRole: "id"
+                    model: []
+                    displayText: currentIndex >= 0 ? currentText : qsTr("Choose a collection")
+                }
+                Button {
+                    text: qsTr("Add")
+                    enabled: collectionSelector.currentIndex >= 0
+                    onClicked: {
+                        var added = appController.library.addToCollection(metadataDialog.documentId,
+                                                                          collectionSelector.currentValue)
+                        window.notification = added
+                            ? qsTr("Document added to the collection.")
+                            : qsTr("The document could not be added to the collection.")
+                        notificationTimer.restart()
+                    }
+                }
+                Button {
+                    text: qsTr("Remove")
+                    enabled: collectionSelector.currentIndex >= 0
+                    onClicked: {
+                        var removed = appController.library.removeFromCollection(metadataDialog.documentId,
+                                                                                  collectionSelector.currentValue)
+                        window.notification = removed
+                            ? qsTr("Document removed from the collection.")
+                            : qsTr("The document is not in that collection.")
+                        notificationTimer.restart()
+                    }
+                }
+            }
             TextArea {
                 id: metadataDescription
                 Layout.fillWidth: true
@@ -280,6 +330,45 @@ ApplicationWindow {
             appController.library.refresh()
             window.notification = saved ? qsTr("Document details saved.") : qsTr("The document details could not be saved.")
             notificationTimer.restart()
+        }
+    }
+
+    Dialog {
+        id: createCollectionDialog
+        modal: true
+        title: qsTr("Create collection")
+        width: Math.min(window.width - 80, 520)
+        standardButtons: Dialog.Ok | Dialog.Cancel
+
+        contentItem: ColumnLayout {
+            spacing: 12
+            TextField {
+                id: collectionName
+                Layout.fillWidth: true
+                placeholderText: qsTr("Collection name")
+            }
+            TextArea {
+                id: collectionDescription
+                Layout.fillWidth: true
+                Layout.preferredHeight: 90
+                placeholderText: qsTr("Description (optional)")
+                wrapMode: TextArea.Wrap
+            }
+        }
+
+        onAccepted: {
+            var created = appController.library.createCollection(collectionName.text,
+                                                                  collectionDescription.text)
+            window.notification = created
+                ? qsTr("Collection created.")
+                : qsTr("A collection with that name could not be created.")
+            notificationTimer.restart()
+            collectionName.clear()
+            collectionDescription.clear()
+        }
+        onRejected: {
+            collectionName.clear()
+            collectionDescription.clear()
         }
     }
 
@@ -655,6 +744,10 @@ ApplicationWindow {
                         Button {
                             text: qsTr("Add folder")
                             onClicked: importFolderDialog.open()
+                        }
+                        Button {
+                            text: qsTr("Watch folder")
+                            onClicked: watchFolderDialog.open()
                         }
                     }
 
@@ -1460,6 +1553,10 @@ ApplicationWindow {
                         Button {
                             text: qsTr("Restore library")
                             onClicked: libraryRestoreDialog.open()
+                        }
+                        Button {
+                            text: qsTr("New collection")
+                            onClicked: createCollectionDialog.open()
                         }
                         Item { Layout.fillWidth: true }
                     }
