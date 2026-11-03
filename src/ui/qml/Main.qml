@@ -1070,6 +1070,14 @@ ApplicationWindow {
                                      }
                                  }
                              }
+                             Button {
+                                 visible: appController.speech.speaking
+                                 text: appController.speech.paused ? qsTr("Resume") : qsTr("Pause")
+                                 enabled: appController.speech.available
+                                 onClicked: appController.speech.paused
+                                     ? appController.speech.resume()
+                                     : appController.speech.pause()
+                             }
                         }
                     }
 
@@ -1395,6 +1403,41 @@ ApplicationWindow {
                                 text: qsTr("High contrast controls")
                                 checked: appController.settings.highContrast
                                 onToggled: appController.settings.highContrast = checked
+                            }
+
+                            Label {
+                                visible: appController.speech.available
+                                text: qsTr("Read aloud")
+                                color: Theme.textPrimary
+                                font.weight: Font.DemiBold
+                            }
+                            RowLayout {
+                                visible: appController.speech.available
+                                Layout.fillWidth: true
+                                Label { text: qsTr("Speed"); color: Theme.textPrimary; Layout.fillWidth: true }
+                                Slider {
+                                    Layout.preferredWidth: 190
+                                    from: 50
+                                    to: 200
+                                    stepSize: 5
+                                    value: appController.speech.rate
+                                    onMoved: appController.speech.rate = Math.round(value)
+                                }
+                                Label { text: qsTr("%1%").arg(appController.speech.rate); color: Theme.textSecondary; Layout.preferredWidth: 44 }
+                            }
+                            RowLayout {
+                                visible: appController.speech.available
+                                Layout.fillWidth: true
+                                Label { text: qsTr("Volume"); color: Theme.textPrimary; Layout.fillWidth: true }
+                                Slider {
+                                    Layout.preferredWidth: 190
+                                    from: 0
+                                    to: 100
+                                    stepSize: 5
+                                    value: appController.speech.volume
+                                    onMoved: appController.speech.volume = Math.round(value)
+                                }
+                                Label { text: qsTr("%1%").arg(appController.speech.volume); color: Theme.textSecondary; Layout.preferredWidth: 44 }
                             }
                         }
                     }

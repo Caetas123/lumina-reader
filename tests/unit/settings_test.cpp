@@ -1,4 +1,5 @@
 #include "application/SettingsController.h"
+#include "application/SpeechController.h"
 #include "infrastructure/database/Database.h"
 
 #include <QSqlQuery>
@@ -27,6 +28,11 @@ private slots:
         settings.setContinuousReading(false);
         settings.setHighContrast(true);
 
+        Lumina::Application::SpeechController speech;
+        speech.setDatabase(&database);
+        speech.setRate(150);
+        speech.setVolume(70);
+
         Lumina::Application::SettingsController reloaded;
         reloaded.setDatabase(&database);
         QCOMPARE(reloaded.theme(), QStringLiteral("sepia"));
@@ -35,10 +41,15 @@ private slots:
         QVERIFY(!reloaded.continuousReading());
         QVERIFY(reloaded.highContrast());
 
+        Lumina::Application::SpeechController reloadedSpeech;
+        reloadedSpeech.setDatabase(&database);
+        QCOMPARE(reloadedSpeech.rate(), 150);
+        QCOMPARE(reloadedSpeech.volume(), 70);
+
         QSqlQuery query(database.connection());
         QVERIFY(query.exec(QStringLiteral("SELECT COUNT(*) FROM app_settings")));
         QVERIFY(query.next());
-        QCOMPARE(query.value(0).toInt(), 5);
+        QCOMPARE(query.value(0).toInt(), 7);
     }
 };
 

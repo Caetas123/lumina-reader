@@ -73,6 +73,7 @@ void AppController::initializeDatabase()
     settings_->setDatabase(database_.get());
     backup_->setDatabase(database_.get());
     lookup_->setDatabase(database_.get());
+    speech_->setDatabase(database_.get());
     qCInfo(luminaApp) << "Local database initialized";
     emit databaseStateChanged();
 }

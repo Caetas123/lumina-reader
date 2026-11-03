@@ -1,5 +1,9 @@
 #include "application/SpeechController.h"
 
+#include "infrastructure/database/Database.h"
+
+#include <QSqlQuery>
+
 #include <algorithm>
 
 #ifdef LUMINA_HAS_QT_SPEECH
@@ -16,6 +20,7 @@ SpeechController::SpeechController(QObject *parent)
     available_ = speech_ != nullptr;
     connect(speech_.get(), &QTextToSpeech::stateChanged, this, [this](QTextToSpeech::State state) {
         speaking_ = state == QTextToSpeech::Speaking || state == QTextToSpeech::Paused;
+        paused_ = state == QTextToSpeech::Paused;
         if (state == QTextToSpeech::Error) {
             errorMessage_ = QStringLiteral("The system text-to-speech engine could not read this passage.");
         } else if (state == QTextToSpeech::Ready) {
@@ -38,6 +43,11 @@ bool SpeechController::speaking() const
     return speaking_;
 }
 
+bool SpeechController::paused() const
+{
+    return paused_;
+}
+
 int SpeechController::rate() const
 {
     return rate_;
@@ -53,9 +63,20 @@ QString SpeechController::errorMessage() const
     return errorMessage_;
 }
 
+void SpeechController::setDatabase(Lumina::Infrastructure::Database *database)
+{
+    database_ = database;
+    load();
+}
+
 void SpeechController::setRate(int rate)
 {
-    rate_ = std::clamp(rate, 50, 200);
+    const int normalized = std::clamp(rate, 50, 200);
+    if (normalized == rate_) {
+        return;
+    }
+    rate_ = normalized;
+    persist(QStringLiteral("speech_rate"), QString::number(rate_));
 #ifdef LUMINA_HAS_QT_SPEECH
     if (speech_ != nullptr) {
         speech_->setRate((static_cast<qreal>(rate_) - 100.0) / 100.0);
@@ -66,7 +87,12 @@ void SpeechController::setRate(int rate)
 
 void SpeechController::setVolume(int volume)
 {
-    volume_ = std::clamp(volume, 0, 100);
+    const int normalized = std::clamp(volume, 0, 100);
+    if (normalized == volume_) {
+        return;
+    }
+    volume_ = normalized;
+    persist(QStringLiteral("speech_volume"), QString::number(volume_));
 #ifdef LUMINA_HAS_QT_SPEECH
     if (speech_ != nullptr) {
         speech_->setVolume(static_cast<qreal>(volume_) / 100.0);
@@ -86,6 +112,7 @@ bool SpeechController::speak(const QString &text)
 #ifdef LUMINA_HAS_QT_SPEECH
     if (speech_ != nullptr) {
         errorMessage_.clear();
+        paused_ = false;
         speech_->say(trimmed);
         emit stateChanged();
         return true;
@@ -103,6 +130,9 @@ void SpeechController::stop()
         speech_->stop();
     }
 #endif
+    paused_ = false;
+    speaking_ = false;
+    emit stateChanged();
 }
 
 void SpeechController::pause()
@@ -121,6 +151,48 @@ void SpeechController::resume()
         speech_->resume();
     }
 #endif
+}
+
+void SpeechController::load()
+{
+    if (database_ == nullptr || !database_->isOpen()) {
+        return;
+    }
+
+    QSqlQuery query(database_->connection());
+    if (!query.exec(QStringLiteral("SELECT key, value FROM app_settings"))) {
+        return;
+    }
+    while (query.next()) {
+        const QString key = query.value(0).toString();
+        const int value = query.value(1).toInt();
+        if (key == QStringLiteral("speech_rate")) {
+            rate_ = std::clamp(value, 50, 200);
+        } else if (key == QStringLiteral("speech_volume")) {
+            volume_ = std::clamp(value, 0, 100);
+        }
+    }
+#ifdef LUMINA_HAS_QT_SPEECH
+    if (speech_ != nullptr) {
+        speech_->setRate((static_cast<qreal>(rate_) - 100.0) / 100.0);
+        speech_->setVolume(static_cast<qreal>(volume_) / 100.0);
+    }
+#endif
+    emit settingsChanged();
+}
+
+void SpeechController::persist(const QString &key, const QString &value)
+{
+    if (database_ == nullptr || !database_->isOpen()) {
+        return;
+    }
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral(
+        "INSERT INTO app_settings (key, value, updated_at) VALUES (:key, :value, CURRENT_TIMESTAMP) "
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP"));
+    query.bindValue(QStringLiteral(":key"), key);
+    query.bindValue(QStringLiteral(":value"), value);
+    query.exec();
 }
 
 } // namespace Lumina::Application
