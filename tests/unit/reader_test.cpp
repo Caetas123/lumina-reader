@@ -4,6 +4,7 @@
 #include "infrastructure/text/TextDecoder.h"
 
 #include <QFile>
+#include <QFileInfo>
 #include <QImage>
 #include <QTemporaryDir>
 #include <QtTest>
@@ -50,6 +51,9 @@ private slots:
         QFile exported(exportPath);
         QVERIFY(exported.open(QIODevice::ReadOnly | QIODevice::Text));
         QVERIFY(QString::fromUtf8(exported.readAll()).contains(QStringLiteral("PAGE TWO")));
+        const QString pdfPath = directory.filePath(QStringLiteral("exported.pdf"));
+        QVERIFY(reader.exportPdf(pdfPath));
+        QVERIFY(QFileInfo(pdfPath).size() > 0);
         QVERIFY(!reader.exportText(filePath));
         QCOMPARE(reader.errorMessage(),
                  QStringLiteral("Choose a different destination from the original document."));
@@ -173,6 +177,6 @@ private slots:
     }
 };
 
-QTEST_GUILESS_MAIN(ReaderTest)
+QTEST_MAIN(ReaderTest)
 
 #include "reader_test.moc"

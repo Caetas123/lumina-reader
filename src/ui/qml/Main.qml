@@ -1496,6 +1496,21 @@ ApplicationWindow {
     }
 
     FileDialog {
+        id: readerPdfExportDialog
+        title: qsTr("Export document as PDF")
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "pdf"
+        nameFilters: [qsTr("PDF document (*.pdf)"), qsTr("All files (*)")]
+        onAccepted: {
+            var path = window.localPath(selectedFile)
+            window.notification = appController.reader.exportPdf(path)
+                ? qsTr("PDF exported successfully.")
+                : appController.reader.errorMessage
+            notificationTimer.restart()
+        }
+    }
+
+    FileDialog {
         id: knowledgeExportDialog
         title: qsTr("Export knowledge")
         fileMode: FileDialog.SaveFile
@@ -2531,6 +2546,23 @@ ApplicationWindow {
                                 visible: appController.reader.open && appController.reader.pageTextAvailable
                                 text: qsTr("Export text")
                                 onClicked: readerExportDialog.open()
+                            }
+                            Button {
+                                visible: appController.reader.open
+                                text: qsTr("Export PDF")
+                                onClicked: readerPdfExportDialog.open()
+                            }
+                            Button {
+                                visible: appController.reader.open
+                                text: qsTr("Print")
+                                onClicked: {
+                                    if (!appController.reader.printDocument()) {
+                                        window.notification = appController.reader.errorMessage
+                                        notificationTimer.restart()
+                                    }
+                                }
+                                ToolTip.visible: hovered
+                                ToolTip.text: qsTr("Send the opened document to the system printer")
                             }
                             Label {
                                 visible: documentSearch.text.length > 0

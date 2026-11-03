@@ -4,8 +4,9 @@
 
 - C++20 compiler;
 - CMake 3.24 or newer;
-- Qt 6.5 or newer with `Core`, `Gui`, `Qml`, `Quick`, `QuickControls2`, `Sql`, and `Test`;
+- Qt 6.5 or newer with `Core`, `Gui`, `Widgets`, `PrintSupport`, `Qml`, `Quick`, `QuickControls2`, `Sql`, and `Test`;
 - `Pdf` for PDF rendering, `TextToSpeech` for system speech, and `CorePrivate` for the in-process EPUB/CBZ/ZIP reader. These are optional at configure time.
+- `Widgets` and `PrintSupport` are required for the native print dialog and PDF export path.
 - `libarchive` is optional. When its headers and library are discoverable by CMake, it enables in-process read-only CBR/CB7/CBT/RAR/7Z comic archives. The build remains valid without it.
 - DjVuLibre is optional. When `libdjvu/ddjvuapi.h` and the DjVuLibre library are discoverable by CMake, it enables in-process read-only DJVU/DJV page rendering and hidden-text extraction. The build remains valid without it.
 - Tesseract is an optional runtime dependency for OCR. Install it separately and expose `tesseract` on `PATH` (or set `LUMINA_TESSERACT_PATH`) to enable the reader's **Read image** action.

@@ -6,11 +6,20 @@
 #include "infrastructure/reader/DocumentEngineFactory.h"
 
 #include <QBuffer>
+#include <QApplication>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QImage>
+#include <QPainter>
+#include <QPageSize>
+#include <QPagedPaintDevice>
+#include <QPdfWriter>
+#include <QPrintDialog>
+#include <QPrinter>
 #include <QSaveFile>
 #include <QStringList>
+#include <QTextDocument>
 #include <QTimer>
 #include <QTransform>
 
@@ -27,6 +36,18 @@ QString imageDataUrl(const QImage &image)
         return {};
     }
     return QStringLiteral("data:image/png;base64,") + QString::fromLatin1(encoded.toBase64());
+}
+
+bool sameFilePath(const QString &first, const QString &second)
+{
+    const QString firstPath = QDir::cleanPath(QFileInfo(first).absoluteFilePath());
+    const QString secondPath = QDir::cleanPath(QFileInfo(second).absoluteFilePath());
+#ifdef Q_OS_WIN
+    constexpr Qt::CaseSensitivity pathCaseSensitivity = Qt::CaseInsensitive;
+#else
+    constexpr Qt::CaseSensitivity pathCaseSensitivity = Qt::CaseSensitive;
+#endif
+    return firstPath.compare(secondPath, pathCaseSensitivity) == 0;
 }
 
 } // namespace
@@ -534,14 +555,7 @@ bool ReaderController::exportText(const QString &path)
         return false;
     }
 
-    const QString sourcePath = QDir::cleanPath(QFileInfo(filePath_).absoluteFilePath());
-    const QString destinationPath = QDir::cleanPath(outputInfo.absoluteFilePath());
-#ifdef Q_OS_WIN
-    constexpr Qt::CaseSensitivity pathCaseSensitivity = Qt::CaseInsensitive;
-#else
-    constexpr Qt::CaseSensitivity pathCaseSensitivity = Qt::CaseSensitive;
-#endif
-    if (destinationPath.compare(sourcePath, pathCaseSensitivity) == 0) {
+    if (sameFilePath(normalizedPath, filePath_)) {
         errorMessage_ = QStringLiteral("Choose a different destination from the original document.");
         emit stateChanged();
         return false;
@@ -568,6 +582,127 @@ bool ReaderController::exportText(const QString &path)
     errorMessage_.clear();
     emit stateChanged();
     return true;
+}
+
+bool ReaderController::exportPdf(const QString &path)
+{
+    if (!open_ || documentEngine_ == nullptr) {
+        return false;
+    }
+    const QString normalizedPath = path.trimmed();
+    const QFileInfo outputInfo(normalizedPath);
+    if (normalizedPath.isEmpty() || !outputInfo.absoluteDir().exists()) {
+        errorMessage_ = QStringLiteral("Choose a valid destination folder for the PDF export.");
+        emit stateChanged();
+        return false;
+    }
+    if (sameFilePath(normalizedPath, filePath_)) {
+        errorMessage_ = QStringLiteral("Choose a different destination from the original document.");
+        emit stateChanged();
+        return false;
+    }
+
+    QPdfWriter writer(normalizedPath);
+    writer.setPageSize(QPageSize(QPageSize::A4));
+    writer.setResolution(144);
+    writer.setTitle(title_);
+    if (!renderDocument(writer) || !QFileInfo::exists(normalizedPath)
+        || QFileInfo(normalizedPath).size() <= 0) {
+        QFile::remove(normalizedPath);
+        errorMessage_ = QStringLiteral("The PDF export could not be written.");
+        emit stateChanged();
+        return false;
+    }
+    errorMessage_.clear();
+    emit stateChanged();
+    return true;
+}
+
+bool ReaderController::printDocument()
+{
+    if (!open_ || documentEngine_ == nullptr) {
+        return false;
+    }
+
+    QPrinter printer(QPrinter::HighResolution);
+    QPrintDialog dialog(&printer);
+    if (dialog.exec() != QDialog::Accepted) {
+        return false;
+    }
+    if (!renderDocument(printer)) {
+        errorMessage_ = QStringLiteral("The document could not be sent to the printer.");
+        emit stateChanged();
+        return false;
+    }
+    errorMessage_.clear();
+    emit stateChanged();
+    return true;
+}
+
+bool ReaderController::renderDocument(QPagedPaintDevice &device) const
+{
+    if (!open_ || documentEngine_ == nullptr || pageCount_ <= 0) {
+        return false;
+    }
+
+    QPainter painter;
+    if (!painter.begin(&device)) {
+        return false;
+    }
+    const QRect pageRect = device.pageLayout().paintRectPixels(device.logicalDpiX());
+    if (!pageRect.isValid() || pageRect.isEmpty()) {
+        painter.end();
+        return false;
+    }
+
+    for (int page = 0; page < pageCount_; ++page) {
+        if (page > 0 && !device.newPage()) {
+            painter.end();
+            return false;
+        }
+
+        Lumina::Domain::Error error;
+        if (documentEngine_->pageKind(page) == Lumina::Domain::Reader::PageKind::Image) {
+            QImage image = documentEngine_->renderPage(page, pageRect.size(), &error);
+            if (!image.isNull() && pageRotation_ != 0) {
+                image = image.transformed(QTransform().rotate(pageRotation_), Qt::SmoothTransformation);
+            }
+            if (image.isNull()) {
+                painter.end();
+                return false;
+            }
+            const QSize scaledSize = image.size().scaled(pageRect.size(), Qt::KeepAspectRatio);
+            const QPoint topLeft = pageRect.center()
+                - QPoint(scaledSize.width() / 2, scaledSize.height() / 2);
+            painter.drawImage(QRect(topLeft, scaledSize), image);
+            continue;
+        }
+
+        const QString text = documentEngine_->textPage(page, &error);
+        if (error.hasError()) {
+            painter.end();
+            return false;
+        }
+        QTextDocument document;
+        document.setDocumentMargin(0);
+        if (QGuiApplication::instance() != nullptr) {
+            document.setDefaultFont(QFont(QStringLiteral("Segoe UI"), 11));
+        }
+        document.setPlainText(text);
+        document.setTextWidth(pageRect.width());
+        const qreal documentHeight = std::max<qreal>(document.size().height(), 1.0);
+        const qreal scale = std::min<qreal>(1.0, pageRect.height() / documentHeight);
+        painter.save();
+        painter.translate(pageRect.topLeft());
+        painter.scale(scale, scale);
+        document.drawContents(&painter,
+                              QRectF(0,
+                                     0,
+                                     pageRect.width() / scale,
+                                     pageRect.height() / scale));
+        painter.restore();
+    }
+    return painter.end();
 }
 
 bool ReaderController::rotatePage(int degrees)

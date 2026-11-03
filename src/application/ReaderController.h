@@ -18,6 +18,8 @@ namespace Lumina::Domain::Reader {
 class DocumentEngine;
 }
 
+class QPagedPaintDevice;
+
 namespace Lumina::Application {
 
 class ReaderController final : public QObject {
@@ -95,6 +97,8 @@ public:
     Q_INVOKABLE bool goToPage(int page);
     Q_INVOKABLE QString pageName(int page) const;
     Q_INVOKABLE bool exportText(const QString &path);
+    Q_INVOKABLE bool exportPdf(const QString &path);
+    Q_INVOKABLE bool printDocument();
     Q_INVOKABLE QString thumbnailSource(int page) const;
     Q_INVOKABLE bool rotatePage(int degrees = 90);
     Q_INVOKABLE bool updateProgress(double progress);
@@ -116,6 +120,7 @@ private:
     void applyCachedOcr();
     [[nodiscard]] QImage pageImage(int page) const;
     [[nodiscard]] QImage currentPageImage() const;
+    [[nodiscard]] bool renderDocument(QPagedPaintDevice &device) const;
     void processNextDocumentOcrPage();
     void rebuildSearchMatches();
     [[nodiscard]] bool selectSearchMatch(int index);

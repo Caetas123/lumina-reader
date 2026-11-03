@@ -50,6 +50,7 @@ The current application provides:
 - optional in-process CBR, CB7, CBT, RAR, and 7Z reading when libarchive is available at configure time;
 - optional in-process DJVU/DJV page rendering and hidden-text extraction when DjVuLibre is available at configure time;
 - optional asynchronous page and document OCR through Tesseract when it is installed on the system, with local progress and cancellation;
+- basic PDF export and system printing for the opened document, without modifying the original file;
 - in-document search for text pages and EPUB chapters;
 - a Contents panel for multi-page documents, with EPUB chapter labels when the source provides them;
 - scoped, local search history for the library, the open document, and the Knowledge center, with deduplication, retention, reopening, and clearing;
@@ -60,6 +61,7 @@ The current application provides:
 - optional system text-to-speech through Qt Speech;
 - Markdown, JSON, and plain-text knowledge export, library metadata export, database backup, and metadata restoration;
 - plain-text export of the currently opened document when selectable text or OCR text is available;
+- PDF export and system printing of the opened document when its reader engine is available;
 - SQLite migrations, safe read-only archive handling, Zip Slip checks, archive entry limits, and Qt Test coverage;
 - GitHub Actions validation for Linux, macOS, and Windows.
 
@@ -69,7 +71,7 @@ The exact capability set depends on the Qt modules present in the build. See [th
 
 - C++20 compiler;
 - CMake 3.24 or newer;
-- Qt 6.5 or newer with `Core`, `Gui`, `Network`, `Qml`, `Quick`, `QuickControls2`, `Sql`, and `Test`;
+- Qt 6.5 or newer with `Core`, `Gui`, `Network`, `Widgets`, `PrintSupport`, `Qml`, `Quick`, `QuickControls2`, `Sql`, and `Test`;
 - optional `Pdf`, `TextToSpeech`, and `CorePrivate` modules enable PDF rendering, system speech, and EPUB/CBZ/ZIP reading respectively;
 - optional libarchive headers and library enable CBR/CB7/CBT/RAR/7Z reading;
 - optional DjVuLibre headers and library enable DJVU/DJV reading;

@@ -2,7 +2,7 @@
 
 #include "infrastructure/logging/Logging.h"
 
-#include <QGuiApplication>
+#include <QApplication>
 #include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
     if (!qEnvironmentVariableIsSet("QT_QUICK_CONTROLS_STYLE")) {
         qputenv("QT_QUICK_CONTROLS_STYLE", QByteArrayLiteral("Basic"));
     }
-    QGuiApplication application(argc, argv);
+    QApplication application(argc, argv);
     QCoreApplication::setApplicationName(QStringLiteral("Lumina Reader"));
     QCoreApplication::setApplicationVersion(QStringLiteral(LUMINA_VERSION));
     QCoreApplication::setOrganizationName(QStringLiteral("Lumina Reader contributors"));

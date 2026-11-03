@@ -22,6 +22,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(Qt6 6.5 REQUIRED COMPONENTS
     Core
     Gui
+    Widgets
+    PrintSupport
     Network
     Qml
     Quick
@@ -95,6 +97,8 @@ target_link_libraries(lumina_core
     PUBLIC
         Qt6::Core
         Qt6::Gui
+        Qt6::Widgets
+        Qt6::PrintSupport
         Qt6::Network
         Qt6::Sql
 )
@@ -237,6 +241,7 @@ if(BUILD_TESTING)
     )
 
     add_test(NAME lumina_reader_tests COMMAND lumina_reader_tests)
+    set_tests_properties(lumina_reader_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
     qt_add_executable(lumina_archive_tests
         tests/unit/archive_test.cpp

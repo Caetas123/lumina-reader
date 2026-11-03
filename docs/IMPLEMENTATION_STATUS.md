@@ -18,6 +18,7 @@ This report describes the behavior implemented in the repository, not only the c
 - Optional system text-to-speech with start, pause, resume, stop, rate, volume, selected-passage reading, and continuous-document reading.
 - Themes, font size, line spacing, continuous reading, high contrast, keyboard navigation, accessible labels/tooltips, settings export/restore, library export/restore, knowledge export, and database backup.
 - Plain-text export of the opened document without changing the source file.
+- Basic PDF export and system printing of the opened document without changing the source file.
 - One cross-platform release version from `project-version.txt`, with tag checks shared by the Linux, Windows, and macOS packaging workflows.
 - Archive safety checks for normalized paths, symbolic links, entry count, entry sizes, total size, unsupported encryption, and malformed readers.
 
@@ -58,7 +59,7 @@ The graphical executable also stayed alive for more than ten seconds with `QT_QP
 ## Intentional limitations
 
 - EPUB is rendered as a safe native text view. CSS pagination, embedded fonts/media, links, and nested navigation levels are not reproduced; the Contents panel follows the EPUB spine and uses chapter labels when available.
-- PDF pages are rendered through Qt PDF when available. Extracted text is exposed in a selectable fallback view, but visual PDF coordinate overlays, true two-page layout, printing, and annotated-PDF export are not yet implemented.
+- PDF pages are rendered through Qt PDF when available. Extracted text is exposed in a selectable fallback view, and the opened document can be exported as a basic PDF or sent to the system printer; visual PDF coordinate overlays, true two-page layout, and annotated-PDF export are not yet implemented.
 - OCR now supports asynchronous page and document-wide passes. Coordinate mapping over the original image and word-level highlight overlays remain future work; manual region annotations are available as the safe fallback.
 - Dictionary and translation providers are explicit online integrations. No local dictionary database is bundled, and no external request occurs without a user action.
 - The current TTS integration follows Qt/system speech state but does not yet paint word-level progress over the reader text.
