@@ -328,6 +328,11 @@ Database::Database()
 
 Database::~Database()
 {
+    close();
+}
+
+void Database::close()
+{
     if (connection_.isValid()) {
         connection_.close();
         connection_ = {};
@@ -353,11 +358,7 @@ bool Database::open(const QString &databasePath, Domain::Error *error)
         return false;
     }
 
-    if (connection_.isValid()) {
-        connection_.close();
-        connection_ = {};
-        QSqlDatabase::removeDatabase(connectionName_);
-    }
+    close();
 
     connection_ = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), connectionName_);
     connection_.setDatabaseName(databasePath);

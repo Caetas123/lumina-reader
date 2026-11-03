@@ -27,6 +27,20 @@ AppController::AppController(QObject *parent)
     , speech_(std::make_unique<SpeechController>())
     , lookup_(std::make_unique<LookupController>())
 {
+    connect(backup_.get(),
+            &BackupController::databaseRestoreAboutToStart,
+            this,
+            [this] { reader_->closeDocument(); });
+    connect(backup_.get(),
+            &BackupController::databaseRestored,
+            this,
+            [this] {
+                library_->refresh();
+                settings_->reload();
+                lookup_->setDatabase(database_.get());
+                speech_->reload();
+                emit databaseStateChanged();
+            });
     initializeDatabase();
 }
 

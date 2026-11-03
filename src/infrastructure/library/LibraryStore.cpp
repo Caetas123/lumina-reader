@@ -1795,8 +1795,8 @@ bool LibraryStore::restoreHighlight(const QVariantMap &record)
     QSqlQuery query(connection);
     query.prepare(QStringLiteral(
         "INSERT OR REPLACE INTO highlights "
-        "(id, document_id, text, note, color, style, locator, page) "
-        "VALUES (:id, :document, :text, :note, :color, :style, :locator, :page)"));
+        "(id, document_id, text, note, color, style, locator, context_before, context_after, page) "
+        "VALUES (:id, :document, :text, :note, :color, :style, :locator, :before, :after, :page)"));
     query.bindValue(QStringLiteral(":id"), id);
     query.bindValue(QStringLiteral(":document"), record.value(QStringLiteral("documentId")));
     query.bindValue(QStringLiteral(":text"), record.value(QStringLiteral("text")));
@@ -1804,6 +1804,10 @@ bool LibraryStore::restoreHighlight(const QVariantMap &record)
     query.bindValue(QStringLiteral(":color"), record.value(QStringLiteral("color")));
     query.bindValue(QStringLiteral(":style"), record.value(QStringLiteral("style")));
     query.bindValue(QStringLiteral(":locator"), record.value(QStringLiteral("locator")));
+    query.bindValue(QStringLiteral(":before"),
+                    record.value(QStringLiteral("contextBefore")).toString());
+    query.bindValue(QStringLiteral(":after"),
+                    record.value(QStringLiteral("contextAfter")).toString());
     query.bindValue(QStringLiteral(":page"), record.value(QStringLiteral("page")));
     bool success = !id.isEmpty() && query.exec();
 
@@ -2122,6 +2126,30 @@ bool LibraryStore::addHighlight(const QString &documentId,
     const QString normalizedColor = color.isEmpty() ? QStringLiteral("#f6c945") : color;
     const QString normalizedNote = note.isNull() ? QStringLiteral("") : note;
     const int normalizedPage = std::max(page, 0);
+    QString contextBefore = QStringLiteral("");
+    QString contextAfter = QStringLiteral("");
+    const QStringList locatorParts = locator.split(QChar(':'), Qt::KeepEmptyParts);
+    if (locatorParts.size() >= 4 && locatorParts.first() == QStringLiteral("text")) {
+        bool pageOk = false;
+        bool startOk = false;
+        bool endOk = false;
+        const int locatorPage = locatorParts.at(locatorParts.size() - 3).toInt(&pageOk);
+        const int start = locatorParts.at(locatorParts.size() - 2).toInt(&startOk);
+        const int end = locatorParts.last().toInt(&endOk);
+        const QVariantMap details = documentDetails(documentId);
+        auto engine = createDocumentEngine(details.value(QStringLiteral("format")).toString());
+        Lumina::Domain::Error error;
+        if (pageOk && startOk && endOk && end > start && locatorPage == normalizedPage && engine != nullptr
+            && engine->open(details.value(QStringLiteral("filePath")).toString(), &error)) {
+            const QString pageText = engine->textPage(locatorPage, &error);
+            if (!error.hasError() && start >= 0 && end <= pageText.size()) {
+                const int contextSize = 160;
+                const int beforeStart = std::max(0, start - contextSize);
+                contextBefore = pageText.mid(beforeStart, start - beforeStart);
+                contextAfter = pageText.mid(end, contextSize);
+            }
+        }
+    }
     QSqlDatabase connection = database_->connection();
     if (!connection.transaction()) {
         return false;
@@ -2129,8 +2157,9 @@ bool LibraryStore::addHighlight(const QString &documentId,
 
     QSqlQuery query(connection);
     query.prepare(QStringLiteral(
-        "INSERT INTO highlights (id, document_id, text, note, color, style, locator, page) "
-        "VALUES (:id, :document, :text, :note, :color, :style, :locator, :page)"));
+        "INSERT INTO highlights "
+        "(id, document_id, text, note, color, style, locator, context_before, context_after, page) "
+        "VALUES (:id, :document, :text, :note, :color, :style, :locator, :before, :after, :page)"));
     query.bindValue(QStringLiteral(":id"), id);
     query.bindValue(QStringLiteral(":document"), documentId);
     query.bindValue(QStringLiteral(":text"), text);
@@ -2138,6 +2167,8 @@ bool LibraryStore::addHighlight(const QString &documentId,
     query.bindValue(QStringLiteral(":color"), normalizedColor);
     query.bindValue(QStringLiteral(":style"), normalizedStyle);
     query.bindValue(QStringLiteral(":locator"), locator);
+    query.bindValue(QStringLiteral(":before"), contextBefore);
+    query.bindValue(QStringLiteral(":after"), contextAfter);
     query.bindValue(QStringLiteral(":page"), normalizedPage);
     bool success = query.exec();
     if (success) {
@@ -2181,6 +2212,8 @@ bool LibraryStore::addHighlight(const QString &documentId,
             {QStringLiteral("color"), normalizedColor},
             {QStringLiteral("style"), normalizedStyle},
             {QStringLiteral("locator"), locator},
+            {QStringLiteral("contextBefore"), contextBefore},
+            {QStringLiteral("contextAfter"), contextAfter},
             {QStringLiteral("page"), normalizedPage},
         });
     return true;
@@ -2238,7 +2271,7 @@ bool LibraryStore::updateHighlight(const QString &highlightId,
         : color.trimmed();
     QSqlQuery snapshot(database_->connection());
     snapshot.prepare(QStringLiteral(
-        "SELECT id, document_id, text, note, color, style, locator, page "
+        "SELECT id, document_id, text, note, color, style, locator, context_before, context_after, page "
         "FROM highlights WHERE id = :id"));
     snapshot.bindValue(QStringLiteral(":id"), highlightId);
     if (!snapshot.exec() || !snapshot.next()) {
@@ -2252,7 +2285,9 @@ bool LibraryStore::updateHighlight(const QString &highlightId,
         {QStringLiteral("color"), snapshot.value(4)},
         {QStringLiteral("style"), snapshot.value(5)},
         {QStringLiteral("locator"), snapshot.value(6)},
-        {QStringLiteral("page"), snapshot.value(7)},
+        {QStringLiteral("contextBefore"), snapshot.value(7)},
+        {QStringLiteral("contextAfter"), snapshot.value(8)},
+        {QStringLiteral("page"), snapshot.value(9)},
     };
     QSqlDatabase connection = database_->connection();
     if (!connection.transaction()) {
@@ -2304,7 +2339,7 @@ bool LibraryStore::removeHighlight(const QString &highlightId)
     }
     QSqlQuery snapshot(database_->connection());
     snapshot.prepare(QStringLiteral(
-        "SELECT id, document_id, text, note, color, style, locator, page "
+        "SELECT id, document_id, text, note, color, style, locator, context_before, context_after, page "
         "FROM highlights WHERE id = :id"));
     snapshot.bindValue(QStringLiteral(":id"), highlightId);
     if (!snapshot.exec() || !snapshot.next()) {
@@ -2318,7 +2353,9 @@ bool LibraryStore::removeHighlight(const QString &highlightId)
         {QStringLiteral("color"), snapshot.value(4)},
         {QStringLiteral("style"), snapshot.value(5)},
         {QStringLiteral("locator"), snapshot.value(6)},
-        {QStringLiteral("page"), snapshot.value(7)},
+        {QStringLiteral("contextBefore"), snapshot.value(7)},
+        {QStringLiteral("contextAfter"), snapshot.value(8)},
+        {QStringLiteral("page"), snapshot.value(9)},
     };
     QSqlDatabase connection = database_->connection();
     if (!connection.transaction()) {

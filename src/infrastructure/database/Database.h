@@ -15,6 +15,7 @@ public:
     Database &operator=(const Database &) = delete;
 
     [[nodiscard]] bool open(const QString &databasePath, Domain::Error *error = nullptr);
+    void close();
     [[nodiscard]] bool migrate(Domain::Error *error = nullptr);
     [[nodiscard]] bool isOpen() const;
     [[nodiscard]] int schemaVersion() const;

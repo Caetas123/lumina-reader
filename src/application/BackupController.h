@@ -25,14 +25,18 @@ public:
     Q_INVOKABLE bool restoreLibrary(const QString &path);
     Q_INVOKABLE bool restoreSettings(const QString &path);
     Q_INVOKABLE bool backupDatabase(const QString &path);
+    Q_INVOKABLE bool restoreDatabase(const QString &path);
 
 signals:
     void stateChanged();
+    void databaseRestoreAboutToStart();
+    void databaseRestored();
 
 private:
     bool writeFile(const QString &path, const QByteArray &data);
     bool validatePath(const QString &path);
     bool validateSourcePath(const QString &path);
+    bool validateDatabaseFile(const QString &path, QString *errorMessage = nullptr) const;
     void fail(const QString &message);
 
     Lumina::Infrastructure::Database *database_ = nullptr;
