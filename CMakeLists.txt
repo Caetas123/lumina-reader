@@ -35,6 +35,8 @@ add_library(lumina_core STATIC
     src/application/AppController.h
     src/application/ReaderController.cpp
     src/application/ReaderController.h
+    src/application/SettingsController.cpp
+    src/application/SettingsController.h
     src/domain/core/Error.h
     src/infrastructure/database/Database.cpp
     src/infrastructure/database/Database.h
@@ -181,6 +183,18 @@ if(BUILD_TESTING)
     )
 
     add_test(NAME lumina_archive_tests COMMAND lumina_archive_tests)
+
+    qt_add_executable(lumina_settings_tests
+        tests/unit/settings_test.cpp
+    )
+
+    target_link_libraries(lumina_settings_tests
+        PRIVATE
+            lumina_core
+            Qt6::Test
+    )
+
+    add_test(NAME lumina_settings_tests COMMAND lumina_settings_tests)
 endif()
 
 include(GNUInstallDirs)

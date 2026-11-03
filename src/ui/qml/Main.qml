@@ -18,6 +18,20 @@ ApplicationWindow {
 
     property int currentView: 0
     property string notification: ""
+    property var themeKeys: ["light", "dark", "sepia", "paper", "gray", "high-contrast", "low-light"]
+
+    function applyTheme() {
+        Theme.mode = appController.settings.highContrast ? "high-contrast" : appController.settings.theme
+    }
+
+    Component.onCompleted: applyTheme()
+
+    Connections {
+        target: appController.settings
+        function onSettingsChanged() {
+            window.applyTheme()
+        }
+    }
 
     function localPath(url) {
         var path = decodeURIComponent(String(url).replace(/^file:\/\//, ""))
@@ -565,8 +579,9 @@ ApplicationWindow {
                                 color: Theme.readerText
                                 selectionColor: Theme.highlight
                                 selectedTextColor: Theme.textPrimary
-                                font.pixelSize: 18
+                                 font.pixelSize: appController.settings.fontSize
                                 font.family: Theme.readerFont
+                                 font.letterSpacing: (appController.settings.lineSpacing - 100) / 20
                                 padding: 30
 
                                 background: Rectangle {
@@ -674,8 +689,81 @@ ApplicationWindow {
                             }
                         }
                     }
+                    Rectangle {
+                        Layout.fillWidth: true
+                        implicitHeight: settingsColumn.implicitHeight + 40
+                        radius: 16
+                        color: Theme.surface
+                        border.color: Theme.border
+
+                        ColumnLayout {
+                            id: settingsColumn
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+                            anchors.margins: 20
+                            spacing: 14
+
+                            Label {
+                                text: qsTr("Reading comfort")
+                                color: Theme.textPrimary
+                                font.pixelSize: 16
+                                font.weight: Font.DemiBold
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Label { text: qsTr("Theme"); color: Theme.textPrimary; Layout.fillWidth: true }
+                                ComboBox {
+                                    Layout.preferredWidth: 190
+                                    model: [qsTr("Light"), qsTr("Dark"), qsTr("Sepia"), qsTr("Paper"), qsTr("Gray"), qsTr("High contrast"), qsTr("Low light")]
+                                    currentIndex: Math.max(0, window.themeKeys.indexOf(appController.settings.theme))
+                                    onActivated: appController.settings.theme = window.themeKeys[index]
+                                }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Label { text: qsTr("Font size"); color: Theme.textPrimary; Layout.fillWidth: true }
+                                Slider {
+                                    Layout.preferredWidth: 190
+                                    from: 12
+                                    to: 32
+                                    stepSize: 1
+                                    value: appController.settings.fontSize
+                                    onMoved: appController.settings.fontSize = Math.round(value)
+                                }
+                                Label { text: qsTr("%1 px").arg(appController.settings.fontSize); color: Theme.textSecondary; Layout.preferredWidth: 44 }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Label { text: qsTr("Line spacing"); color: Theme.textPrimary; Layout.fillWidth: true }
+                                Slider {
+                                    Layout.preferredWidth: 190
+                                    from: 100
+                                    to: 180
+                                    stepSize: 5
+                                    value: appController.settings.lineSpacing
+                                    onMoved: appController.settings.lineSpacing = Math.round(value)
+                                }
+                                Label { text: qsTr("%1%").arg(appController.settings.lineSpacing); color: Theme.textSecondary; Layout.preferredWidth: 44 }
+                            }
+
+                            CheckBox {
+                                text: qsTr("Use continuous reading when available")
+                                checked: appController.settings.continuousReading
+                                onToggled: appController.settings.continuousReading = checked
+                            }
+                            CheckBox {
+                                text: qsTr("High contrast controls")
+                                checked: appController.settings.highContrast
+                                onToggled: appController.settings.highContrast = checked
+                            }
+                        }
+                    }
                     Label {
-                        text: qsTr("Reading themes and accessibility controls are being connected to the same local preference system as the library.")
+                        text: qsTr("Your preferences are stored locally with your Lumina Reader library.")
                         color: Theme.textSecondary
                         wrapMode: Text.WordWrap
                         Layout.fillWidth: true
