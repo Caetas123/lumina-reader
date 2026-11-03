@@ -4,6 +4,7 @@
 
 #include <QProcess>
 #include <QSize>
+#include <QStringList>
 #include <QTemporaryFile>
 
 namespace Lumina::Infrastructure {
@@ -18,6 +19,8 @@ public:
     [[nodiscard]] QString name() const override;
     [[nodiscard]] bool isAvailable() const override;
     [[nodiscard]] bool busy() const;
+    [[nodiscard]] static QStringList argumentsFor(const QString &imagePath,
+                                                  const QString &language);
     [[nodiscard]] bool recognize(const QImage &image,
                                  const QString &language,
                                  Completion completion) override;

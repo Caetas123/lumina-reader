@@ -94,6 +94,18 @@ bool TesseractOcrProvider::busy() const
     return busy_;
 }
 
+QStringList TesseractOcrProvider::argumentsFor(const QString &imagePath,
+                                               const QString &language)
+{
+    return {imagePath,
+            QStringLiteral("stdout"),
+            QStringLiteral("-l"),
+            language,
+            QStringLiteral("--psm"),
+            QStringLiteral("3"),
+            QStringLiteral("tsv")};
+}
+
 bool TesseractOcrProvider::recognize(const QImage &image,
                                     const QString &language,
                                     Completion completion)
@@ -135,13 +147,7 @@ bool TesseractOcrProvider::recognize(const QImage &image,
     emit busyChanged();
 
     process_.setProgram(executable);
-    process_.setArguments({imageFile_.fileName(),
-                           QStringLiteral("stdout"),
-                           QStringLiteral("--language"),
-                           normalizedLanguage,
-                           QStringLiteral("--psm"),
-                           QStringLiteral("3"),
-                           QStringLiteral("tsv")});
+    process_.setArguments(argumentsFor(imageFile_.fileName(), normalizedLanguage));
     imageSize_ = image.size();
     process_.start();
     return true;

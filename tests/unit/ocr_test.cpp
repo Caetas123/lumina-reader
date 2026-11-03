@@ -13,6 +13,20 @@ private slots:
         QVERIFY(!provider.busy());
     }
 
+    void buildsTesseractCommandLine()
+    {
+        const QStringList arguments = Lumina::Infrastructure::TesseractOcrProvider::argumentsFor(
+            QStringLiteral("page.png"), QStringLiteral("por"));
+        QCOMPARE(arguments,
+                 QStringList({QStringLiteral("page.png"),
+                              QStringLiteral("stdout"),
+                              QStringLiteral("-l"),
+                              QStringLiteral("por"),
+                              QStringLiteral("--psm"),
+                              QStringLiteral("3"),
+                              QStringLiteral("tsv")}));
+    }
+
     void rejectsInvalidImageWithoutStarting()
     {
         Lumina::Infrastructure::TesseractOcrProvider provider;
