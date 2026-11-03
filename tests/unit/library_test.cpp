@@ -179,6 +179,9 @@ private slots:
         QVERIFY(store.updateProgress(documentId, 0.5, 2));
         QCOMPARE(store.documentDetails(documentId).value(QStringLiteral("status")).toString(),
                  QStringLiteral("reading"));
+        QVERIFY(store.addReadingTime(documentId, 125));
+        QCOMPARE(store.documentDetails(documentId).value(QStringLiteral("readingSeconds")).toLongLong(),
+                 125);
         store.setViewFilter(QStringLiteral("reading"));
         QCOMPARE(store.count(), 1);
         store.setViewFilter(QStringLiteral("all"));

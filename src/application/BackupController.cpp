@@ -210,7 +210,7 @@ bool BackupController::exportLibrary(const QString &path)
     if (!query.exec(QStringLiteral(
             "SELECT id, title, author, file_path, file_hash, file_size, format, content_type, "
             "status, progress, current_page, page_count, added_at, COALESCE(last_opened_at, ''), "
-            "description, language, is_favorite, rating, page_rotation "
+            "description, language, is_favorite, rating, page_rotation, reading_seconds "
             "FROM documents ORDER BY title COLLATE NOCASE"))) {
         fail(QStringLiteral("The library could not be read for export."));
         return false;
@@ -238,6 +238,7 @@ bool BackupController::exportLibrary(const QString &path)
             {QStringLiteral("isFavorite"), query.value(16).toInt() != 0},
             {QStringLiteral("rating"), query.value(17).toInt()},
             {QStringLiteral("pageRotation"), query.value(18).toInt()},
+            {QStringLiteral("readingSeconds"), query.value(19).toLongLong()},
         });
     }
 
@@ -356,6 +357,8 @@ bool BackupController::restoreLibrary(const QString &path)
                 || requestedRotation == 270
             ? requestedRotation
             : 0;
+        const qint64 readingSeconds = std::max<qint64>(
+            0, item.value(QStringLiteral("readingSeconds")).toVariant().toLongLong());
 
         QSqlQuery update(connection);
         update.prepare(QStringLiteral(
@@ -363,6 +366,7 @@ bool BackupController::restoreLibrary(const QString &path)
             "language = :language, status = :status, progress = :progress, current_page = :page, "
             "page_count = :page_count, last_opened_at = NULLIF(:last_opened, ''), "
             "is_favorite = :favorite, rating = :rating, page_rotation = :rotation, "
+            "reading_seconds = :reading_seconds, "
             "updated_at = CURRENT_TIMESTAMP WHERE id = :id"));
         update.bindValue(QStringLiteral(":title"), item.value(QStringLiteral("title")).toString());
         update.bindValue(QStringLiteral(":author"), item.value(QStringLiteral("author")).toString());
@@ -376,6 +380,7 @@ bool BackupController::restoreLibrary(const QString &path)
         update.bindValue(QStringLiteral(":favorite"), item.value(QStringLiteral("isFavorite")).toBool() ? 1 : 0);
         update.bindValue(QStringLiteral(":rating"), rating);
         update.bindValue(QStringLiteral(":rotation"), rotation);
+        update.bindValue(QStringLiteral(":reading_seconds"), readingSeconds);
         update.bindValue(QStringLiteral(":id"), find.value(0));
         if (!update.exec()) {
             connection.rollback();

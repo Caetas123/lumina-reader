@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Optional asynchronous Tesseract OCR for image/PDF/comic pages, with per-page persistence and Knowledge center indexing.
 - A format-independent `DocumentEngine` contract with adapters for text, images, archives, EPUB/CBZ/ZIP, and optional Qt PDF rendering.
 - Automatic and user-selected library covers, plus persisted page rotation for visual documents and backup restoration.
+- Accumulated local reading time is persisted per document alongside progress and reading history.
 - Optional libarchive-backed, read-only comic archive engines for CBR, CB7, CBT, RAR, and 7Z when the dependency is available at configure time.
 
 ### Changed

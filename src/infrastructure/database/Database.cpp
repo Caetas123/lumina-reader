@@ -268,6 +268,14 @@ QList<Migration> migrations()
                     "CHECK (page_rotation IN (0, 90, 180, 270))"),
             },
         },
+        {
+            8,
+            {
+                QStringLiteral(
+                    "ALTER TABLE documents ADD COLUMN reading_seconds INTEGER NOT NULL DEFAULT 0 "
+                    "CHECK (reading_seconds >= 0)"),
+            },
+        },
     };
 }
 

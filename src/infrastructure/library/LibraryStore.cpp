@@ -356,6 +356,7 @@ QHash<int, QByteArray> LibraryStore::roleNames() const
         {FavoriteRole, "isFavorite"},
         {RatingRole, "rating"},
         {PageRotationRole, "pageRotation"},
+        {ReadingSecondsRole, "readingSeconds"},
     };
 }
 
@@ -437,7 +438,7 @@ void LibraryStore::reload()
         "d.id, d.title, d.author, d.file_path, d.format, d.content_type, d.status, "
         "d.progress, d.current_page, d.page_count, d.cover_path, d.file_size, "
         "d.added_at, COALESCE(d.last_opened_at, ''), d.description, d.language, "
-        "d.is_favorite, d.rating, d.page_rotation");
+        "d.is_favorite, d.rating, d.page_rotation, d.reading_seconds");
     QStringList predicates;
     const QString filterPredicate = viewFilterPredicate(viewFilter_);
     if (!filterPredicate.isEmpty()) {
@@ -516,6 +517,7 @@ QVariantMap LibraryStore::recordFromQuery(const QSqlQuery &query) const
         {QStringLiteral("isFavorite"), query.value(16)},
         {QStringLiteral("rating"), query.value(17)},
         {QStringLiteral("pageRotation"), query.value(18)},
+        {QStringLiteral("readingSeconds"), query.value(19)},
     };
 }
 
@@ -988,6 +990,25 @@ bool LibraryStore::updateProgress(const QString &documentId, double progress, in
     return true;
 }
 
+bool LibraryStore::addReadingTime(const QString &documentId, qint64 seconds)
+{
+    if (!isReady() || documentId.trimmed().isEmpty() || seconds <= 0) {
+        return false;
+    }
+
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral(
+        "UPDATE documents SET reading_seconds = reading_seconds + :seconds, "
+        "updated_at = CURRENT_TIMESTAMP WHERE id = :id"));
+    query.bindValue(QStringLiteral(":seconds"), seconds);
+    query.bindValue(QStringLiteral(":id"), documentId);
+    if (!query.exec() || query.numRowsAffected() == 0) {
+        return false;
+    }
+    reload();
+    return true;
+}
+
 QVariantMap LibraryStore::documentDetails(const QString &documentId) const
 {
     if (!isReady()) {
@@ -997,7 +1018,7 @@ QVariantMap LibraryStore::documentDetails(const QString &documentId) const
     query.prepare(QStringLiteral(
         "SELECT id, title, author, file_path, format, content_type, status, progress, "
         "current_page, page_count, cover_path, file_size, added_at, COALESCE(last_opened_at, ''), "
-        "description, language, is_favorite, rating, page_rotation "
+        "description, language, is_favorite, rating, page_rotation, reading_seconds "
         "FROM documents WHERE id = :id"));
     query.bindValue(QStringLiteral(":id"), documentId);
     if (!query.exec() || !query.next()) {

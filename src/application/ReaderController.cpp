@@ -41,6 +41,9 @@ ReaderController::ReaderController(Lumina::Infrastructure::LibraryStore *library
 
 ReaderController::~ReaderController()
 {
+    if (open_) {
+        persistProgress();
+    }
     if (ocrProvider_ != nullptr && ocrProvider_->busy()) {
         ocrProvider_->cancel();
     }
@@ -211,6 +214,7 @@ void ReaderController::clearState()
     searchCurrent_ = -1;
     searchStart_ = -1;
     searchLength_ = 0;
+    readingTimer_.invalidate();
 }
 
 void ReaderController::fail(const QString &message)
@@ -378,6 +382,7 @@ bool ReaderController::openDocument(const QString &documentId)
     applyCachedOcr();
 
     open_ = true;
+    readingTimer_.start();
     errorMessage_.clear();
     library_->setPageCount(documentId_, pageCount_);
     persistProgress();
@@ -604,6 +609,21 @@ void ReaderController::persistProgress()
         ? 1.0
         : static_cast<double>(currentPage_) / static_cast<double>(pageCount_ - 1);
     library_->updateProgress(documentId_, progress, currentPage_);
+    persistReadingTime();
+}
+
+void ReaderController::persistReadingTime()
+{
+    if (library_ == nullptr || !open_ || !readingTimer_.isValid()) {
+        return;
+    }
+    const qint64 seconds = readingTimer_.elapsed() / 1000;
+    if (seconds <= 0) {
+        return;
+    }
+    if (library_->addReadingTime(documentId_, seconds)) {
+        readingTimer_.restart();
+    }
 }
 
 } // namespace Lumina::Application

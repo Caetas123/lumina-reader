@@ -38,6 +38,7 @@ public:
         FavoriteRole,
         RatingRole,
         PageRotationRole,
+        ReadingSecondsRole,
     };
     Q_ENUM(Role)
 
@@ -73,6 +74,7 @@ public:
     Q_INVOKABLE bool setCoverPath(const QString &documentId, const QString &coverPath);
     Q_INVOKABLE bool setPageRotation(const QString &documentId, int rotation);
     Q_INVOKABLE bool updateProgress(const QString &documentId, double progress, int currentPage);
+    bool addReadingTime(const QString &documentId, qint64 seconds);
     Q_INVOKABLE QVariantMap documentDetails(const QString &documentId) const;
     Q_INVOKABLE QVariantList collections() const;
     Q_INVOKABLE QVariantList collectionsForDocument(const QString &documentId) const;

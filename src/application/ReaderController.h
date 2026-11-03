@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QElapsedTimer>
 #include <QImage>
 #include <QList>
 #include <QString>
@@ -101,6 +102,7 @@ private:
     void rebuildSearchMatches();
     [[nodiscard]] bool selectSearchMatch(int index);
     void persistProgress();
+    void persistReadingTime();
 
     Lumina::Infrastructure::LibraryStore *library_ = nullptr;
     std::unique_ptr<Lumina::Domain::Reader::DocumentEngine> documentEngine_;
@@ -128,6 +130,7 @@ private:
     int searchCurrent_ = -1;
     int searchStart_ = -1;
     int searchLength_ = 0;
+    QElapsedTimer readingTimer_;
 
 };
 

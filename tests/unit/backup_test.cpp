@@ -39,6 +39,7 @@ private slots:
                                      QStringLiteral("Remember this")));
         QVERIFY(library.setFavorite(documentId, true));
         QVERIFY(library.setRating(documentId, 4));
+        QVERIFY(library.addReadingTime(documentId, 90));
         QVERIFY(library.updateMetadata(documentId,
                                        QStringLiteral("Original title"),
                                        QStringLiteral("Original author"),
@@ -85,6 +86,7 @@ private slots:
                  QStringLiteral("en"));
         QVERIFY(library.documentDetails(documentId).value(QStringLiteral("isFavorite")).toBool());
         QCOMPARE(library.documentDetails(documentId).value(QStringLiteral("rating")).toInt(), 4);
+        QCOMPARE(library.documentDetails(documentId).value(QStringLiteral("readingSeconds")).toLongLong(), 90);
 
         QFile markdown(markdownPath);
         QVERIFY(markdown.open(QIODevice::ReadOnly));

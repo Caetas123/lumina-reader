@@ -190,6 +190,18 @@ ApplicationWindow {
         }
     }
 
+    function readingTimeLabel(seconds) {
+        var totalMinutes = Math.floor(Math.max(0, Number(seconds) || 0) / 60)
+        if (totalMinutes < 60) {
+            return qsTr("%1 min read").arg(totalMinutes)
+        }
+        var hours = Math.floor(totalMinutes / 60)
+        var minutes = totalMinutes % 60
+        return minutes === 0
+            ? qsTr("%1 h read").arg(hours)
+            : qsTr("%1 h %2 min read").arg(hours).arg(minutes)
+    }
+
     Timer {
         id: notificationTimer
         interval: 3600
@@ -926,6 +938,13 @@ ApplicationWindow {
                                             color: Theme.textSecondary
                                             font.pixelSize: 12
                                         }
+                                        Label {
+                                            visible: Number(model.readingSeconds) > 0
+                                            Layout.fillWidth: true
+                                            text: window.readingTimeLabel(model.readingSeconds)
+                                            color: Theme.textSecondary
+                                            font.pixelSize: 11
+                                        }
                                         RowLayout {
                                             Layout.fillWidth: true
                                             spacing: 0
@@ -1060,6 +1079,13 @@ ApplicationWindow {
                                         font.pixelSize: 12
                                         Layout.preferredWidth: 72
                                     }
+                                        Label {
+                                            visible: Number(model.readingSeconds) > 0
+                                            text: window.readingTimeLabel(model.readingSeconds)
+                                            color: Theme.textSecondary
+                                            font.pixelSize: 11
+                                            Layout.preferredWidth: 112
+                                        }
 
                                     ToolButton {
                                         z: 2
