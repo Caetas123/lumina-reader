@@ -6,6 +6,7 @@ Lumina Reader follows a local-first privacy model.
 
 - PDFs remain on the user's device.
 - Reading progress, annotations, settings, and search indexes are local.
+- Search history is stored locally, separated by library, document, and Knowledge center scope, and can be cleared from the interface.
 - There is no telemetry in the foundation.
 - No online dictionary, translation, OCR, synchronization, or sharing provider is required for local reading.
 - Original PDFs are not modified by the application unless an explicit export flow is implemented and confirmed.
