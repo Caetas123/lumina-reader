@@ -2,7 +2,7 @@
 
 Audit date: 2026-11-03  
 Branch: `main`
-Release candidate: `0.2.3`
+Release: `0.2.3`
 
 This report describes the behavior implemented in the repository, not only the controls visible in QML. Optional capabilities are marked as conditional instead of being presented as universally available.
 
@@ -90,6 +90,9 @@ The detailed requirement matrix and evidence boundaries are in [AUDIT_CHECKLIST_
 
 ## Recent thematic commits
 
+- `00c18b3` — restore PDF search selection after page navigation.
+- `949036c` — record the PDF GUI validation evidence.
+- `2d4fc66` — bump the synchronized release version to 0.2.3.
 - `f5caac7` — restore saved visual region annotations over page coordinates.
 - `c114061` — normalize optional highlight notes and cover cross-format Knowledge search.
 - `c8ee5bd` — cover visual page sources and annotated PDF export paths.
@@ -113,4 +116,4 @@ The detailed requirement matrix and evidence boundaries are in [AUDIT_CHECKLIST_
 - `b33707f` — add library metadata filters and sorting.
 - `7e91a7f` — add optional DjVu engine.
 
-Release `v0.2.2` was published after the versioned commits were pushed and all tag-triggered GitHub Actions jobs completed successfully. The `0.2.3` candidate adds the verified PDF search restoration and is ready for the next same-version Windows/Linux/macOS package gate. Native Linux/macOS GUI rendering and optional libarchive/DjVu/Tesseract providers remain conditional where they were not available for direct local interaction.
+Release `v0.2.3` was published after the versioned commits were pushed and all tag-triggered GitHub Actions jobs completed successfully. The Windows, Linux, and macOS package run IDs and direct asset digests are recorded in [AUDIT_CHECKLIST_2026-11-03.md](AUDIT_CHECKLIST_2026-11-03.md). Native Linux/macOS GUI rendering and optional libarchive/DjVu/Tesseract providers remain conditional where they were not available for direct local interaction.
