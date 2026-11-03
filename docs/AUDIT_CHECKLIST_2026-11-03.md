@@ -1,8 +1,8 @@
 # Lumina Reader final audit checklist
 
-Audit date: 2026-11-03  
-Target release: `0.2.1`  
-Local platform: Windows x64  
+Audit date: 2026-11-03
+Target release: `0.2.1`
+Local platform: Windows x64
 Validation executable: `C:\Users\caeta\AppData\Local\Temp\lumina-reader-ui-build-20261103\lumina_reader.exe`
 
 This checklist is evidence-bounded. `PASS` means the behavior was exercised in the current Windows build or covered by a passing automated test. `CONDITIONAL` means the code path exists but depends on an optional module or external provider that was not available on this host. It is not reported as a local pass. `REMOTE` is reserved for GitHub Actions and release evidence.
