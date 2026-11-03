@@ -15,6 +15,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Replaceable `PdfEngine` abstraction.
 - Initial unit tests, cross-platform CI configuration, and open-source project documentation.
 
+## [0.1.5] - 2026-11-02
+
+### Added
+
+- Linux x86_64 AppImage published as a direct executable download.
+- Automated Linux packaging and GitHub Release publication when a version tag is pushed.
+
+### Fixed
+
+- Linux packaging now excludes only an optional Qt SQL driver that depends on an unavailable proprietary library; SQLite remains available to the application.
+- GitHub Actions now uses Qt-compatible Linux, Windows, and macOS runner/toolchain combinations.
+
+### Changed
+
+- The application and release metadata now use version `0.1.5`.
+
 ## [0.1.4] - 2026-11-02
 
 ### Changed
