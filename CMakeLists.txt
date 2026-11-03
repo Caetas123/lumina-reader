@@ -32,6 +32,8 @@ add_library(lumina_core STATIC
     src/domain/core/Error.h
     src/infrastructure/database/Database.cpp
     src/infrastructure/database/Database.h
+    src/infrastructure/library/LibraryStore.cpp
+    src/infrastructure/library/LibraryStore.h
     src/infrastructure/logging/Logging.cpp
     src/infrastructure/logging/Logging.h
     src/pdf/PdfEngine.h
@@ -124,6 +126,18 @@ if(BUILD_TESTING)
     )
 
     add_test(NAME lumina_database_tests COMMAND lumina_database_tests)
+
+    qt_add_executable(lumina_library_tests
+        tests/unit/library_test.cpp
+    )
+
+    target_link_libraries(lumina_library_tests
+        PRIVATE
+            lumina_core
+            Qt6::Test
+    )
+
+    add_test(NAME lumina_library_tests COMMAND lumina_library_tests)
 endif()
 
 include(GNUInstallDirs)

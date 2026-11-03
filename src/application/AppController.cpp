@@ -2,6 +2,7 @@
 
 #include "domain/core/Error.h"
 #include "infrastructure/database/Database.h"
+#include "infrastructure/library/LibraryStore.h"
 #include "infrastructure/logging/Logging.h"
 
 #include <QDir>
@@ -14,6 +15,7 @@ namespace Lumina::Application {
 AppController::AppController(QObject *parent)
     : QObject(parent)
     , database_(std::make_unique<Lumina::Infrastructure::Database>())
+    , library_(std::make_unique<Lumina::Infrastructure::LibraryStore>())
 {
     initializeDatabase();
 }
@@ -57,6 +59,7 @@ void AppController::initializeDatabase()
     }
 
     databaseReady_ = true;
+    library_->setDatabase(database_.get());
     qCInfo(luminaApp) << "Local database initialized";
     emit databaseStateChanged();
 }
@@ -79,6 +82,11 @@ bool AppController::databaseReady() const
 QString AppController::startupError() const
 {
     return startupError_;
+}
+
+Lumina::Infrastructure::LibraryStore *AppController::library() const
+{
+    return library_.get();
 }
 
 void AppController::retryInitialization()
