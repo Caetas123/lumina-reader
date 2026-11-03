@@ -70,6 +70,15 @@ public:
                                     const QString &language);
     Q_INVOKABLE bool updateProgress(const QString &documentId, double progress, int currentPage);
     Q_INVOKABLE QVariantMap documentDetails(const QString &documentId) const;
+    Q_INVOKABLE QVariantList collections() const;
+    Q_INVOKABLE QVariantList collectionsForDocument(const QString &documentId) const;
+    Q_INVOKABLE bool createCollection(const QString &name, const QString &description = {});
+    Q_INVOKABLE bool deleteCollection(const QString &collectionId);
+    Q_INVOKABLE bool addToCollection(const QString &documentId, const QString &collectionId);
+    Q_INVOKABLE bool removeFromCollection(const QString &documentId, const QString &collectionId);
+    Q_INVOKABLE QVariantList tags() const;
+    Q_INVOKABLE QStringList tagsForDocument(const QString &documentId) const;
+    Q_INVOKABLE bool setTags(const QString &documentId, const QStringList &tags);
     Q_INVOKABLE QVariantList knowledgeSearch(const QString &term) const;
     Q_INVOKABLE QVariantList highlightsForDocument(const QString &documentId) const;
     Q_INVOKABLE bool removeHighlight(const QString &highlightId);

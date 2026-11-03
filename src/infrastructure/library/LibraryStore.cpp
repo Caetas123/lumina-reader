@@ -843,6 +843,200 @@ QVariantMap LibraryStore::documentDetails(const QString &documentId) const
     return recordFromQuery(query);
 }
 
+QVariantList LibraryStore::collections() const
+{
+    QVariantList results;
+    if (!isReady()) {
+        return results;
+    }
+    QSqlQuery query(database_->connection());
+    if (!query.exec(QStringLiteral(
+            "SELECT id, name, description, created_at, updated_at FROM collections "
+            "ORDER BY name COLLATE NOCASE"))) {
+        return results;
+    }
+    while (query.next()) {
+        results.append(QVariantMap{
+            {QStringLiteral("id"), query.value(0)},
+            {QStringLiteral("name"), query.value(1)},
+            {QStringLiteral("description"), query.value(2)},
+            {QStringLiteral("createdAt"), query.value(3)},
+            {QStringLiteral("updatedAt"), query.value(4)},
+        });
+    }
+    return results;
+}
+
+QVariantList LibraryStore::collectionsForDocument(const QString &documentId) const
+{
+    QVariantList results;
+    if (!isReady() || documentId.trimmed().isEmpty()) {
+        return results;
+    }
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral(
+        "SELECT c.id, c.name, c.description FROM collections c "
+        "JOIN document_collections dc ON dc.collection_id = c.id "
+        "WHERE dc.document_id = :document ORDER BY c.name COLLATE NOCASE"));
+    query.bindValue(QStringLiteral(":document"), documentId);
+    if (!query.exec()) {
+        return results;
+    }
+    while (query.next()) {
+        results.append(QVariantMap{
+            {QStringLiteral("id"), query.value(0)},
+            {QStringLiteral("name"), query.value(1)},
+            {QStringLiteral("description"), query.value(2)},
+        });
+    }
+    return results;
+}
+
+bool LibraryStore::createCollection(const QString &name, const QString &description)
+{
+    if (!isReady() || name.trimmed().isEmpty()) {
+        return false;
+    }
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral(
+        "INSERT INTO collections (id, name, description) VALUES (:id, :name, :description)"));
+    query.bindValue(QStringLiteral(":id"), QUuid::createUuid().toString(QUuid::WithoutBraces));
+    query.bindValue(QStringLiteral(":name"), name.trimmed());
+    query.bindValue(QStringLiteral(":description"), description.trimmed());
+    return query.exec();
+}
+
+bool LibraryStore::deleteCollection(const QString &collectionId)
+{
+    if (!isReady() || collectionId.trimmed().isEmpty()) {
+        return false;
+    }
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral("DELETE FROM collections WHERE id = :id"));
+    query.bindValue(QStringLiteral(":id"), collectionId);
+    return query.exec() && query.numRowsAffected() > 0;
+}
+
+bool LibraryStore::addToCollection(const QString &documentId, const QString &collectionId)
+{
+    if (!isReady() || documentId.trimmed().isEmpty() || collectionId.trimmed().isEmpty()) {
+        return false;
+    }
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral(
+        "INSERT OR IGNORE INTO document_collections (document_id, collection_id) "
+        "VALUES (:document, :collection)"));
+    query.bindValue(QStringLiteral(":document"), documentId);
+    query.bindValue(QStringLiteral(":collection"), collectionId);
+    return query.exec();
+}
+
+bool LibraryStore::removeFromCollection(const QString &documentId, const QString &collectionId)
+{
+    if (!isReady() || documentId.trimmed().isEmpty() || collectionId.trimmed().isEmpty()) {
+        return false;
+    }
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral(
+        "DELETE FROM document_collections WHERE document_id = :document AND collection_id = :collection"));
+    query.bindValue(QStringLiteral(":document"), documentId);
+    query.bindValue(QStringLiteral(":collection"), collectionId);
+    return query.exec() && query.numRowsAffected() > 0;
+}
+
+QVariantList LibraryStore::tags() const
+{
+    QVariantList results;
+    if (!isReady()) {
+        return results;
+    }
+    QSqlQuery query(database_->connection());
+    if (!query.exec(QStringLiteral("SELECT id, name, created_at FROM tags ORDER BY name COLLATE NOCASE"))) {
+        return results;
+    }
+    while (query.next()) {
+        results.append(QVariantMap{
+            {QStringLiteral("id"), query.value(0)},
+            {QStringLiteral("name"), query.value(1)},
+            {QStringLiteral("createdAt"), query.value(2)},
+        });
+    }
+    return results;
+}
+
+QStringList LibraryStore::tagsForDocument(const QString &documentId) const
+{
+    QStringList results;
+    if (!isReady() || documentId.trimmed().isEmpty()) {
+        return results;
+    }
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral(
+        "SELECT t.name FROM tags t JOIN document_tags dt ON dt.tag_id = t.id "
+        "WHERE dt.document_id = :document ORDER BY t.name COLLATE NOCASE"));
+    query.bindValue(QStringLiteral(":document"), documentId);
+    if (!query.exec()) {
+        return results;
+    }
+    while (query.next()) {
+        results.append(query.value(0).toString());
+    }
+    return results;
+}
+
+bool LibraryStore::setTags(const QString &documentId, const QStringList &tags)
+{
+    if (!isReady() || documentId.trimmed().isEmpty() || documentDetails(documentId).isEmpty()) {
+        return false;
+    }
+    QSqlDatabase connection = database_->connection();
+    if (!connection.transaction()) {
+        return false;
+    }
+    QSqlQuery remove(connection);
+    remove.prepare(QStringLiteral("DELETE FROM document_tags WHERE document_id = :document"));
+    remove.bindValue(QStringLiteral(":document"), documentId);
+    bool success = remove.exec();
+    for (const QString &rawTag : tags) {
+        const QString tag = rawTag.trimmed();
+        if (!success || tag.isEmpty()) {
+            continue;
+        }
+        QSqlQuery insertTag(connection);
+        insertTag.prepare(QStringLiteral(
+            "INSERT OR IGNORE INTO tags (id, name) VALUES (:id, :name)"));
+        insertTag.bindValue(QStringLiteral(":id"), QUuid::createUuid().toString(QUuid::WithoutBraces));
+        insertTag.bindValue(QStringLiteral(":name"), tag);
+        success = insertTag.exec();
+        if (!success) {
+            break;
+        }
+
+        QSqlQuery findTag(connection);
+        findTag.prepare(QStringLiteral("SELECT id FROM tags WHERE name = :name"));
+        findTag.bindValue(QStringLiteral(":name"), tag);
+        success = findTag.exec() && findTag.next();
+        if (!success) {
+            break;
+        }
+
+        QSqlQuery link(connection);
+        link.prepare(QStringLiteral(
+            "INSERT OR IGNORE INTO document_tags (document_id, tag_id) VALUES (:document, :tag)"));
+        link.bindValue(QStringLiteral(":document"), documentId);
+        link.bindValue(QStringLiteral(":tag"), findTag.value(0));
+        success = link.exec();
+        if (!success) {
+            break;
+        }
+    }
+    if (!success || !connection.commit()) {
+        connection.rollback();
+        return false;
+    }
+    return true;
+}
+
 QVariantList LibraryStore::knowledgeSearch(const QString &term) const
 {
     QVariantList results;

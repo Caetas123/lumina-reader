@@ -54,6 +54,19 @@ private slots:
         QVERIFY(store.documentDetails(documentId).value(QStringLiteral("isFavorite")).toBool());
         QCOMPARE(store.documentDetails(documentId).value(QStringLiteral("rating")).toInt(), 5);
 
+        QVERIFY(store.createCollection(QStringLiteral("Study"), QStringLiteral("Reading list")));
+        const QVariantList collectionList = store.collections();
+        QCOMPARE(collectionList.size(), 1);
+        const QString collectionId = collectionList.first().toMap().value(QStringLiteral("id")).toString();
+        QVERIFY(store.addToCollection(documentId, collectionId));
+        QCOMPARE(store.collectionsForDocument(documentId).size(), 1);
+        QVERIFY(store.setTags(documentId, {QStringLiteral("study"), QStringLiteral("important")}));
+        QCOMPARE(store.tagsForDocument(documentId),
+                 QStringList({QStringLiteral("important"), QStringLiteral("study")}));
+        QVERIFY(store.removeFromCollection(documentId, collectionId));
+        QCOMPARE(store.collectionsForDocument(documentId).size(), 0);
+        QVERIFY(store.deleteCollection(collectionId));
+
         const QString secondPath = directory.filePath(QStringLiteral("second-note.txt"));
         QFile secondFile(secondPath);
         QVERIFY(secondFile.open(QIODevice::WriteOnly | QIODevice::Text));
