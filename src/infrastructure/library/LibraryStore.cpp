@@ -1671,12 +1671,12 @@ QVariantList LibraryStore::knowledgeSearch(const QString &term,
                                            const QString &order) const
 {
     QVariantList results;
-    if (!isReady() || term.trimmed().isEmpty()) {
+    if (!isReady()) {
         return results;
     }
 
     const QString match = ftsPrefixQuery(term);
-    if (match.isEmpty()) {
+    if (!term.trimmed().isEmpty() && match.isEmpty()) {
         return results;
     }
 
@@ -1690,8 +1690,11 @@ QVariantList LibraryStore::knowledgeSearch(const QString &term,
         "ks.page, ks.locator, ks.created_at, COALESCE(a.kind, '') "
         "FROM knowledge_items_search ks JOIN documents d ON d.id = ks.document_id "
         "LEFT JOIN highlights h ON h.id = ks.source_id AND ks.source_kind = 'highlight' "
-        "LEFT JOIN annotations a ON a.id = ks.source_id AND ks.source_kind = 'annotation' "
-        "WHERE knowledge_items_search MATCH :match");
+        "LEFT JOIN annotations a ON a.id = ks.source_id AND ks.source_kind = 'annotation' ");
+    QStringList conditions;
+    if (!match.isEmpty()) {
+        conditions.append(QStringLiteral("knowledge_items_search MATCH :match"));
+    }
     const QString normalizedFormat = format.trimmed().toLower();
     const QString normalizedColor = color.trimmed().toLower();
     const QString normalizedDocumentId = documentId.trimmed();
@@ -1699,33 +1702,40 @@ QVariantList LibraryStore::knowledgeSearch(const QString &term,
     const QString normalizedCreatedAfter = createdAfter.trimmed();
     const QString normalizedCreatedBefore = createdBefore.trimmed();
     if (!normalizedFormat.isEmpty()) {
-        statement += QStringLiteral(" AND d.format = :format");
+        conditions.append(QStringLiteral("d.format = :format"));
     }
     if (!normalizedColor.isEmpty()) {
-        statement += QStringLiteral(" AND COALESCE(h.color, '') = :color");
+        conditions.append(QStringLiteral("COALESCE(h.color, '') = :color"));
     }
     if (!normalizedDocumentId.isEmpty()) {
-        statement += QStringLiteral(" AND ks.document_id = :document");
+        conditions.append(QStringLiteral("ks.document_id = :document"));
     }
     if (!normalizedAuthor.isEmpty()) {
-        statement += QStringLiteral(" AND lower(COALESCE(d.author, '')) LIKE lower(:author)");
+        conditions.append(QStringLiteral("lower(COALESCE(d.author, '')) LIKE lower(:author)"));
     }
     if (!normalizedCreatedAfter.isEmpty()) {
-        statement += QStringLiteral(" AND ks.created_at >= :created_after");
+        conditions.append(QStringLiteral("ks.created_at >= :created_after"));
     }
     if (!normalizedCreatedBefore.isEmpty()) {
-        statement += QStringLiteral(" AND ks.created_at <= :created_before");
+        conditions.append(QStringLiteral("ks.created_at <= :created_before"));
+    }
+    if (!conditions.isEmpty()) {
+        statement += QStringLiteral(" WHERE ") + conditions.join(QStringLiteral(" AND "));
     }
     const QString normalizedOrder = order.trimmed().toLower();
     if (normalizedOrder == QStringLiteral("oldest")) {
         statement += QStringLiteral(" ORDER BY ks.created_at ASC");
     } else if (normalizedOrder == QStringLiteral("newest")) {
         statement += QStringLiteral(" ORDER BY ks.created_at DESC");
+    } else if (match.isEmpty()) {
+        statement += QStringLiteral(" ORDER BY ks.created_at DESC");
     } else {
         statement += QStringLiteral(" ORDER BY rank, ks.created_at DESC");
     }
     query.prepare(statement);
-    query.bindValue(QStringLiteral(":match"), match);
+    if (!match.isEmpty()) {
+        query.bindValue(QStringLiteral(":match"), match);
+    }
     if (!normalizedFormat.isEmpty()) {
         query.bindValue(QStringLiteral(":format"), normalizedFormat);
     }

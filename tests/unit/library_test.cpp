@@ -293,6 +293,7 @@ private slots:
                  QStringLiteral("highlight"));
         QCOMPARE(results.first().toMap().value(QStringLiteral("note")).toString(),
                  QStringLiteral("Updated concept"));
+        QCOMPARE(store.knowledgeSearch(QString()).size(), 1);
         QCOMPARE(store.knowledgeSearch(QStringLiteral("democ"),
                                        QStringLiteral("txt"),
                                        QStringLiteral("#7acb8a"))
