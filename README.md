@@ -8,7 +8,7 @@
 
 Lumina Reader is a native, local-first reading library for Windows, macOS, and Linux. It helps you import documents, keep your reading progress, save passages and notes, and find that knowledge again across your library. It is built with C++20, Qt 6, Qt Quick/QML, SQLite, and CMake.
 
-The project is privacy-focused: documents, reading data, OCR results, and search indexes stay on the device by default. The public release links below point to the synchronized `v0.2.4` release. Windows and Linux are the fully audited full-engine builds for this release; macOS remains a supported CI package with its platform-specific capability set.
+The project is privacy-focused: documents, reading data, OCR results, and search indexes stay on the device by default. The public release links below point to the synchronized `v0.2.5` release. Windows and Linux are the fully audited full-engine builds for this release; macOS remains a supported CI package with its platform-specific capability set.
 
 ## Download
 
@@ -16,15 +16,15 @@ Ready-to-run builds are published on [GitHub Releases](https://github.com/Caetas
 
 | Platform | Download | Notes |
 | --- | --- | --- |
-| Windows x64 | [Download installer EXE (`v0.2.4`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.4/LuminaReader-Setup-windows-x64.exe) | Recommended. Run the `.exe` to install the application and its Qt dependencies. |
-| macOS x86_64 | [Download DMG (`v0.2.4`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.4/LuminaReader-macos-x86_64.dmg) | Open the DMG and move Lumina Reader to Applications. The macOS workflow publishes the core Qt build; native macOS validation is tracked separately. |
-| Linux x86_64 | [Download AppImage (`v0.2.4`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.4/LuminaReader-linux-x86_64.AppImage) | Make it executable with `chmod +x`, then run it. No installation or Qt setup is required. |
-| Debian/Ubuntu x86_64 | [Download Debian package (`v0.2.4`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.4/LuminaReader-linux-x86_64.deb) | Install with your distribution's package manager. |
+| Windows x64 | [Download installer EXE (`v0.2.5`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.5/LuminaReader-Setup-windows-x64.exe) | Recommended. Run the `.exe` to install the application and its Qt dependencies. |
+| macOS x86_64 | [Download DMG (`v0.2.5`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.5/LuminaReader-macos-x86_64.dmg) | Open the DMG and move Lumina Reader to Applications. The macOS workflow publishes the core Qt build; native macOS validation is tracked separately. |
+| Linux x86_64 | [Download AppImage (`v0.2.5`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.5/LuminaReader-linux-x86_64.AppImage) | Make it executable with `chmod +x`, then run it. No installation or Qt setup is required. |
+| Debian/Ubuntu x86_64 | [Download Debian package (`v0.2.5`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.5/LuminaReader-linux-x86_64.deb) | Install with your distribution's package manager. |
 
 The Windows installer is a self-contained `.exe` that installs the Qt runtime, platform plugins, native document engines, and multilingual OCR runtime before launching Lumina Reader.
 The Linux AppImage is a self-contained executable for 64-bit Linux systems and includes the Qt runtime, native document engines, speech runtime, and multilingual OCR runtime required by Lumina Reader.
 
-See the [v0.2.4 release notes](https://github.com/Caetas123/lumina-reader/releases/tag/v0.2.4) for the packages and their SHA-256 checksums. New builds are added to Releases when a version tag is published.
+See the [v0.2.5 release notes](https://github.com/Caetas123/lumina-reader/releases/tag/v0.2.5) for the packages and their SHA-256 checksums. New builds are added to Releases when a version tag is published.
 
 ## Principles
 

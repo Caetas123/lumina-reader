@@ -2,7 +2,7 @@
 
 Audit date: 2026-11-04
 Branch: `main`
-Release under audit: `0.2.4`
+Release under audit: `0.2.5`
 
 This report describes the current repository and separates local evidence from
 platform evidence that must come from GitHub Actions. The final checklist uses

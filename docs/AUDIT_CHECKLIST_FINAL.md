@@ -1,4 +1,4 @@
-# Final audit checklist — Lumina Reader v0.2.4
+# Final audit checklist — Lumina Reader v0.2.5
 
 Audit date: 2026-11-04
 Repository: `https://github.com/Caetas123/lumina-reader`
@@ -28,27 +28,27 @@ image.
 
 | Requirement | Platform | Version | Test/action | Observed result and evidence | Related commit | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| One release version | Windows/Linux | 0.2.4 | Read `project-version.txt` and configure CMake | Both full builds reported project version `0.2.4`; tag/release verification is repeated after push | `c71785d` | PASS |
-| Full document-engine gate | Windows | 0.2.4 | Configure with `LUMINA_REQUIRE_FULL_ENGINES=ON` | Qt PDF, TextToSpeech, Multimedia, libarchive, DjVuLibre, libwebp, and libavif detected in the full build | `e4cbfb6`, `a082d49` | PASS |
-| Full document-engine gate | Linux | 0.2.4 | Configure with `LUMINA_REQUIRE_FULL_ENGINES=ON` in Ubuntu-24.04 WSL2 | Configuration succeeded with the same full-engine gate | `e4cbfb6`, `a082d49` | PASS |
-| Automated suite | Windows | 0.2.4 | CTest in the full build with Qt/vcpkg/DjVu runtime paths | 11/11 tests passed | `e4cbfb6`, `03c7455` | PASS |
-| Automated suite | Linux | 0.2.4 | CTest in the full build | 11/11 tests passed | `e4cbfb6`, `03c7455` | PASS |
-| Real WebP and AVIF decoding | Windows/Linux | 0.2.4 | Run `lumina_image_tests` with `audit.webp` and `audit.avif` | 1/1 test passed on each platform with real fixture paths; no skip | `e4cbfb6` | PASS |
-| Packaging script syntax | Linux | 0.2.4 | `bash -n packaging/linux/build-appimage.sh` | Syntax passed; OCR staging reached all language/config checks on Ubuntu | `a082d49` | PASS |
+| One release version | Windows/Linux | 0.2.5 | Read `project-version.txt` and configure CMake | Both full builds reported project version `0.2.5`; tag/release verification is repeated after push | `c71785d` | PASS |
+| Full document-engine gate | Windows | 0.2.5 | Configure with `LUMINA_REQUIRE_FULL_ENGINES=ON` | Qt PDF, TextToSpeech, Multimedia, libarchive, DjVuLibre, libwebp, and libavif detected in the full build | `e4cbfb6`, `a082d49` | PASS |
+| Full document-engine gate | Linux | 0.2.5 | Configure with `LUMINA_REQUIRE_FULL_ENGINES=ON` in Ubuntu-24.04 WSL2 | Configuration succeeded with the same full-engine gate | `e4cbfb6`, `a082d49` | PASS |
+| Automated suite | Windows | 0.2.5 | CTest in the full build with Qt/vcpkg/DjVu runtime paths | 11/11 tests passed | `e4cbfb6`, `03c7455` | PASS |
+| Automated suite | Linux | 0.2.5 | CTest in the full build | 11/11 tests passed | `e4cbfb6`, `03c7455` | PASS |
+| Real WebP and AVIF decoding | Windows/Linux | 0.2.5 | Run `lumina_image_tests` with `audit.webp` and `audit.avif` | 1/1 test passed on each platform with real fixture paths; no skip | `e4cbfb6` | PASS |
+| Packaging script syntax | Linux | 0.2.5 | `bash -n packaging/linux/build-appimage.sh` | Syntax passed; OCR staging reached all language/config checks on Ubuntu | `a082d49` | PASS |
 
 ## GUI and design
 
 | Requirement | Platform | Version | Test/action | Observed result and evidence | Related commit | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| Start the real packaged executable | Windows | 0.2.4 | Launch staged `lumina_reader.exe` and inspect native window | App stayed open with the dark navy/purple Lumina interface and project logo | `03c7455` | PASS |
-| Library, grid/list views, search, History | Windows | 0.2.4 | Drive controls through CUA and native GUI | Library contained 42 audit items; grid/list toggles, search field, History button, filters, and cards were visible and usable | `03c7455` | PASS |
-| Official visual language | Windows | 0.2.4 | Compare screenshots with the supplied reference | Navy background, raised blue cards, purple primary action, sidebar, logo, empty-state artwork, security card, rounded borders, and component states were present | `03c7455` | PASS |
-| History dialog | Windows | 0.2.4 | Open History from the library | Centered dark modal with icon header, empty state, explanatory copy, and styled Close button rendered in the final design | `03c7455` | PASS |
-| Settings sections and named profiles | Windows | 0.2.4 | Open Settings, create/switch/delete a profile | General, Reading, Appearance, Files & library, Privacy, and About use the same design system; `Study mode` persisted and was deleted through the GUI | `03c7455` | PASS |
-| Responsive compact layout | Windows | 0.2.4 | Resize and inspect compact, normal, and maximized windows | 980×620, 1100×700, and maximized states were checked; library, reader toolbar, Settings, and dialogs avoided horizontal clipping | `03c7455` | PASS |
-| Linux native executable render | Linux/WSLg | 0.2.4 | Launch rebuilt Linux binary and capture WSLg screen | Process remained alive and WSLg displayed the native Lumina interface; log is recorded above | `c531394` | PASS |
-| Detailed Linux click-by-click accessibility parity | Linux/WSLg | 0.2.4 | Attempt CUA control through the WSLg `msrdc` wrapper | The wrapper exposed only a panel and routed coordinates to the Windows window, so full Linux interaction evidence cannot be collected from this host | `c531394` | BLOCKED |
-| Native macOS GUI and DPI matrix | macOS | 0.2.4 | Native visual execution | No macOS device/VM is attached to this Windows audit host; macOS package remains a separate CI artifact | `a082d49` | BLOCKED |
+| Start the real packaged executable | Windows | 0.2.5 | Launch staged `lumina_reader.exe` and inspect native window | App stayed open with the dark navy/purple Lumina interface and project logo | `03c7455` | PASS |
+| Library, grid/list views, search, History | Windows | 0.2.5 | Drive controls through CUA and native GUI | Library contained 42 audit items; grid/list toggles, search field, History button, filters, and cards were visible and usable | `03c7455` | PASS |
+| Official visual language | Windows | 0.2.5 | Compare screenshots with the supplied reference | Navy background, raised blue cards, purple primary action, sidebar, logo, empty-state artwork, security card, rounded borders, and component states were present | `03c7455` | PASS |
+| History dialog | Windows | 0.2.5 | Open History from the library | Centered dark modal with icon header, empty state, explanatory copy, and styled Close button rendered in the final design | `03c7455` | PASS |
+| Settings sections and named profiles | Windows | 0.2.5 | Open Settings, create/switch/delete a profile | General, Reading, Appearance, Files & library, Privacy, and About use the same design system; `Study mode` persisted and was deleted through the GUI | `03c7455` | PASS |
+| Responsive compact layout | Windows | 0.2.5 | Resize and inspect compact, normal, and maximized windows | 980×620, 1100×700, and maximized states were checked; library, reader toolbar, Settings, and dialogs avoided horizontal clipping | `03c7455` | PASS |
+| Linux native executable render | Linux/WSLg | 0.2.5 | Launch rebuilt Linux binary and capture WSLg screen | Process remained alive and WSLg displayed the native Lumina interface; log is recorded above | `c531394` | PASS |
+| Detailed Linux click-by-click accessibility parity | Linux/WSLg | 0.2.5 | Attempt CUA control through the WSLg `msrdc` wrapper | The wrapper exposed only a panel and routed coordinates to the Windows window, so full Linux interaction evidence cannot be collected from this host | `c531394` | BLOCKED |
+| Native macOS GUI and DPI matrix | macOS | 0.2.5 | Native visual execution | No macOS device/VM is attached to this Windows audit host; macOS package remains a separate CI artifact | `a082d49` | BLOCKED |
 
 ## Complete format matrix
 
@@ -91,18 +91,18 @@ close/reopen persistence, and Knowledge/export coverage where applicable.
 
 | Requirement | Platform | Version | Test/action | Observed result and evidence | Related commit | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| Import, duplicate detection, metadata, covers, tags, collections, statuses | Windows | 0.2.4 | GUI library plus library/database tests | Fixture cards, metadata, progress/status, and duplicate-safe import path worked; source files remain untouched on removal | prior library commits | PASS |
-| Reading position and history persistence | Windows | 0.2.4 | Open, navigate, close/reopen through GUI | Current page, progress, reading time, and History state persisted | `00c18b3` | PASS |
-| Text highlights, comments, annotations, bookmarks | Windows | 0.2.4 | GUI text/PDF/image workflows and persistence tests | Saved items reopened and remained searchable; image/PDF coordinates were persisted | `f5caac7` | PASS |
-| OCR page flow | Windows | 0.2.4 | Real Tesseract through packaged GUI | Status was `Text recognized and saved to the Knowledge center`; text area displayed recognized text | `a082d49` | PASS |
-| OCR database/FTS/word coordinates | Windows | 0.2.4 | Read-only SQLite verification after GUI OCR | `integrity ok`; one completed OCR page, one FTS row, and 22 OCR word rows were present | `a082d49` | PASS |
-| OCR language/runtime packaging | Windows/Linux | 0.2.4 | Stage checks for `eng`, `por`, `spa`, `jpn`, `kor`, `chi_sim`, `chi_tra`, `osd`, and `configs/tsv` | All required files were staged; Tesseract was executed in the Windows GUI path | `a082d49` | PASS |
-| Knowledge center search/export/navigation | Windows | 0.2.4 | Search saved OCR/highlight content; export Markdown/JSON/TXT/PDF | Saved content was found across formats and exported to the evidence directory | `c531394` | PASS |
-| Google, dictionary, and translation actions | Windows | 0.2.4 | Use public test text and explicit GUI actions | Google opened in the browser; dictionary/translation history and local reuse paths were exercised without uploading documents | `b1a192d` | PASS |
-| Text-to-speech controls | Windows | 0.2.4 | Reader `Read aloud` controls, pause/resume/stop state | Qt Speech controls and backend-dependent word-progress path were exercised; audio backend evidence is host-dependent | `ce81667` | PASS |
-| Backup, restore, settings/library/Knowledge export | Windows | 0.2.4 | GUI exports and database backup/restore tests | SQLite backup passed integrity check; PDF, text, JSON, and settings artifacts exist in the evidence directory | `cb6511e` | PASS |
-| Archive/HTML safety | Windows/Linux | 0.2.4 | Unit tests plus corrupt/protected/path-limit fixtures | Zip Slip/path traversal, malformed archive, size/count limits, encryption, and unsafe HTML/script paths were rejected or sanitized | `a082d49` | PASS |
-| Windows installer without command line | Windows | 0.2.4 | Graphical installer workflow and staged executable | Installer flow includes language detection, folder selection, Start menu/desktop shortcut choices, progress, uninstall metadata, and launch action; final release asset is verified after CI | `6fed524`, `a082d49` | PASS |
+| Import, duplicate detection, metadata, covers, tags, collections, statuses | Windows | 0.2.5 | GUI library plus library/database tests | Fixture cards, metadata, progress/status, and duplicate-safe import path worked; source files remain untouched on removal | prior library commits | PASS |
+| Reading position and history persistence | Windows | 0.2.5 | Open, navigate, close/reopen through GUI | Current page, progress, reading time, and History state persisted | `00c18b3` | PASS |
+| Text highlights, comments, annotations, bookmarks | Windows | 0.2.5 | GUI text/PDF/image workflows and persistence tests | Saved items reopened and remained searchable; image/PDF coordinates were persisted | `f5caac7` | PASS |
+| OCR page flow | Windows | 0.2.5 | Real Tesseract through packaged GUI | Status was `Text recognized and saved to the Knowledge center`; text area displayed recognized text | `a082d49` | PASS |
+| OCR database/FTS/word coordinates | Windows | 0.2.5 | Read-only SQLite verification after GUI OCR | `integrity ok`; one completed OCR page, one FTS row, and 22 OCR word rows were present | `a082d49` | PASS |
+| OCR language/runtime packaging | Windows/Linux | 0.2.5 | Stage checks for `eng`, `por`, `spa`, `jpn`, `kor`, `chi_sim`, `chi_tra`, `osd`, and `configs/tsv` | All required files were staged; Tesseract was executed in the Windows GUI path | `a082d49` | PASS |
+| Knowledge center search/export/navigation | Windows | 0.2.5 | Search saved OCR/highlight content; export Markdown/JSON/TXT/PDF | Saved content was found across formats and exported to the evidence directory | `c531394` | PASS |
+| Google, dictionary, and translation actions | Windows | 0.2.5 | Use public test text and explicit GUI actions | Google opened in the browser; dictionary/translation history and local reuse paths were exercised without uploading documents | `b1a192d` | PASS |
+| Text-to-speech controls | Windows | 0.2.5 | Reader `Read aloud` controls, pause/resume/stop state | Qt Speech controls and backend-dependent word-progress path were exercised; audio backend evidence is host-dependent | `ce81667` | PASS |
+| Backup, restore, settings/library/Knowledge export | Windows | 0.2.5 | GUI exports and database backup/restore tests | SQLite backup passed integrity check; PDF, text, JSON, and settings artifacts exist in the evidence directory | `cb6511e` | PASS |
+| Archive/HTML safety | Windows/Linux | 0.2.5 | Unit tests plus corrupt/protected/path-limit fixtures | Zip Slip/path traversal, malformed archive, size/count limits, encryption, and unsafe HTML/script paths were rejected or sanitized | `a082d49` | PASS |
+| Windows installer without command line | Windows | 0.2.5 | Graphical installer workflow and staged executable | Installer flow includes language detection, folder selection, Start menu/desktop shortcut choices, progress, uninstall metadata, and launch action; final release asset is verified after CI | `6fed524`, `a082d49` | PASS |
 
 ## Remote CI and release gate
 
@@ -112,11 +112,11 @@ closed.
 
 | Requirement | Platform | Version | Test/action | Observed result and evidence | Related commit | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| GitHub CI build/test | Windows/Linux/macOS | 0.2.4 | Run the `ci.yml` workflow at the release commit | Exact run IDs and job results to be recorded after push | CI series | BLOCKED |
-| Windows release asset | Windows x64 | 0.2.4 | Tag workflow publishes direct installer EXE | Exact asset URL, size, and SHA-256 to be recorded after push | release series | BLOCKED |
-| Linux release assets | Linux x86_64 | 0.2.4 | Tag workflow publishes AppImage and `.deb` | Exact asset URLs, sizes, and SHA-256 to be recorded after push | release series | BLOCKED |
-| Same Windows/Linux tag and README links | Windows/Linux | 0.2.4 | Inspect GitHub Release and direct README URLs | Exact tag and downloadable assets to be recorded after push | docs/release series | BLOCKED |
-| No Windows ZIP end-user asset | Windows | 0.2.4 | Inspect release assets | ZIP is an internal installer input only; final release list must confirm absence | release series | BLOCKED |
+| GitHub CI build/test | Windows/Linux/macOS | 0.2.5 | Run the `ci.yml` workflow at the release commit | Exact run IDs and job results to be recorded after push | CI series | BLOCKED |
+| Windows release asset | Windows x64 | 0.2.5 | Tag workflow publishes direct installer EXE | Exact asset URL, size, and SHA-256 to be recorded after push | release series | BLOCKED |
+| Linux release assets | Linux x86_64 | 0.2.5 | Tag workflow publishes AppImage and `.deb` | Exact asset URLs, sizes, and SHA-256 to be recorded after push | release series | BLOCKED |
+| Same Windows/Linux tag and README links | Windows/Linux | 0.2.5 | Inspect GitHub Release and direct README URLs | Exact tag and downloadable assets to be recorded after push | docs/release series | BLOCKED |
+| No Windows ZIP end-user asset | Windows | 0.2.5 | Inspect release assets | ZIP is an internal installer input only; final release list must confirm absence | release series | BLOCKED |
 
 The final four rows are not allowed to remain `BLOCKED` after publication. The
 release will be considered closed only when the remote evidence is appended and

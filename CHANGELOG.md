@@ -4,7 +4,7 @@ All notable changes to Lumina Reader will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows Semantic Versioning where a public release version exists.
 
-## [0.2.4] - 2026-11-04
+## [0.2.5] - 2026-11-04
 
 This release completes the full-engine packaging work for Windows and Linux and adds persisted reading profiles. The release assets are built from the same tag and include the OCR runtime required by the image-reading workflow.
 
@@ -20,7 +20,8 @@ This release completes the full-engine packaging work for Windows and Linux and 
 - Linux AppImage staging now carries the non-glibc Tesseract runtime libraries instead of assuming that the user's system has them.
 - Linux OCR packaging now locates both modern and Ubuntu-style Tesseract tessdata directories and validates `configs/tsv` before deployment.
 - Windows release tests now put the vcpkg and DjVu runtime DLL directories on `PATH` before CTest.
-- Release documentation and direct download links now point to the synchronized `v0.2.4` artifacts.
+- Release packaging accepts the current libavif allocation API and uses the correct `libjpeg-turbo` vcpkg port on Windows runners.
+- Release documentation and direct download links now point to the synchronized `v0.2.5` artifacts.
 
 ### Verified
 
