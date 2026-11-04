@@ -85,7 +85,8 @@ QImage loadAvif(const QByteArray &bytes)
         avifRGBImageSetDefaults(&rgb, decoder->image);
         rgb.format = AVIF_RGB_FORMAT_RGBA;
         rgb.depth = 8;
-        if (avifRGBImageAllocatePixels(&rgb) == AVIF_RESULT_OK
+        (void)avifRGBImageAllocatePixels(&rgb);
+        if (rgb.pixels != nullptr
             && avifImageYUVToRGB(decoder->image, &rgb) == AVIF_RESULT_OK) {
             image = QImage(static_cast<int>(rgb.width), static_cast<int>(rgb.height),
                            QImage::Format_RGBA8888);

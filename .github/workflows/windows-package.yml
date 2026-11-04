@@ -50,7 +50,7 @@ jobs:
             libarchive:x64-windows `
             libwebp:x64-windows `
             libavif:x64-windows `
-            jpeg-turbo:x64-windows `
+            libjpeg-turbo:x64-windows `
             --clean-after-build
           if ($LASTEXITCODE -ne 0) { throw "vcpkg failed with exit code $LASTEXITCODE." }
           "VCPKG_ROOT=$vcpkgRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
