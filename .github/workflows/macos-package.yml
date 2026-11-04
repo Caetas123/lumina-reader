@@ -25,7 +25,7 @@ jobs:
           host: mac
           target: desktop
           arch: clang_64
-          modules: qtshadertools qtpdf qtspeech
+          modules: qtshadertools qtpdf qtspeech qtmultimedia
           install-deps: true
           cache: true
           set-env: true

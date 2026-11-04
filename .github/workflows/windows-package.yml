@@ -25,7 +25,7 @@ jobs:
           host: windows
           target: desktop
           arch: win64_msvc2022_64
-          modules: qtshadertools qtpdf qtspeech
+          modules: qtshadertools qtpdf qtspeech qtmultimedia
           install-deps: true
           cache: true
           set-env: true
@@ -40,9 +40,55 @@ jobs:
         with:
           arch: x64
 
+      - name: Install native document codecs
+        shell: pwsh
+        run: |
+          $vcpkgRoot = Join-Path $env:RUNNER_TEMP "lumina-vcpkg"
+          git clone --depth 1 https://github.com/microsoft/vcpkg.git $vcpkgRoot
+          & (Join-Path $vcpkgRoot "bootstrap-vcpkg.bat") -disableMetrics
+          & (Join-Path $vcpkgRoot "vcpkg.exe") install `
+            libarchive:x64-windows `
+            libwebp:x64-windows `
+            libavif:x64-windows `
+            jpeg-turbo:x64-windows `
+            --clean-after-build
+          if ($LASTEXITCODE -ne 0) { throw "vcpkg failed with exit code $LASTEXITCODE." }
+          "VCPKG_ROOT=$vcpkgRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Build DjVuLibre engine
+        shell: pwsh
+        run: |
+          $cmakePath = (Get-Command cmake.exe -ErrorAction Stop).Source
+          $ninjaPath = (Get-Command ninja.exe -ErrorAction Stop).Source
+          .\tools\build-djvulibre-windows.ps1 `
+            -VcpkgRoot $env:VCPKG_ROOT `
+            -OutputDirectory "$PWD\dist\windows\djvu" `
+            -CMakePath $cmakePath `
+            -NinjaPath $ninjaPath
+
       - name: Configure
         shell: pwsh
-        run: cmake -S . -B build/release -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR"
+        run: |
+          $nativeRoot = Join-Path $env:VCPKG_ROOT "installed\x64-windows"
+          $arguments = @(
+            "-S", ".",
+            "-B", "build/release",
+            "-G", "Ninja",
+            "-DCMAKE_BUILD_TYPE=Release",
+            "-DCMAKE_PREFIX_PATH=$env:QT_ROOT_DIR",
+            "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake",
+            "-DVCPKG_TARGET_TRIPLET=x64-windows",
+            "-DLUMINA_REQUIRE_FULL_ENGINES=ON",
+            "-DLUMINA_LIBARCHIVE_INCLUDE_DIR=$nativeRoot/include",
+            "-DLUMINA_LIBARCHIVE_LIBRARY=$nativeRoot/lib/archive.lib",
+            "-DLUMINA_WEBP_INCLUDE_DIR=$nativeRoot/include",
+            "-DLUMINA_WEBP_LIBRARY=$nativeRoot/lib/libwebpdecoder.lib",
+            "-DLUMINA_AVIF_INCLUDE_DIR=$nativeRoot/include",
+            "-DLUMINA_AVIF_LIBRARY=$nativeRoot/lib/avif.lib",
+            "-DLUMINA_DJVU_INCLUDE_DIR=$PWD/dist/windows/djvu/include/libdjvu",
+            "-DLUMINA_DJVU_LIBRARY=$PWD/dist/windows/djvu/lib/djvulibre.lib"
+          )
+          cmake @arguments
 
       - name: Verify release version
         if: startsWith(github.ref, 'refs/tags/')
@@ -55,7 +101,10 @@ jobs:
 
       - name: Test
         shell: pwsh
-        run: ctest --test-dir build/release --output-on-failure
+        run: |
+          $nativeRoot = Join-Path $env:VCPKG_ROOT "installed\x64-windows"
+          $env:PATH = "$nativeRoot\bin;$PWD\dist\windows\djvu\bin;$env:PATH"
+          ctest --test-dir build/release --output-on-failure
 
       - name: Stage application
         shell: pwsh
@@ -64,6 +113,15 @@ jobs:
           New-Item -ItemType Directory -Path $staging -Force | Out-Null
           Copy-Item "build/release/lumina_reader.exe" $staging
           windeployqt --release --no-translations --compiler-runtime --qmldir src/ui/qml (Join-Path $staging "lumina_reader.exe")
+
+          $nativeRoot = Join-Path $env:VCPKG_ROOT "installed\x64-windows"
+          Copy-Item -Path (Join-Path $nativeRoot "bin\*.dll") -Destination $staging -Force
+          Copy-Item -Path "$PWD\dist\windows\djvu\bin\*.dll" -Destination $staging -Force
+
+          $sevenZip = (Get-Command 7z.exe -ErrorAction Stop).Source
+          .\tools\stage-tesseract-windows.ps1 `
+            -Destination (Join-Path $staging "ocr") `
+            -SevenZipPath $sevenZip
 
       - name: Create installer package input
         shell: pwsh

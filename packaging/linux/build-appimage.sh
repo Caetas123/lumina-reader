@@ -22,6 +22,74 @@ install -Dm644 packaging/linux/lumina-reader.desktop \
 sed -i "s/@VERSION@/${version}/g" \
     "${app_directory}/usr/share/applications/lumina-reader.desktop"
 
+# Keep OCR self-contained in the AppImage and the Debian package.  The
+# application first looks next to itself at usr/bin/ocr/tesseract, so the
+# release does not depend on a user's PATH or on a system-specific tessdata
+# directory.
+if command -v tesseract >/dev/null 2>&1; then
+    tessdata_directory="$(tesseract --print-tessdata-dir 2>/dev/null || true)"
+    if [[ ! -d "${tessdata_directory}" ]]; then
+        for candidate in \
+            "${TESSDATA_PREFIX:-}" \
+            "/usr/share/tesseract-ocr/5/tessdata" \
+            "/usr/share/tesseract-ocr/4.00/tessdata" \
+            "/usr/share/tessdata"; do
+            if [[ -n "${candidate}" && -d "${candidate}" ]]; then
+                tessdata_directory="${candidate}"
+                break
+            fi
+        done
+    fi
+    if [[ -z "${tessdata_directory}" || ! -d "${tessdata_directory}" ]]; then
+        echo "Could not locate a usable Tesseract tessdata directory" >&2
+        exit 1
+    fi
+    install -Dm755 "$(command -v tesseract)" \
+        "${app_directory}/usr/bin/ocr/tesseract"
+    for language in eng por spa jpn kor chi_sim chi_tra osd; do
+        if [[ ! -f "${tessdata_directory}/${language}.traineddata" ]]; then
+            echo "Missing Tesseract language data: ${language}" >&2
+            exit 1
+        fi
+        install -Dm644 "${tessdata_directory}/${language}.traineddata" \
+            "${app_directory}/usr/bin/ocr/tessdata/${language}.traineddata"
+    done
+    if [[ ! -f "${tessdata_directory}/configs/tsv" ]]; then
+        echo "Missing Tesseract TSV configuration: ${tessdata_directory}/configs/tsv" >&2
+        exit 1
+    fi
+    cp -a "${tessdata_directory}/configs" \
+        "${app_directory}/usr/bin/ocr/tessdata/"
+
+    # linuxdeployqt follows the main Qt executable.  Tesseract is a child
+    # process, so explicitly copy its non-glibc runtime dependencies too.
+    declare -A copied_ocr_libraries=()
+    copy_ocr_dependencies() {
+        local binary="$1"
+        while read -r dependency; do
+            [[ -z "${dependency}" || "${dependency}" == "linux-vdso*" ]] && continue
+            local library_path="${dependency#*=> }"
+            library_path="${library_path%% (*}"
+            [[ "${library_path}" != /* || ! -f "${library_path}" ]] && continue
+            local library_name
+            library_name="$(basename "${library_path}")"
+            case "${library_name}" in
+                libc.so*|libm.so*|libpthread.so*|libdl.so*|librt.so*|libutil.so*|libresolv.so*|ld-linux*.so*)
+                    continue
+                    ;;
+            esac
+            [[ -n "${copied_ocr_libraries[${library_path}]:-}" ]] && continue
+            copied_ocr_libraries["${library_path}"]=1
+            install -Dm755 "${library_path}" "${app_directory}/usr/lib/${library_name}"
+            copy_ocr_dependencies "${library_path}"
+        done < <(ldd "${binary}" 2>/dev/null || true)
+    }
+    copy_ocr_dependencies "${app_directory}/usr/bin/ocr/tesseract"
+else
+    echo "Tesseract is required for the full Linux package" >&2
+    exit 1
+fi
+
 curl --fail --location --retry 3 --silent --show-error \
     --output "${linuxdeployqt_path}" \
     "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
@@ -43,11 +111,19 @@ if [[ -f "${optional_mimer_plugin}" ]]; then
     mv "${optional_mimer_plugin}" "${optional_mimer_backup}"
 fi
 
+linuxdeployqt_extra_args=()
+if [[ "${LUMINA_ALLOW_NEW_GLIBC:-0}" == "1" ]]; then
+    # linuxdeployqt protects the portable default by rejecting hosts newer
+    # than Ubuntu 22.04. This opt-in is only for local validation on newer
+    # distributions; CI still runs the default portable path on Ubuntu 22.04.
+    linuxdeployqt_extra_args+=(-unsupported-allow-new-glibc)
+fi
 "${linuxdeployqt_path}" --appimage-extract-and-run \
     "${app_directory}/usr/share/applications/lumina-reader.desktop" \
     -appimage \
     -no-translations \
-    -qmldir="${project_directory}/src/ui/qml"
+    -qmldir="${project_directory}/src/ui/qml" \
+    "${linuxdeployqt_extra_args[@]}"
 
 generated_appimage="$(find "${project_directory}" -maxdepth 1 -type f -name '*.AppImage' \
     ! -name 'linuxdeployqt.AppImage' -print -quit)"

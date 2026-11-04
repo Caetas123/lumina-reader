@@ -42,7 +42,7 @@ jobs:
           host: ${{ matrix.qt-host }}
           target: desktop
           arch: ${{ matrix.qt-arch }}
-          modules: qtshadertools qtpdf qtspeech
+          modules: qtshadertools qtpdf qtspeech qtmultimedia
           install-deps: true
           cache: true
           set-env: true
@@ -52,6 +52,13 @@ jobs:
         run: |
           cmake --version
           qtpaths --version
+
+      - name: Install Linux multimedia runtime dependencies
+        if: matrix.name == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpulse-dev libpipewire-0.3-0 libspeechd2 speech-dispatcher
 
       - name: Set up MSVC
         if: matrix.name == 'Windows'

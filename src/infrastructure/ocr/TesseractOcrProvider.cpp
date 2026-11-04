@@ -1,6 +1,9 @@
 #include "infrastructure/ocr/TesseractOcrProvider.h"
 
+#include <QCoreApplication>
 #include <QFileInfo>
+#include <QDir>
+#include <QProcessEnvironment>
 #include <QRegularExpression>
 #include <QStandardPaths>
 
@@ -81,6 +84,17 @@ QString TesseractOcrProvider::executablePath() const
     if (!configuredPath.isEmpty() && QFileInfo::exists(configuredPath)) {
         return configuredPath;
     }
+    const QString bundledPath = QDir(QCoreApplication::applicationDirPath())
+        .filePath(QStringLiteral("ocr/tesseract%1").arg(
+#ifdef Q_OS_WIN
+            QStringLiteral(".exe")
+#else
+            QString()
+#endif
+        ));
+    if (QFileInfo::exists(bundledPath)) {
+        return bundledPath;
+    }
     return QStandardPaths::findExecutable(QStringLiteral("tesseract"));
 }
 
@@ -148,6 +162,13 @@ bool TesseractOcrProvider::recognize(const QImage &image,
 
     process_.setProgram(executable);
     process_.setArguments(argumentsFor(imageFile_.fileName(), normalizedLanguage));
+    QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
+    const QFileInfo executableInfo(executable);
+    const QString bundledTessdata = executableInfo.dir().filePath(QStringLiteral("tessdata"));
+    if (QFileInfo(bundledTessdata).isDir()) {
+        environment.insert(QStringLiteral("TESSDATA_PREFIX"), bundledTessdata);
+    }
+    process_.setProcessEnvironment(environment);
     imageSize_ = image.size();
     process_.start();
     return true;
