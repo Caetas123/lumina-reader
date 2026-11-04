@@ -11,6 +11,7 @@
 #include <QNetworkRequest>
 #include <QRegularExpression>
 #include <QSqlQuery>
+#include <QTimer>
 #include <QStringList>
 #include <QUrlQuery>
 
@@ -104,6 +105,29 @@ QString normalizedLanguage(const QString &language, const QString &fallback)
     }
     static const QRegularExpression languagePattern(QStringLiteral("^(auto|[a-z]{2,3}(?:-[a-z]{2,4})?)$"));
     return languagePattern.match(normalized).hasMatch() ? normalized : fallback;
+}
+
+QString inferSourceLanguage(const QString &text)
+{
+    const QString normalized = text.trimmed().toLower();
+    if (normalized.contains(QRegularExpression(QStringLiteral("[\\x{3040}-\\x{30ff}]")))) {
+        return QStringLiteral("ja");
+    }
+    if (normalized.contains(QRegularExpression(QStringLiteral("[\\x{ac00}-\\x{d7af}]")))) {
+        return QStringLiteral("ko");
+    }
+    if (normalized.contains(QRegularExpression(QStringLiteral("[\\x{4e00}-\\x{9fff}]")))) {
+        return QStringLiteral("zh");
+    }
+    if (normalized.contains(QRegularExpression(QStringLiteral("[\\u00e3\\u00f5\\u00e1\\u00e9\\u00ed\\u00f3\\u00fa\\u00e2\\u00ea\\u00f4\\u00e7]")))
+        || normalized.contains(QRegularExpression(QStringLiteral("\\b(que|nao|não|para|uma|com|dos|das|esta|este|leitura)\\b")))) {
+        return QStringLiteral("pt");
+    }
+    if (normalized.contains(QRegularExpression(QStringLiteral("[\\u00f1\\u00bf\\u00a1]")))
+        || normalized.contains(QRegularExpression(QStringLiteral("\\b(que|para|una|uno|los|las|con|esta|este|lectura)\\b")))) {
+        return QStringLiteral("es");
+    }
+    return QStringLiteral("en");
 }
 
 QString dictionaryBody(const QJsonArray &entries, QString *pronunciation)
@@ -609,6 +633,7 @@ bool LookupController::lookupDictionary(const QString &term, const QString &lang
     DictionaryApiProvider provider;
     QNetworkRequest request(provider.lookupUrl(normalizedTerm, languageCode));
     request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("LuminaReader/%1").arg(LUMINA_VERSION));
+    request.setTransferTimeout(15000);
     activeReply_ = networkManager_.get(request);
     busy_ = true;
     lastError_.clear();
@@ -616,6 +641,11 @@ bool LookupController::lookupDictionary(const QString &term, const QString &lang
     emit stateChanged();
 
     QPointer<QNetworkReply> reply = activeReply_;
+    QTimer::singleShot(15000, reply, [this, reply]() {
+        if (reply != nullptr && reply == activeReply_ && !reply->isFinished()) {
+            reply->abort();
+        }
+    });
     connect(reply, &QNetworkReply::finished, this, [this, reply, normalizedTerm, languageCode, provider]() {
         if (reply == nullptr || reply != activeReply_) {
             if (reply != nullptr) {
@@ -676,8 +706,11 @@ bool LookupController::translateText(const QString &text,
         fail(QStringLiteral("Select a word or passage first."));
         return false;
     }
-    const QString normalizedSource = normalizedLanguage(sourceLanguage, QStringLiteral("auto"));
+    QString normalizedSource = normalizedLanguage(sourceLanguage, QStringLiteral("auto"));
     const QString normalizedTarget = normalizedLanguage(targetLanguage, QStringLiteral("en"));
+    if (normalizedSource == QStringLiteral("auto")) {
+        normalizedSource = inferSourceLanguage(normalizedText);
+    }
     if (activeReply_ != nullptr) {
         QNetworkReply *previous = activeReply_.data();
         activeReply_.clear();
@@ -693,6 +726,7 @@ bool LookupController::translateText(const QString &text,
                                                     normalizedSource,
                                                     normalizedTarget));
     request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("LuminaReader/%1").arg(LUMINA_VERSION));
+    request.setTransferTimeout(15000);
     activeReply_ = networkManager_.get(request);
     busy_ = true;
     lastError_.clear();
@@ -700,6 +734,11 @@ bool LookupController::translateText(const QString &text,
     emit stateChanged();
 
     QPointer<QNetworkReply> reply = activeReply_;
+    QTimer::singleShot(15000, reply, [this, reply]() {
+        if (reply != nullptr && reply == activeReply_ && !reply->isFinished()) {
+            reply->abort();
+        }
+    });
     connect(reply, &QNetworkReply::finished, this, [this, reply, normalizedText, normalizedSource, normalizedTarget, provider]() {
         if (reply == nullptr || reply != activeReply_) {
             if (reply != nullptr) {
