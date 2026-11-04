@@ -1,22 +1,24 @@
 # Building Lumina Reader
 
-## Requirements
+Lumina Reader is a native C++20/Qt 6 desktop application. The repository contains a development build and a full-engine release build. The release gate is intentionally strict: it stops at configure time when a document engine required by the published package is missing.
+
+## Common requirements
 
 - C++20 compiler;
 - CMake 3.24 or newer;
-- Qt 6.5 or newer with `Core`, `Gui`, `Widgets`, `PrintSupport`, `Qml`, `Quick`, `QuickControls2`, `Sql`, and `Test`;
-- `Pdf` for PDF rendering, `TextToSpeech` for system speech, and `CorePrivate` for the in-process EPUB/CBZ/ZIP reader. These are optional at configure time.
-- `Widgets` and `PrintSupport` are required for the native print dialog and PDF export path.
-- `libarchive` is optional. When its headers and library are discoverable by CMake, it enables in-process read-only CBR/CB7/CBT/RAR/7Z comic archives. The build remains valid without it.
-- DjVuLibre is optional. When `libdjvu/ddjvuapi.h` and the DjVuLibre library are discoverable by CMake, it enables in-process read-only DJVU/DJV page rendering and hidden-text extraction. The build remains valid without it.
-- Tesseract is an optional runtime dependency for OCR. Install it separately and expose `tesseract` on `PATH` (or set `LUMINA_TESSERACT_PATH`) to enable the reader's **Read image** action.
-- Ninja for the checked-in default preset.
+- Ninja;
+- Qt 6.8.3 or newer with `Core`, `Gui`, `Widgets`, `PrintSupport`, `Network`, `Qml`, `Quick`, `QuickControls2`, `QuickDialogs2`, `Sql`, `Test`, `Pdf`, `TextToSpeech`, `Multimedia`, and `CorePrivate`;
+- libarchive;
+- DjVuLibre;
+- libwebp;
+- libavif;
+- Tesseract OCR with `eng`, `por`, `spa`, `jpn`, `kor`, `chi_sim`, `chi_tra`, and `osd` language data for the full package.
 
-The project does not require a server, browser runtime, JavaScript engine, or network service to configure and test the local reader.
+The application has no server, browser runtime, Electron, WebView, or JavaScript service dependency. Online dictionary and translation calls are explicit user actions; normal reading and OCR remain local.
 
-## Standard build
+## Development build
 
-Run from the repository root:
+Use the development build when working on the application without every native engine installed:
 
 ```sh
 cmake --preset default
@@ -24,35 +26,68 @@ cmake --build --preset default
 ctest --preset default --output-on-failure
 ```
 
-The default preset creates a local `build/default` directory, which is ignored by Git.
-
-## Qt discovery
-
-If CMake cannot find Qt, point it at the Qt kit prefix. The exact path depends on the operating system and compiler kit:
+If Qt is not on CMake's search path, provide its kit prefix:
 
 ```sh
 cmake --preset default -DCMAKE_PREFIX_PATH=/path/to/Qt/6.8.3/<kit>
 ```
 
-For Windows, use a Developer Command Prompt that provides the MSVC environment before configuring. For macOS, select the intended Xcode command-line tools and Qt kit. For Linux, install the compiler, Ninja, OpenGL development packages required by Qt, and the Qt development modules.
+Development configuration may omit `Pdf`, `TextToSpeech`, `Multimedia`, libarchive, DjVuLibre, libwebp, or libavif. The application then hides the unavailable format instead of claiming that an extension is supported.
+
+## Full-engine release build
+
+The release workflows configure with `-DLUMINA_REQUIRE_FULL_ENGINES=ON`. Use the same flag locally after installing the dependencies above:
+
+```sh
+cmake -S . -B build/release -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH=/path/to/Qt/6.8.3/<kit> \
+  -DLUMINA_REQUIRE_FULL_ENGINES=ON
+cmake --build build/release --parallel
+ctest --test-dir build/release --output-on-failure
+```
+
+CMake verifies Qt PDF/Speech/Multimedia, libarchive, DjVuLibre, libwebp, and libavif before generating the release build. A successful compile is therefore also evidence that those engines were detected by the configure step, not merely installed somewhere on the machine.
+
+## Windows
+
+Use an MSVC Developer Command Prompt with the Windows SDK and Qt's `msvc2022_64` kit. The release workflow uses vcpkg for libarchive, libwebp, libavif, and JPEG, builds DjVuLibre from the pinned revision in `tools/build-djvulibre-windows.ps1`, and stages Tesseract with `tools/stage-tesseract-windows.ps1`.
+
+The graphical installer is built from the staged application directory. The ZIP created during that workflow is an internal installer input only; it is not an end-user download.
+
+## Linux
+
+On Ubuntu/Debian, install the release dependencies with:
+
+```sh
+sudo apt-get update
+sudo apt-get install -y \
+  build-essential cmake ninja-build pkg-config \
+  libarchive-dev libavif-dev libdjvulibre-dev libwebp-dev \
+  libpulse-dev libpipewire-0.3-0 libspeechd2 speech-dispatcher \
+  tesseract-ocr tesseract-ocr-eng tesseract-ocr-por tesseract-ocr-spa \
+  tesseract-ocr-jpn tesseract-ocr-kor tesseract-ocr-chi-sim tesseract-ocr-chi-tra
+```
+
+The AppImage and Debian package copy Tesseract, its language data, `tessdata/configs/tsv`, and its non-glibc runtime dependencies into the deployed application. The application looks for `usr/bin/ocr/tesseract` beside the deployed executable before falling back to `PATH`.
+
+The release runner is Ubuntu 22.04 so linuxdeployqt's portable-glibc guard is
+enabled by default. When validating the script on a newer local distribution,
+set `LUMINA_ALLOW_NEW_GLIBC=1`; this is an explicit local-only opt-in and is not
+used by the release workflow.
 
 ## Tests
 
-The current tests are Qt Test executables registered with CTest:
+The Qt Test suite is registered with CTest. It covers database migrations and FTS5, library import/search/metadata, document engines and archive safety, reader persistence/export, lookup mocks, settings and named profiles, backup/restore, OCR boundaries, image codecs, and performance benchmarks. Tests use temporary or in-memory data and do not upload user documents.
 
-- `lumina_smoke_tests` checks that the application version is defined;
-- `lumina_database_tests` checks SQLite migration, FTS5 table creation, idempotence, and invalid input handling;
-- `lumina_library_tests` covers import, duplicate detection, metadata, generated/custom covers, favorites, ratings, collections, tags, smart views, progress, rotation, highlights, annotations, OCR word coordinates, and bookmarks;
-- `lumina_reader_tests` covers pagination, position persistence, document search, text/image PDF export with saved annotations, RTF/FB2/HTML text extraction, and safe HTML import/search;
-- `lumina_archive_tests` covers EPUB/CBZ navigation and archive path-safety behavior when Qt Core private archive support is present;
-- `lumina_settings_tests` covers persisted reading preferences;
-- `lumina_backup_tests` covers knowledge/library export, metadata fields, metadata restoration, and integrity-checked database backup/restore.
-- `lumina_ocr_tests` covers the optional OCR provider boundary and invalid-image handling; OCR word-coordinate persistence is covered by `lumina_library_tests`.
+For a headless QML startup check:
 
-Tests use an in-memory SQLite database and do not use the internet or user documents.
+```sh
+QT_QPA_PLATFORM=offscreen ./build/release/lumina_reader
+```
 
-For a headless QML startup check on a desktop kit, set `QT_QPA_PLATFORM=offscreen` and launch the built `lumina_reader` executable. The application should remain running instead of exiting during QML creation.
+The process should remain alive after QML creation. GUI validation must still be performed with the real desktop executable; an offscreen launch is only a startup check.
 
-## Local development data
+## Local data
 
-The running application stores its SQLite database under Qt's `AppDataLocation`. This data is local runtime state and must not be committed. Delete it only through an explicit user action or a platform-appropriate data-management workflow; do not add deletion commands to build scripts.
+The running application stores its SQLite database under Qt's `AppDataLocation`. This is user runtime state and must not be committed or deleted by build scripts.

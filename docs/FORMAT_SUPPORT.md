@@ -1,76 +1,80 @@
-# Format support and feature parity
+# Format and feature support
 
-This document describes the behavior of the code that is currently shipped. A file extension is not treated as support by itself: Lumina Reader validates the file signature and only exposes a format when the corresponding reader is available in the build.
+This is the user-facing capability matrix for Lumina Reader `v0.2.4`.
+Windows and Linux release builds are configured with the full-engine gate and
+ship the native engines and OCR runtime required by the table. Development
+builds may intentionally omit those dependencies; the picker then hides the
+unavailable formats instead of pretending that an extension is enough.
 
-## Status legend
+## Supported formats
 
-- **Available**: the format can be imported and opened in the tested build.
-- **Conditional**: the feature is available when the optional Qt module or platform provider is included.
-- **Partial**: the document opens, but one or more format-specific capabilities are not available yet.
-- **Unavailable**: the extension is intentionally not advertised because there is no safe reader in this build.
+| Format | Release reader | Search and text | Notes |
+| --- | --- | --- | --- |
+| TXT | Built in | Yes | UTF-8, BOM, UTF-16, and common fallback decoding are handled. |
+| RTF | Built in | Yes | Safe plain-text conversion; advanced layout and embedded objects are not executed. |
+| HTML / HTM | Built in | Yes | Safe local text conversion; scripts, styles, frames, objects, and embeds are removed. |
+| FB2 | Built in | Yes | XML text is extracted into the native reading view. |
+| EPUB | Qt archive engine | Yes for extracted chapter text | The Contents panel follows the EPUB spine. CSS pagination, embedded media, and complex layout are not reproduced. |
+| PDF | Qt PDF | Extracted text or OCR | Scanned pages can use OCR. Visual pages support zoom, rotation, single/two-page layouts, export, and printing. |
+| MOBI / AZW / AZW3 | PalmDOC decoder | Yes for decoded text | Unencrypted PalmDOC-compatible files are supported; DRM and complex KF8 resources are not unlocked. |
+| CBZ / ZIP comic | Qt archive engine | OCR for image pages | Read-only archives containing supported image pages. ZIP files containing only arbitrary text are rejected as comic documents. |
+| CBR / CB7 / CBT | libarchive | OCR for image pages | Read-only in-process archive access with path, count, size, and encryption safety limits. |
+| RAR / 7Z | libarchive | OCR for image pages | Release builds include the reader; encrypted or malformed entries are rejected. |
+| DJVU / DJV | DjVuLibre | Hidden text or OCR | Native page rendering and hidden-text extraction are available in the full release build. |
+| JPG / JPEG | Qt image pipeline | OCR and image regions | Single visual page with saved regions and OCR coordinate overlays. |
+| PNG | Qt image pipeline | OCR and image regions | Single visual page with saved regions and OCR coordinate overlays. |
+| WEBP | libwebp fallback plus Qt image pipeline | OCR and image regions | The full release build verifies the native WebP decoder and ships its runtime. |
+| AVIF | libavif fallback plus Qt image pipeline | OCR and image regions | The full release build verifies the native AVIF decoder and ships its runtime. |
+| GIF | Qt image pipeline | OCR and image regions | Static and animated images are accepted; animation is presented through Qt's image pipeline. |
 
-## Current format matrix
+## Shared reading capabilities
 
-| Format | Import | Open and navigate | Text/search | Highlights, notes, bookmarks, progress | Current limitation or alternative |
-| --- | --- | --- | --- | --- | --- |
-| EPUB | Available with Qt archive support | Available, following the EPUB spine | Available for XHTML chapters | Available for text locations and the global Knowledge center | The Contents panel follows the EPUB spine and uses chapter titles when present; CSS layout, embedded fonts, media, and nested navigation levels are not reproduced by the native text view |
-| PDF | Conditional on `Qt6::Pdf` | Available when the module is present | Page text is indexed and searchable; pages with an extracted text layer offer a selectable text view, while scanned pages can use Tesseract OCR | Progress and bookmarks are available; saved text highlights and visual region annotations are included in exported/printed pages when their coordinates are known | Release builds request Qt PDF. A build without it reports a clear capability message; opened documents can use single-page/two-page layouts, export, and system printing |
-| MOBI | Available for unencrypted PalmDOC files | Available as paginated text | Available for decoded text | Available for text locations | PalmDOC compression is decoded; DRM and unsupported Huffman/KF8 variants are rejected with a normal reader error |
-| AZW | Available for unencrypted PalmDOC-compatible files | Available as paginated text | Available for decoded text | Available for text locations | DRM-protected content is not supported and is never unlocked |
-| AZW3 | Available for unencrypted PalmDOC-compatible files | Available as paginated text | Available for decoded text | Available for text locations | Complex KF8 layout/resources and DRM-protected content are not supported |
-| FB2 | Available | Available as paginated text | Available after XML text extraction | Available for text locations | Rich FB2 styling and embedded images are not represented in the current reflow view |
-| TXT | Available | Available as paginated text | Available | Available for text locations | Encoding detection is UTF-8 first |
-| RTF | Available | Available as paginated text | Available after safe plain-text conversion | Available for text locations | Advanced layout, fields, embedded objects, and tracked changes are intentionally not executed |
-| HTML/HTM | Available | Available as paginated text | Available after safe HTML-to-text conversion | Available for text locations | Script, style, frame, object, and embed blocks are removed; no browser or external page is opened |
-| CBZ | Available with Qt archive support | Available as ordered image pages | Conditional on Tesseract OCR | Progress, page bookmarks, OCR text, word-coordinate mapping, and manual page annotations are available | OCR requires a local Tesseract installation; saved region annotations and highlights over recognized words are restored as coordinate overlays |
-| ZIP comics | Available with Qt archive support | Available when the archive contains supported images | Conditional on Tesseract OCR | Progress, page bookmarks, OCR text, word-coordinate mapping, and manual page annotations are available | ZIP archives are read-only and never extracted to user-selected paths; saved regions and OCR highlights are restored as coordinate overlays; OCR requires Tesseract |
-| CBR | Conditional on libarchive | Available when libarchive is found at configure time | Conditional on Tesseract OCR | Progress, page bookmarks, OCR text, word-coordinate mapping, and manual page annotations are available | Read-only in-process libarchive adapter; encrypted or malformed entries are rejected |
-| CB7 | Conditional on libarchive | Available when libarchive is found at configure time | Conditional on Tesseract OCR | Progress, page bookmarks, OCR text, word-coordinate mapping, and manual page annotations are available | Read-only in-process libarchive adapter; encrypted or malformed entries are rejected |
-| CBT | Conditional on libarchive | Available when libarchive is found at configure time | Conditional on Tesseract OCR | Progress, page bookmarks, OCR text, word-coordinate mapping, and manual page annotations are available | Read-only in-process libarchive adapter; tar paths and entry sizes are bounded |
-| RAR | Conditional on libarchive | Available when libarchive is found at configure time | Conditional on Tesseract OCR | Progress, page bookmarks, OCR text, word-coordinate mapping, and manual page annotations are available | Requires libarchive's RAR reader; DRM/encrypted content is not unlocked |
-| 7Z | Conditional on libarchive | Available when libarchive is found at configure time | Conditional on Tesseract OCR | Progress, page bookmarks, OCR text, word-coordinate mapping, and manual page annotations are available | Requires libarchive's 7-Zip reader; encrypted content is not unlocked |
-| DJVU/DJV | Conditional on DjVuLibre | Available when DjVuLibre is found at configure time | Hidden text is searchable; scanned pages can use Tesseract OCR and word-coordinate mapping | Progress, page bookmarks, OCR text, and manual region annotations are available | DjVuLibre is optional and is not bundled by the default Windows/macOS/Linux package workflows |
-| JPG/JPEG | Available | Available as a single image | Conditional on Tesseract OCR | Progress, OCR text, word-coordinate mapping, and manual region annotations are available | OCR requires a local Tesseract installation; saved regions and OCR highlights are restored as coordinate overlays; text selection uses the recognized text view |
-| PNG | Available | Available as a single image | Conditional on Tesseract OCR | Progress, OCR text, word-coordinate mapping, and manual region annotations are available | OCR requires a local Tesseract installation; saved regions and OCR highlights are restored as coordinate overlays; text selection uses the recognized text view |
-| WEBP | Available when the Qt image plugin is present | Available as a single image | Not available without OCR | Progress and page bookmarks are available | Depends on the Qt image plugin shipped with the package |
-| AVIF | Available when the Qt image plugin is present | Available as a single image | Not available without OCR | Progress and page bookmarks are available | Depends on the Qt image plugin shipped with the package |
-| GIF | Available when the Qt image plugin is present | Available as a single image | Not available without OCR | Progress and page bookmarks are available | Animated content is shown through the Qt image pipeline |
+When the source provides text or a stable page location, the application
+supports:
 
-## Functional parity matrix
+- library import, duplicate detection, folder import, drag and drop, optional
+  folder watching, status, progress, favorites, ratings, descriptions,
+  language, genre, collections, tags, and reading history;
+- persistent highlights, annotations, bookmarks, notes, OCR text, normalized
+  OCR word coordinates, and the Knowledge center backed by SQLite FTS5;
+- local search history for the library, document, and Knowledge center, with
+  deduplication, reopening, favorites, and clearing;
+- PDF and plain-text export, system printing, Markdown/JSON/plain-text
+  Knowledge export, library metadata export, settings export, and validated
+  database backup/restore;
+- dark, light, sepia, paper, gray, low-light, and high-contrast themes;
+  responsive layouts, keyboard focus, font/layout/color preferences, and
+  named reading profiles;
+- contextual Google, dictionary, and translation actions. Online requests are
+  explicit user actions; saved results and lookup history remain local;
+- Qt Speech read-aloud controls. Word-level highlighting is available when the
+  selected operating-system voice backend exposes progress callbacks.
 
-The matrix below describes the user-visible study workflow. **Conditional** means that the reader is included only when the optional engine is available; **OCR** means that selectable text, search, lookup, speech, and text highlights require local Tesseract recognition; **manual region** means that an image can still receive a coordinate-based annotation without OCR.
+## OCR
 
-| Format | Read and navigate | Select and search | Highlights and notes | OCR and image regions | Bookmarks and progress | Knowledge search | Dictionary, translation, Google, speech | Export and print |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| TXT | Yes | Yes | Yes | Not needed | Yes | Yes | Yes | Text/PDF |
-| RTF | Yes | Yes | Yes | Not needed | Yes | Yes | Yes | Text/PDF |
-| HTML/HTM | Yes, as safe text | Yes | Yes | Not needed | Yes | Yes | Yes | Text/PDF |
-| FB2 | Yes | Yes | Yes | Not needed | Yes | Yes | Yes | Text/PDF |
-| EPUB | Conditional | Yes for extracted chapter text | Yes | Not needed for text chapters | Yes | Yes | Yes | Text/PDF |
-| PDF | Conditional | Extracted text or OCR | Yes | OCR for scanned pages; manual regions | Yes | Text/OCR | Text/OCR | PDF/print |
-| MOBI/AZW/AZW3 | Yes for unencrypted PalmDOC-compatible files | Yes for decoded text | Yes | Not needed for decoded text | Yes | Yes | Yes | Text/PDF |
-| CBZ/ZIP | Conditional | OCR | Yes | OCR plus manual regions | Yes | OCR/annotations | OCR | PDF/print |
-| CBR/CB7/CBT/RAR/7Z | Conditional on libarchive | OCR | Yes | OCR plus manual regions | Yes | OCR/annotations | OCR | PDF/print |
-| DJVU/DJV | Conditional on DjVuLibre | Hidden text or OCR | Yes | OCR plus manual regions | Yes | Text/OCR | Text/OCR | PDF/print |
-| JPG/JPEG/PNG/WEBP/AVIF/GIF | Yes as visual pages | OCR | Yes | OCR plus manual regions | Yes | OCR/annotations | OCR | PDF/print |
+Windows and Linux release packages include Tesseract, language data for
+English, Portuguese, Spanish, Japanese, Korean, Simplified Chinese,
+Traditional Chinese, and orientation detection, plus Tesseract's `configs/tsv`
+file required for word-coordinate parsing. OCR runs locally and asynchronously;
+recognized text, word boxes, and page status are persisted in the local
+database and indexed in Knowledge. The UI also supports cancellation and a
+manual region annotation fallback.
 
-## Shared capabilities
+## Platform and build boundaries
 
-The following capabilities are format-independent when the underlying content provides text or a stable page location:
+- Windows x64 publishes a self-contained graphical installer EXE. The ZIP
+  created by the workflow is only an internal installer input and is not an
+  end-user release asset.
+- Linux x86_64 publishes a self-contained AppImage and a Debian/Ubuntu `.deb`.
+- macOS publishes the existing x86_64 DMG workflow. The macOS workflow does
+  not run the Windows/Linux full-engine gate, so native macOS capability and
+  visual evidence must be read from its own CI run rather than inferred from
+  the Windows/Linux audit.
+- All public packages use one tag and the version in `project-version.txt`.
+- The original documents are never modified implicitly. Archives are read-only,
+  normalized paths and resource limits are enforced, and unsupported or
+  encrypted content produces a user-facing error.
 
-- local library import, duplicate detection by SHA-256, folder import, drag and drop, status, progress, favorites, ratings, descriptions, language, collections, and tags;
-- SQLite migrations and FTS5 search for library metadata and saved knowledge;
-- persistent highlights, annotations, bookmarks, reading history, and the global Knowledge center;
-- Markdown, JSON, and plain-text knowledge export;
-- plain-text and annotated PDF export of the opened document, plus system printing;
-- library metadata export and metadata restoration by file hash or saved path;
-- local themes, font size, line spacing, font/layout/color reader preferences at global, format, content-type, and document scope, high contrast, keyboard-friendly navigation, and optional system text-to-speech with backend-dependent word progress;
-- integrity-checked database backup and restoration with a recoverable previous database copy;
-- single-page and two-page layouts for visual documents;
-- explicit browser actions for Google, dictionary lookup, and translation; previously fetched lookup results are reusable from the local cache. The document itself is never uploaded automatically.
-
-## Optional capabilities and honest limitations
-
-Qt PDF, Qt Speech, Qt's private ZIP helper, libarchive, and DjVuLibre are optional build capabilities. The CI and release workflows request the public Qt PDF and Speech modules. The ZIP helper, libarchive adapter, and DjVu adapter are used only for in-process, read-only document access; they are not general-purpose extraction services.
-
-OCR is provided through a local Tesseract executable when the user installs it; page and document-wide recognition run asynchronously, persist text and normalized word coordinates locally, and never upload the document. OCR selections can be highlighted in the image through those coordinates, while the UI falls back to manual region annotations when OCR is unavailable. DjVuLibre supplies native DjVu page decoding and hidden-text extraction when present. PDF text extraction is available through the optional Qt PDF module, while MOBI/AZW support is limited to unencrypted PalmDOC-compatible text. The application keeps unavailable formats out of the picker and explains the missing optional capability instead of claiming support.
+See [BUILDING.md](BUILDING.md) for dependency installation and
+[AUDIT_CHECKLIST_FINAL.md](AUDIT_CHECKLIST_FINAL.md) for evidence-backed
+validation results.

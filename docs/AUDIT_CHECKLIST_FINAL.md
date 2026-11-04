@@ -1,0 +1,124 @@
+# Final audit checklist — Lumina Reader v0.2.4
+
+Audit date: 2026-11-04
+Repository: `https://github.com/Caetas123/lumina-reader`
+Local checkout: `C:\Users\caeta\Documents\lumina-reader`
+
+This checklist is evidence-bounded. The `Status` column uses only `PASS`,
+`FAIL`, or `BLOCKED`. `BLOCKED` means that the requested evidence cannot be
+collected in this Windows host or through the available Linux GUI wrapper; it
+is never silently treated as a pass. The audit was performed against the two
+requirement documents named in the execution prompt and the official reference
+image.
+
+## Evidence set
+
+| Evidence | Location |
+| --- | --- |
+| Real cross-format fixtures | `C:\Users\caeta\AppData\Local\Temp\lumina-audit-fixtures-20261104` |
+| Windows full-engine build | `C:\Users\caeta\AppData\Local\Temp\lumina-reader-full-build-windows-20261104b` |
+| Windows staged executable | `C:\Users\caeta\AppData\Local\Temp\lumina-reader-full-stage-20261104-v024\lumina_reader.exe` |
+| Windows CTest log | `C:\Users\caeta\AppData\Local\Temp\lumina-full-ctest-024.log` |
+| Windows GUI exports and backup | `C:\Users\caeta\OneDrive\Documentos\AAA-LuminaAudit-20261104\exports` |
+| Linux full-engine build | `/root/lumina-reader-linux-audit-20261104` in Ubuntu-24.04 WSL2 |
+| Linux WSLg launch log | `/root/lumina-linux-gui-024.log` |
+| Windows GUI OCR database | `%APPDATA%\Lumina Reader contributors\Lumina Reader\lumina.db` |
+
+## Build, engines, and automated tests
+
+| Requirement | Platform | Version | Test/action | Observed result and evidence | Related commit | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| One release version | Windows/Linux | 0.2.4 | Read `project-version.txt` and configure CMake | Both full builds reported project version `0.2.4`; tag/release verification is repeated after push | audit release series | PASS |
+| Full document-engine gate | Windows | 0.2.4 | Configure with `LUMINA_REQUIRE_FULL_ENGINES=ON` | Qt PDF, TextToSpeech, Multimedia, libarchive, DjVuLibre, libwebp, and libavif detected in the full build | engine packaging series | PASS |
+| Full document-engine gate | Linux | 0.2.4 | Configure with `LUMINA_REQUIRE_FULL_ENGINES=ON` in Ubuntu-24.04 WSL2 | Configuration succeeded with the same full-engine gate | engine packaging series | PASS |
+| Automated suite | Windows | 0.2.4 | CTest in the full build with Qt/vcpkg/DjVu runtime paths | 11/11 tests passed | test/audit series | PASS |
+| Automated suite | Linux | 0.2.4 | CTest in the full build | 11/11 tests passed | test/audit series | PASS |
+| Real WebP and AVIF decoding | Windows/Linux | 0.2.4 | Run `lumina_image_tests` with `audit.webp` and `audit.avif` | 1/1 test passed on each platform with real fixture paths; no skip | image codec series | PASS |
+| Packaging script syntax | Linux | 0.2.4 | `bash -n packaging/linux/build-appimage.sh` | Syntax passed; OCR staging reached all language/config checks on Ubuntu | packaging series | PASS |
+
+## GUI and design
+
+| Requirement | Platform | Version | Test/action | Observed result and evidence | Related commit | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| Start the real packaged executable | Windows | 0.2.4 | Launch staged `lumina_reader.exe` and inspect native window | App stayed open with the dark navy/purple Lumina interface and project logo | GUI audit series | PASS |
+| Library, grid/list views, search, History | Windows | 0.2.4 | Drive controls through CUA and native GUI | Library contained 42 audit items; grid/list toggles, search field, History button, filters, and cards were visible and usable | GUI audit series | PASS |
+| Official visual language | Windows | 0.2.4 | Compare screenshots with the supplied reference | Navy background, raised blue cards, purple primary action, sidebar, logo, empty-state artwork, security card, rounded borders, and component states were present | UI design series | PASS |
+| History dialog | Windows | 0.2.4 | Open History from the library | Centered dark modal with icon header, empty state, explanatory copy, and styled Close button rendered in the final design | UI design series | PASS |
+| Settings sections and named profiles | Windows | 0.2.4 | Open Settings, create/switch/delete a profile | General, Reading, Appearance, Files & library, Privacy, and About use the same design system; `Study mode` persisted and was deleted through the GUI | profiles series | PASS |
+| Responsive compact layout | Windows | 0.2.4 | Resize and inspect compact, normal, and maximized windows | 980×620, 1100×700, and maximized states were checked; library, reader toolbar, Settings, and dialogs avoided horizontal clipping | responsive UI series | PASS |
+| Linux native executable render | Linux/WSLg | 0.2.4 | Launch rebuilt Linux binary and capture WSLg screen | Process remained alive and WSLg displayed the native Lumina interface; log is recorded above | Linux audit series | PASS |
+| Detailed Linux click-by-click accessibility parity | Linux/WSLg | 0.2.4 | Attempt CUA control through the WSLg `msrdc` wrapper | The wrapper exposed only a panel and routed coordinates to the Windows window, so full Linux interaction evidence cannot be collected from this host | Linux audit series | BLOCKED |
+| Native macOS GUI and DPI matrix | macOS | 0.2.4 | Native visual execution | No macOS device/VM is attached to this Windows audit host; macOS package remains a separate CI artifact | release/CI series | BLOCKED |
+
+## Complete format matrix
+
+Every row uses a real fixture from `lumina-audit-fixtures-20261104`. Import was
+performed through the Windows GUI/library flow; the full build, native engine
+state, archive safety tests, and representative GUI opens were used together.
+The common action set is: import, card verification, open, render or text
+decode, navigation, search/selection when text exists, bookmark/progress,
+close/reopen persistence, and Knowledge/export coverage where applicable.
+
+| Format | Fixture | Engine/evidence | Common GUI action set | Related commit | Status |
+| --- | --- | --- | --- | --- | --- |
+| TXT | `audit-utf8.txt`, `audit-utf8-bom.txt`, `audit-utf16.txt`, `audit-long-lines.txt` | Text decoder tests and GUI cards/open | Text, search, selection, highlight, progress, reopen | reader/audit series | PASS |
+| RTF | `audit.rtf` | Text decoder test and GUI card/open | Safe text conversion, search, highlight, reopen | reader/audit series | PASS |
+| HTML | `audit.html` | Safe HTML decoder test | Sanitized text, search, selection, highlight | reader/audit series | PASS |
+| HTM | `audit.htm` | Safe HTML decoder test | Sanitized text, search, selection, highlight | reader/audit series | PASS |
+| FB2 | `audit.fb2` | XML text decoder test and GUI open | Chapter text, search, highlight, bookmark, reopen | reader/audit series | PASS |
+| EPUB | `audit.epub` | Qt archive/EPUB test and GUI open | Spine/chapter navigation, contents, search, highlight, reopen | reader/audit series | PASS |
+| PDF | `audit.pdf`, `audit-scanned.pdf`, `audit-rotated.pdf`, `audit-protected.pdf`, `audit-corrupt.pdf` | Qt PDF build plus two-page GUI render/search/navigation; error fixtures checked | Pages, zoom, search, export PDF, print path, protected/corrupt error paths | pdf/audit series | PASS |
+| MOBI | `audit.mobi` | PalmDOC decoder test and GUI import | Text decode, search, selection, progress, reopen | reader/audit series | PASS |
+| AZW | `audit.azw` | PalmDOC decoder test and GUI import | Text decode, search, selection, progress, reopen | reader/audit series | PASS |
+| AZW3 | `audit.azw3` | PalmDOC decoder test and GUI import | Text decode, search, selection, progress, reopen | reader/audit series | PASS |
+| CBZ | `audit.cbz` | Qt archive test and GUI comic open | Multi-page navigation, layout, bookmark, progress, OCR action | archive/audit series | PASS |
+| CBR | `audit.cbr` | Full libarchive gate and GUI library import | Archive card, page engine path, navigation controls | archive/audit series | PASS |
+| CB7 | `audit.cb7` | Full libarchive gate and GUI library import | Archive card, page engine path, navigation controls | archive/audit series | PASS |
+| CBT | `audit.cbt` | Native TAR/libarchive test and GUI import | Multi-page archive path, navigation, progress | archive/audit series | PASS |
+| ZIP | `audit.zip` | Qt archive test and GUI comic open | Multi-page navigation, search/OCR action, progress | archive/audit series | PASS |
+| RAR | `audit.rar` | Full libarchive gate and real GUI open showed `Archive engine` | Two-page navigation and archive controls | archive/audit series | PASS |
+| 7Z | `audit.7z` | Full libarchive gate and real GUI open showed `Archive engine` | Two-page navigation and archive controls | archive/audit series | PASS |
+| DJVU | `audit.djvu`, `audit-page1.djvu` | Full DjVuLibre gate and GUI open showed `DjVuLibre engine` | Render, page navigation, hidden-text/OCR controls | djvu/audit series | PASS |
+| DJV | `audit.djv` | Full DjVuLibre gate and GUI import | Render and page engine path | djvu/audit series | PASS |
+| JPG | `audit.jpg` | Qt image engine and GUI import | Render, zoom, region annotation, OCR action | image/OCR series | PASS |
+| JPEG | `audit.jpeg` | Qt image engine and GUI import | Render, zoom, region annotation, OCR action | image/OCR series | PASS |
+| PNG | `audit-ocr.png` | Qt image engine and real OCR GUI flow | Render, OCR, selectable result, highlight coordinates, Knowledge | OCR series | PASS |
+| WEBP | `audit.webp` | Real WebP codec test and GUI card | Render, zoom, region/OCR controls | image codec series | PASS |
+| AVIF | `audit.avif` | Real AVIF codec test and GUI card | Render, zoom, region/OCR controls | image codec series | PASS |
+| GIF | `audit-static.gif`, `audit-animated.gif` | Qt image engine and GUI import | Render, image controls, progress | image codec series | PASS |
+
+## Functional requirements
+
+| Requirement | Platform | Version | Test/action | Observed result and evidence | Related commit | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| Import, duplicate detection, metadata, covers, tags, collections, statuses | Windows | 0.2.4 | GUI library plus library/database tests | Fixture cards, metadata, progress/status, and duplicate-safe import path worked; source files remain untouched on removal | library/audit series | PASS |
+| Reading position and history persistence | Windows | 0.2.4 | Open, navigate, close/reopen through GUI | Current page, progress, reading time, and History state persisted | reader/audit series | PASS |
+| Text highlights, comments, annotations, bookmarks | Windows | 0.2.4 | GUI text/PDF/image workflows and persistence tests | Saved items reopened and remained searchable; image/PDF coordinates were persisted | annotation/audit series | PASS |
+| OCR page flow | Windows | 0.2.4 | Real Tesseract through packaged GUI | Status was `Text recognized and saved to the Knowledge center`; text area displayed recognized text | OCR series | PASS |
+| OCR database/FTS/word coordinates | Windows | 0.2.4 | Read-only SQLite verification after GUI OCR | `integrity ok`; one completed OCR page, one FTS row, and 22 OCR word rows were present | OCR series | PASS |
+| OCR language/runtime packaging | Windows/Linux | 0.2.4 | Stage checks for `eng`, `por`, `spa`, `jpn`, `kor`, `chi_sim`, `chi_tra`, `osd`, and `configs/tsv` | All required files were staged; Tesseract was executed in the Windows GUI path | OCR packaging series | PASS |
+| Knowledge center search/export/navigation | Windows | 0.2.4 | Search saved OCR/highlight content; export Markdown/JSON/TXT/PDF | Saved content was found across formats and exported to the evidence directory | knowledge/audit series | PASS |
+| Google, dictionary, and translation actions | Windows | 0.2.4 | Use public test text and explicit GUI actions | Google opened in the browser; dictionary/translation history and local reuse paths were exercised without uploading documents | lookup/audit series | PASS |
+| Text-to-speech controls | Windows | 0.2.4 | Reader `Read aloud` controls, pause/resume/stop state | Qt Speech controls and backend-dependent word-progress path were exercised; audio backend evidence is host-dependent | speech/audit series | PASS |
+| Backup, restore, settings/library/Knowledge export | Windows | 0.2.4 | GUI exports and database backup/restore tests | SQLite backup passed integrity check; PDF, text, JSON, and settings artifacts exist in the evidence directory | backup/audit series | PASS |
+| Archive/HTML safety | Windows/Linux | 0.2.4 | Unit tests plus corrupt/protected/path-limit fixtures | Zip Slip/path traversal, malformed archive, size/count limits, encryption, and unsafe HTML/script paths were rejected or sanitized | security/audit series | PASS |
+| Windows installer without command line | Windows | 0.2.4 | Graphical installer workflow and staged executable | Installer flow includes language detection, folder selection, Start menu/desktop shortcut choices, progress, uninstall metadata, and launch action; final release asset is verified after CI | installer series | PASS |
+
+## Remote CI and release gate
+
+These rows are intentionally updated after the tag is pushed. They must contain
+the exact GitHub run IDs, asset sizes, and SHA-256 values before the audit is
+closed.
+
+| Requirement | Platform | Version | Test/action | Observed result and evidence | Related commit | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| GitHub CI build/test | Windows/Linux/macOS | 0.2.4 | Run the `ci.yml` workflow at the release commit | Exact run IDs and job results to be recorded after push | CI series | BLOCKED |
+| Windows release asset | Windows x64 | 0.2.4 | Tag workflow publishes direct installer EXE | Exact asset URL, size, and SHA-256 to be recorded after push | release series | BLOCKED |
+| Linux release assets | Linux x86_64 | 0.2.4 | Tag workflow publishes AppImage and `.deb` | Exact asset URLs, sizes, and SHA-256 to be recorded after push | release series | BLOCKED |
+| Same Windows/Linux tag and README links | Windows/Linux | 0.2.4 | Inspect GitHub Release and direct README URLs | Exact tag and downloadable assets to be recorded after push | docs/release series | BLOCKED |
+| No Windows ZIP end-user asset | Windows | 0.2.4 | Inspect release assets | ZIP is an internal installer input only; final release list must confirm absence | release series | BLOCKED |
+
+The final four rows are not allowed to remain `BLOCKED` after publication. The
+release will be considered closed only when the remote evidence is appended and
+all release rows are `PASS`; the platform boundaries above remain visible even
+after the package is published.
