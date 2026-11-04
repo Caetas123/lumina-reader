@@ -28,12 +28,12 @@ image.
 
 | Requirement | Platform | Version | Test/action | Observed result and evidence | Related commit | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| One release version | Windows/Linux | 0.2.5 | Read `project-version.txt` and configure CMake | Both full builds reported project version `0.2.5`; tag/release verification is repeated after push | `c71785d` | PASS |
+| One release version | Windows/Linux | 0.2.5 | Read `project-version.txt` and configure CMake | Both full builds reported project version `0.2.5`; the stable release tag is `v0.2.5` | `d39258a` | PASS |
 | Full document-engine gate | Windows | 0.2.5 | Configure with `LUMINA_REQUIRE_FULL_ENGINES=ON` | Qt PDF, TextToSpeech, Multimedia, libarchive, DjVuLibre, libwebp, and libavif detected in the full build | `e4cbfb6`, `a082d49` | PASS |
 | Full document-engine gate | Linux | 0.2.5 | Configure with `LUMINA_REQUIRE_FULL_ENGINES=ON` in Ubuntu-24.04 WSL2 | Configuration succeeded with the same full-engine gate | `e4cbfb6`, `a082d49` | PASS |
 | Automated suite | Windows | 0.2.5 | CTest in the full build with Qt/vcpkg/DjVu runtime paths | 11/11 tests passed | `e4cbfb6`, `03c7455` | PASS |
 | Automated suite | Linux | 0.2.5 | CTest in the full build | 11/11 tests passed | `e4cbfb6`, `03c7455` | PASS |
-| Real WebP and AVIF decoding | Windows/Linux | 0.2.5 | Run `lumina_image_tests` with `audit.webp` and `audit.avif` | 1/1 test passed on each platform with real fixture paths; no skip | `e4cbfb6` | PASS |
+| Real WebP and AVIF decoding | Windows/Linux | 0.2.5 | Run `lumina_image_tests` with `audit.webp` and `audit.avif` | 1/1 test passed on each platform with real fixture paths; no skip | `e4cbfb6`, `75d48ce` | PASS |
 | Packaging script syntax | Linux | 0.2.5 | `bash -n packaging/linux/build-appimage.sh` | Syntax passed; OCR staging reached all language/config checks on Ubuntu | `a082d49` | PASS |
 
 ## GUI and design
@@ -106,19 +106,19 @@ close/reopen persistence, and Knowledge/export coverage where applicable.
 
 ## Remote CI and release gate
 
-These rows are intentionally updated after the tag is pushed. They must contain
-the exact GitHub run IDs, asset sizes, and SHA-256 values before the audit is
-closed.
+The remote evidence below was captured after the `v0.2.5` tag was pushed. It
+contains the exact GitHub run IDs, asset sizes, and SHA-256 values for the
+published artifacts.
 
 | Requirement | Platform | Version | Test/action | Observed result and evidence | Related commit | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| GitHub CI build/test | Windows/Linux/macOS | 0.2.5 | Run the `ci.yml` workflow at the release commit | Exact run IDs and job results to be recorded after push | CI series | BLOCKED |
-| Windows release asset | Windows x64 | 0.2.5 | Tag workflow publishes direct installer EXE | Exact asset URL, size, and SHA-256 to be recorded after push | release series | BLOCKED |
-| Linux release assets | Linux x86_64 | 0.2.5 | Tag workflow publishes AppImage and `.deb` | Exact asset URLs, sizes, and SHA-256 to be recorded after push | release series | BLOCKED |
-| Same Windows/Linux tag and README links | Windows/Linux | 0.2.5 | Inspect GitHub Release and direct README URLs | Exact tag and downloadable assets to be recorded after push | docs/release series | BLOCKED |
-| No Windows ZIP end-user asset | Windows | 0.2.5 | Inspect release assets | ZIP is an internal installer input only; final release list must confirm absence | release series | BLOCKED |
+| GitHub CI build/test | Windows/Linux/macOS | 0.2.5 | Run the `ci.yml` workflow at the release commit | Run `41846304566` passed: Linux job `126630606400`, Windows job `126630607021`, macOS job `126630605801`; head `d39258a` | `d39258a` | PASS |
+| Windows release asset | Windows x64 | 0.2.5 | Tag workflow publishes direct installer EXE | [Direct EXE](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.5/LuminaReader-Setup-windows-x64.exe), 233,711,690 bytes, SHA-256 `66518947DE066FDF6B85652C0CE9315C3B37DD5DFD98F972646783C9BCE39D12`; workflow `41847338774` passed | `d39258a` | PASS |
+| Linux release assets | Linux x86_64 | 0.2.5 | Tag workflow publishes AppImage and `.deb` | [AppImage](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.5/LuminaReader-linux-x86_64.AppImage), 101,284,344 bytes, SHA-256 `FAD4C69D9ED429668BA2ABB66AE5F670B6444CF7E76E10719D2D3270EBA53AE0`; [Debian package](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.5/LuminaReader-linux-x86_64.deb), 87,620,064 bytes, SHA-256 `D8AFB804D30EB94EEBE639414254DC31EE6523F32FEF3B342415ED92E3CDA443`; workflow `41847338601` passed | `d39258a` | PASS |
+| Same Windows/Linux tag and README links | Windows/Linux | 0.2.5 | Inspect GitHub Release and direct README URLs | Stable [v0.2.5 release](https://github.com/Caetas123/lumina-reader/releases/tag/v0.2.5) contains the Windows EXE and both Linux packages under the same tag; README links resolve to those direct assets | `d39258a` | PASS |
+| No Windows ZIP end-user asset | Windows | 0.2.5 | Inspect release assets | The stable release contains exactly the Windows EXE, two Linux packages, and the macOS DMG; no ZIP is published for end users | `d39258a` | PASS |
 
-The final four rows are not allowed to remain `BLOCKED` after publication. The
-release will be considered closed only when the remote evidence is appended and
-all release rows are `PASS`; the platform boundaries above remain visible even
-after the package is published.
+All remote release rows are now `PASS`. The platform boundaries above remain
+visible: this Windows host cannot provide native macOS GUI/DPI evidence, and
+the WSLg `msrdc` wrapper prevented detailed Linux click-by-click accessibility
+automation.
