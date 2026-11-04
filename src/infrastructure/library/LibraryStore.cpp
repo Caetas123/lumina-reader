@@ -2,6 +2,7 @@
 
 #include "infrastructure/database/Database.h"
 #include "infrastructure/archive/ArchiveReader.h"
+#include "infrastructure/image/ImageCodec.h"
 #include "infrastructure/logging/Logging.h"
 #include "infrastructure/reader/DocumentEngineFactory.h"
 #include "infrastructure/text/TextDecoder.h"
@@ -125,8 +126,7 @@ bool hasExpectedSignature(const QString &path, const QString &format)
 
     const QByteArray header = file.read(12);
     if (isImageFormat(format)) {
-        QImageReader reader(path);
-        return reader.canRead();
+        return Lumina::Infrastructure::canReadImageFile(path);
     }
     if (format == QStringLiteral("pdf")) {
         return header.startsWith("%PDF-");
@@ -338,7 +338,7 @@ QString generatedCoverPath(const QString &path, const QString &format, const QSt
 {
     QImage image;
     if (isImageFormat(format)) {
-        image.load(path);
+        image = Lumina::Infrastructure::loadImageFile(path);
     }
 #ifdef LUMINA_HAS_QT_PDF
     else if (format == QStringLiteral("pdf")) {
@@ -2639,8 +2639,19 @@ bool LibraryStore::saveOcrPage(const QString &documentId,
                                const QString &status,
                                const QVariantList &words)
 {
+    auto logQueryFailure = [](const QSqlQuery &query, const QString &operation) {
+        if (!query.lastError().isValid()) {
+            qCWarning(luminaDatabase) << operation << "failed without a database error";
+            return;
+        }
+        qCWarning(luminaDatabase) << operation << query.lastError().text()
+                                  << "native:" << query.lastError().nativeErrorCode();
+    };
+
     if (!isReady() || documentId.trimmed().isEmpty() || documentDetails(documentId).isEmpty()
         || page < 0) {
+        qCWarning(luminaDatabase) << "Cannot save OCR page: invalid store/document/page"
+                                  << documentId << page;
         return false;
     }
     const QString normalizedStatus = status.trimmed().toLower();
@@ -2654,6 +2665,8 @@ bool LibraryStore::saveOcrPage(const QString &documentId,
     const QString sourceId = documentId + QStringLiteral(":") + QString::number(page);
     QSqlDatabase connection = database_->connection();
     if (!connection.transaction()) {
+        qCWarning(luminaDatabase) << "Cannot start OCR page transaction"
+                                  << connection.lastError().text();
         return false;
     }
 
@@ -2669,6 +2682,9 @@ bool LibraryStore::saveOcrPage(const QString &documentId,
     pageQuery.bindValue(QStringLiteral(":text"), boundedText);
     pageQuery.bindValue(QStringLiteral(":status"), normalizedStatus);
     bool success = pageQuery.exec();
+    if (!success) {
+        logQueryFailure(pageQuery, QStringLiteral("Saving OCR page"));
+    }
 
     if (success) {
         QSqlQuery removeWords(connection);
@@ -2678,6 +2694,9 @@ bool LibraryStore::saveOcrPage(const QString &documentId,
         removeWords.bindValue(QStringLiteral(":document"), documentId);
         removeWords.bindValue(QStringLiteral(":page"), page);
         success = removeWords.exec();
+        if (!success) {
+            logQueryFailure(removeWords, QStringLiteral("Removing OCR word annotations"));
+        }
     }
 
     if (success) {
@@ -2686,6 +2705,9 @@ bool LibraryStore::saveOcrPage(const QString &documentId,
             "DELETE FROM knowledge_items_search WHERE source_id = :source AND source_kind = 'ocr'"));
         removeSearch.bindValue(QStringLiteral(":source"), sourceId);
         success = removeSearch.exec();
+        if (!success) {
+            logQueryFailure(removeSearch, QStringLiteral("Removing OCR search entry"));
+        }
     }
 
     if (success && normalizedStatus == QStringLiteral("completed") && !boundedText.trimmed().isEmpty()) {
@@ -2700,6 +2722,9 @@ bool LibraryStore::saveOcrPage(const QString &documentId,
         search.bindValue(QStringLiteral(":page"), page);
         search.bindValue(QStringLiteral(":locator"), QStringLiteral("ocr:") + QString::number(page));
         success = search.exec();
+        if (!success) {
+            logQueryFailure(search, QStringLiteral("Saving OCR search entry"));
+        }
     }
 
     if (success && normalizedStatus == QStringLiteral("completed")) {
@@ -2737,6 +2762,7 @@ bool LibraryStore::saveOcrPage(const QString &documentId,
             wordQuery.bindValue(QStringLiteral(":width"), width);
             wordQuery.bindValue(QStringLiteral(":height"), height);
             if (!wordQuery.exec()) {
+                logQueryFailure(wordQuery, QStringLiteral("Saving OCR word annotation"));
                 success = false;
                 break;
             }
@@ -2744,6 +2770,10 @@ bool LibraryStore::saveOcrPage(const QString &documentId,
     }
 
     if (!success || !connection.commit()) {
+        if (success) {
+            qCWarning(luminaDatabase) << "Committing OCR page transaction failed"
+                                      << connection.lastError().text();
+        }
         connection.rollback();
         return false;
     }

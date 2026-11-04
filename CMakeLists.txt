@@ -11,6 +11,11 @@ endif()
 
 project(LuminaReader VERSION "${LUMINA_READER_VERSION}" LANGUAGES CXX)
 
+option(LUMINA_REQUIRE_FULL_ENGINES
+    "Fail configuration when a release build is missing a document engine or codec"
+    OFF
+)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -36,10 +41,55 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS
 find_package(Qt6 6.5 QUIET COMPONENTS Pdf)
 find_package(Qt6 6.5 QUIET COMPONENTS CorePrivate)
 find_package(Qt6 6.5 QUIET COMPONENTS TextToSpeech)
+find_package(Qt6 6.5 QUIET COMPONENTS Multimedia)
 find_path(LUMINA_LIBARCHIVE_INCLUDE_DIR NAMES archive.h)
 find_library(LUMINA_LIBARCHIVE_LIBRARY NAMES archive libarchive)
 find_path(LUMINA_DJVU_INCLUDE_DIR NAMES ddjvuapi.h PATH_SUFFIXES libdjvu)
 find_library(LUMINA_DJVU_LIBRARY NAMES djvulibre ddjvu libddjvu)
+find_path(LUMINA_WEBP_INCLUDE_DIR NAMES webp/decode.h)
+find_library(LUMINA_WEBP_LIBRARY NAMES webpdecoder libwebpdecoder webp libwebp)
+find_path(LUMINA_AVIF_INCLUDE_DIR NAMES avif/avif.h)
+find_library(LUMINA_AVIF_LIBRARY NAMES avif libavif)
+
+if(LUMINA_REQUIRE_FULL_ENGINES)
+    set(LUMINA_MISSING_ENGINES)
+    if(NOT TARGET Qt6::Pdf)
+        list(APPEND LUMINA_MISSING_ENGINES "Qt6 Pdf")
+    endif()
+    if(NOT TARGET Qt6::TextToSpeech)
+        list(APPEND LUMINA_MISSING_ENGINES "Qt6 TextToSpeech")
+    endif()
+    if(NOT TARGET Qt6::Multimedia)
+        list(APPEND LUMINA_MISSING_ENGINES "Qt6 Multimedia")
+    endif()
+    if(NOT LUMINA_LIBARCHIVE_INCLUDE_DIR OR NOT LUMINA_LIBARCHIVE_LIBRARY)
+        list(APPEND LUMINA_MISSING_ENGINES "libarchive")
+    endif()
+    if(NOT LUMINA_DJVU_INCLUDE_DIR OR NOT LUMINA_DJVU_LIBRARY)
+        list(APPEND LUMINA_MISSING_ENGINES "DjVuLibre")
+    endif()
+    if(NOT LUMINA_WEBP_INCLUDE_DIR OR NOT LUMINA_WEBP_LIBRARY)
+        list(APPEND LUMINA_MISSING_ENGINES "libwebp")
+    endif()
+    if(NOT LUMINA_AVIF_INCLUDE_DIR OR NOT LUMINA_AVIF_LIBRARY)
+        list(APPEND LUMINA_MISSING_ENGINES "libavif")
+    endif()
+    if(LUMINA_MISSING_ENGINES)
+        string(JOIN ", " LUMINA_MISSING_ENGINES_TEXT ${LUMINA_MISSING_ENGINES})
+        message(FATAL_ERROR
+            "This full Lumina Reader package is missing required engines/codecs: "
+            "${LUMINA_MISSING_ENGINES_TEXT}. Install the release dependencies or "
+            "configure without LUMINA_REQUIRE_FULL_ENGINES for a development build."
+        )
+    endif()
+endif()
+
+if(TARGET Qt6::Pdf)
+    set(LUMINA_CAPABILITY_PDF "yes")
+else()
+    set(LUMINA_CAPABILITY_PDF "no")
+endif()
+message(STATUS "Lumina Reader capability PDF: ${LUMINA_CAPABILITY_PDF}")
 
 qt_standard_project_setup(REQUIRES 6.5)
 
@@ -76,6 +126,8 @@ add_library(lumina_core STATIC
     src/infrastructure/logging/Logging.h
     src/infrastructure/ocr/TesseractOcrProvider.cpp
     src/infrastructure/ocr/TesseractOcrProvider.h
+    src/infrastructure/image/ImageCodec.cpp
+    src/infrastructure/image/ImageCodec.h
     src/infrastructure/reader/DocumentEngineFactory.cpp
     src/infrastructure/reader/DocumentEngineFactory.h
     src/infrastructure/reader/DjvuEngine.cpp
@@ -130,6 +182,18 @@ if(LUMINA_DJVU_INCLUDE_DIR AND LUMINA_DJVU_LIBRARY)
     target_compile_definitions(lumina_core PUBLIC LUMINA_HAS_DJVU=1)
     target_include_directories(lumina_core PUBLIC "${LUMINA_DJVU_INCLUDE_DIR}")
     target_link_libraries(lumina_core PUBLIC "${LUMINA_DJVU_LIBRARY}")
+endif()
+
+if(LUMINA_WEBP_INCLUDE_DIR AND LUMINA_WEBP_LIBRARY)
+    target_compile_definitions(lumina_core PUBLIC LUMINA_HAS_LIBWEBP=1)
+    target_include_directories(lumina_core PUBLIC "${LUMINA_WEBP_INCLUDE_DIR}")
+    target_link_libraries(lumina_core PUBLIC "${LUMINA_WEBP_LIBRARY}")
+endif()
+
+if(LUMINA_AVIF_INCLUDE_DIR AND LUMINA_AVIF_LIBRARY)
+    target_compile_definitions(lumina_core PUBLIC LUMINA_HAS_LIBAVIF=1)
+    target_include_directories(lumina_core PUBLIC "${LUMINA_AVIF_INCLUDE_DIR}")
+    target_link_libraries(lumina_core PUBLIC "${LUMINA_AVIF_LIBRARY}")
 endif()
 
 qt_add_executable(lumina_reader
@@ -309,6 +373,18 @@ if(BUILD_TESTING)
     )
 
     add_test(NAME lumina_ocr_tests COMMAND lumina_ocr_tests)
+
+    qt_add_executable(lumina_image_tests
+        tests/unit/image_codec_test.cpp
+    )
+
+    target_link_libraries(lumina_image_tests
+        PRIVATE
+            lumina_core
+            Qt6::Test
+    )
+
+    add_test(NAME lumina_image_tests COMMAND lumina_image_tests)
 
     qt_add_executable(lumina_performance_tests
         tests/unit/performance_test.cpp

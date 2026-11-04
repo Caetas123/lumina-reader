@@ -1,6 +1,7 @@
 #include "infrastructure/reader/DocumentEngineFactory.h"
 
 #include "infrastructure/archive/ArchiveReader.h"
+#include "infrastructure/image/ImageCodec.h"
 #include "infrastructure/reader/DjvuEngine.h"
 #include "infrastructure/text/TextDecoder.h"
 
@@ -37,8 +38,8 @@ public:
     bool open(const QString &filePath, Error *error) override
     {
         close();
-        QImageReader reader(filePath);
-        if (!reader.canRead() || !image_.load(filePath)) {
+        image_ = Lumina::Infrastructure::loadImageFile(filePath);
+        if (image_.isNull()) {
             setError(error,
                      ErrorCode::Unsupported,
                      QStringLiteral("The image could not be opened. It may be damaged or unsupported."));
