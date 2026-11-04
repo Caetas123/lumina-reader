@@ -2,13 +2,20 @@
 
 #include "infrastructure/database/Database.h"
 
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QRegularExpression>
+#include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QStringList>
 
 #include <algorithm>
 
 namespace {
+
+constexpr QLatin1StringView defaultProfileId("default");
+constexpr QLatin1StringView defaultProfileName("Default");
 
 bool isThemeSupported(const QString &theme)
 {
@@ -48,6 +55,11 @@ QString normalizedContextToken(const QString &value)
     const QString normalized = value.trimmed().toLower();
     static const QRegularExpression allowed(QStringLiteral("^[a-z0-9_-]{1,128}$"));
     return allowed.match(normalized).hasMatch() ? normalized : QString();
+}
+
+QString profileKey(const QString &profileId, const QString &key)
+{
+    return QStringLiteral("profile.%1.%2").arg(profileId, key);
 }
 
 QString scopedReaderKey(const QString &key,
@@ -111,6 +123,22 @@ bool SettingsController::highContrast() const
     return highContrast_;
 }
 
+QString SettingsController::activeProfile() const
+{
+    return profileNameForId(activeProfileId_);
+}
+
+QStringList SettingsController::profileNames() const
+{
+    QStringList names;
+    names.reserve(profileIds_.size() + 1);
+    names.append(QString::fromLatin1(defaultProfileName));
+    for (const QString &id : profileIds_) {
+        names.append(profileNames_.value(id, id));
+    }
+    return names;
+}
+
 QString SettingsController::fontFamily() const
 {
     return fontFamily_;
@@ -166,6 +194,152 @@ void SettingsController::setDatabase(Lumina::Infrastructure::Database *database)
 void SettingsController::reload()
 {
     load();
+}
+
+void SettingsController::setActiveProfile(const QString &profile)
+{
+    if (database_ == nullptr || !database_->isOpen()) {
+        return;
+    }
+    const QString requested = profile.trimmed();
+    QString nextId;
+    if (requested.compare(QString::fromLatin1(defaultProfileId), Qt::CaseInsensitive) == 0
+        || requested.compare(QString::fromLatin1(defaultProfileName), Qt::CaseInsensitive) == 0) {
+        nextId = QString::fromLatin1(defaultProfileId);
+    } else {
+        for (const QString &id : profileIds_) {
+            if (id.compare(requested, Qt::CaseInsensitive) == 0
+                || profileNames_.value(id).compare(requested, Qt::CaseInsensitive) == 0) {
+                nextId = id;
+                break;
+            }
+        }
+    }
+    if (nextId.isEmpty() || nextId == activeProfileId_) {
+        return;
+    }
+
+    activeProfileId_ = nextId;
+    if (activeProfileId_ == QString::fromLatin1(defaultProfileId)) {
+        QSqlQuery query(database_->connection());
+        query.exec(QStringLiteral("DELETE FROM app_settings WHERE key = 'active_profile'"));
+    } else {
+        QSqlQuery query(database_->connection());
+        query.prepare(QStringLiteral(
+            "INSERT INTO app_settings (key, value, updated_at) VALUES ('active_profile', :value, CURRENT_TIMESTAMP) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP"));
+        query.bindValue(QStringLiteral(":value"), activeProfileId_);
+        query.exec();
+    }
+    load();
+    emit profilesChanged();
+}
+
+bool SettingsController::createProfile(const QString &name)
+{
+    if (database_ == nullptr || !database_->isOpen()) {
+        return false;
+    }
+    const QString displayName = name.trimmed().left(64);
+    if (displayName.isEmpty()
+        || displayName.compare(QString::fromLatin1(defaultProfileName), Qt::CaseInsensitive) == 0) {
+        return false;
+    }
+    for (const QString &id : profileIds_) {
+        if (profileNames_.value(id).compare(displayName, Qt::CaseInsensitive) == 0) {
+            return false;
+        }
+    }
+
+    QString id = profileIdForName(displayName);
+    if (id.isEmpty()) {
+        return false;
+    }
+    const QString baseId = id;
+    int suffix = 2;
+    while (profileIds_.contains(id)) {
+        id = QStringLiteral("%1-%2").arg(baseId).arg(suffix++);
+    }
+
+    const QString sourcePrefix = profileStoragePrefix();
+    const QString targetPrefix = profileKey(id, QString());
+    QSqlQuery source(database_->connection());
+    if (!source.exec(QStringLiteral("SELECT key, value FROM app_settings"))) {
+        return false;
+    }
+    while (source.next()) {
+        const QString sourceKey = source.value(0).toString();
+        if (sourceKey == QStringLiteral("profiles") || sourceKey == QStringLiteral("active_profile")) {
+            continue;
+        }
+        QString baseKey;
+        if (sourcePrefix.isEmpty()) {
+            if (sourceKey.startsWith(QStringLiteral("profile."))) {
+                continue;
+            }
+            baseKey = sourceKey;
+        } else if (sourceKey.startsWith(sourcePrefix)) {
+            baseKey = sourceKey.mid(sourcePrefix.size());
+        } else {
+            continue;
+        }
+        if (baseKey.isEmpty()) {
+            continue;
+        }
+        QSqlQuery copy(database_->connection());
+        copy.prepare(QStringLiteral(
+            "INSERT INTO app_settings (key, value, updated_at) VALUES (:key, :value, CURRENT_TIMESTAMP) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP"));
+        copy.bindValue(QStringLiteral(":key"), targetPrefix + baseKey);
+        copy.bindValue(QStringLiteral(":value"), source.value(1).toString());
+        if (!copy.exec()) {
+            return false;
+        }
+    }
+
+    profileIds_.append(id);
+    profileNames_.insert(id, displayName);
+    persistProfiles(profileIds_, profileNames_);
+    emit profilesChanged();
+    setActiveProfile(displayName);
+    return true;
+}
+
+bool SettingsController::deleteProfile(const QString &name)
+{
+    if (database_ == nullptr || !database_->isOpen()) {
+        return false;
+    }
+    QString id;
+    const QString requested = name.trimmed();
+    for (const QString &candidate : profileIds_) {
+        if (candidate.compare(requested, Qt::CaseInsensitive) == 0
+            || profileNames_.value(candidate).compare(requested, Qt::CaseInsensitive) == 0) {
+            id = candidate;
+            break;
+        }
+    }
+    if (id.isEmpty()) {
+        return false;
+    }
+
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral("DELETE FROM app_settings WHERE key LIKE :prefix"));
+    query.bindValue(QStringLiteral(":prefix"), profileKey(id, QStringLiteral("%")));
+    if (!query.exec()) {
+        return false;
+    }
+    profileIds_.removeAll(id);
+    profileNames_.remove(id);
+    persistProfiles(profileIds_, profileNames_);
+    const bool wasActive = activeProfileId_ == id;
+    if (wasActive) {
+        activeProfileId_.clear();
+        setActiveProfile(QString::fromLatin1(defaultProfileName));
+    } else {
+        emit profilesChanged();
+    }
+    return true;
 }
 
 void SettingsController::setTheme(const QString &theme)
@@ -347,7 +521,19 @@ QString SettingsController::readerPreferenceValue(const QString &key,
     }
     keys.append(normalizedKey);
 
+    QStringList candidates;
+    const QString prefix = profileStoragePrefix();
     for (const QString &candidate : keys) {
+        candidates.append(prefix + candidate);
+    }
+    if (!prefix.isEmpty()) {
+        // A profile starts with a snapshot of the Default profile, but older
+        // databases may not have that snapshot. Keep the legacy values as a
+        // safe fallback instead of making an existing preference disappear.
+        candidates.append(keys);
+    }
+
+    for (const QString &candidate : candidates) {
         QSqlQuery query(database_->connection());
         query.prepare(QStringLiteral("SELECT value FROM app_settings WHERE key = :key"));
         query.bindValue(QStringLiteral(":key"), candidate);
@@ -381,12 +567,37 @@ void SettingsController::load()
         return;
     }
 
+    profileIds_ = storedProfileIds();
+    QString storedActiveProfile;
+    QSqlQuery activeQuery(database_->connection());
+    activeQuery.prepare(QStringLiteral("SELECT value FROM app_settings WHERE key = 'active_profile'"));
+    if (activeQuery.exec() && activeQuery.next()) {
+        storedActiveProfile = activeQuery.value(0).toString();
+    }
+    if (profileIds_.contains(storedActiveProfile)) {
+        activeProfileId_ = storedActiveProfile;
+    } else {
+        activeProfileId_ = QString::fromLatin1(defaultProfileId);
+    }
+
+    resetDefaults();
+    const QString prefix = profileStoragePrefix();
     QSqlQuery query(database_->connection());
     if (!query.exec(QStringLiteral("SELECT key, value FROM app_settings"))) {
         return;
     }
     while (query.next()) {
-        const QString key = query.value(0).toString();
+        QString key = query.value(0).toString();
+        if (prefix.isEmpty()) {
+            if (key.startsWith(QStringLiteral("profile."))) {
+                continue;
+            }
+        } else {
+            if (!key.startsWith(prefix)) {
+                continue;
+            }
+            key.remove(0, prefix.size());
+        }
         const QString value = query.value(1).toString();
         if (key == QStringLiteral("theme") && isThemeSupported(value)) {
             theme_ = value;
@@ -433,9 +644,100 @@ void SettingsController::persist(const QString &key, const QString &value)
     query.prepare(QStringLiteral(
         "INSERT INTO app_settings (key, value, updated_at) VALUES (:key, :value, CURRENT_TIMESTAMP) "
         "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP"));
-    query.bindValue(QStringLiteral(":key"), key);
+    query.bindValue(QStringLiteral(":key"), profileStoragePrefix() + key);
     query.bindValue(QStringLiteral(":value"), value);
     query.exec();
+}
+
+QString SettingsController::profileStoragePrefix() const
+{
+    return activeProfileId_ == QString::fromLatin1(defaultProfileId)
+        ? QString()
+        : profileKey(activeProfileId_, QString());
+}
+
+QString SettingsController::profileIdForName(const QString &name) const
+{
+    QString id = name.trimmed().toLower();
+    id.replace(QRegularExpression(QStringLiteral("[^a-z0-9_-]+")), QStringLiteral("-"));
+    id.replace(QRegularExpression(QStringLiteral("^-+|-+$")), QString());
+    return id == QString::fromLatin1(defaultProfileId) ? QString() : id.left(48);
+}
+
+QString SettingsController::profileNameForId(const QString &id) const
+{
+    return id == QString::fromLatin1(defaultProfileId)
+        ? QString::fromLatin1(defaultProfileName)
+        : profileNames_.value(id, id);
+}
+
+QStringList SettingsController::storedProfileIds() const
+{
+    auto *self = const_cast<SettingsController *>(this);
+    self->profileIds_.clear();
+    self->profileNames_.clear();
+    if (database_ == nullptr || !database_->isOpen()) {
+        return {};
+    }
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral("SELECT value FROM app_settings WHERE key = 'profiles'"));
+    if (!query.exec() || !query.next()) {
+        return {};
+    }
+    const QJsonDocument document = QJsonDocument::fromJson(query.value(0).toByteArray());
+    if (!document.isArray()) {
+        return {};
+    }
+    for (const QJsonValue &value : document.array()) {
+        const QJsonObject object = value.toObject();
+        const QString id = object.value(QStringLiteral("id")).toString().trimmed().toLower();
+        const QString name = object.value(QStringLiteral("name")).toString().trimmed().left(64);
+        if (id.isEmpty() || id == QString::fromLatin1(defaultProfileId) || name.isEmpty()
+            || self->profileIds_.contains(id)) {
+            continue;
+        }
+        self->profileIds_.append(id);
+        self->profileNames_.insert(id, name);
+    }
+    return self->profileIds_;
+}
+
+void SettingsController::persistProfiles(const QStringList &ids,
+                                         const QHash<QString, QString> &names)
+{
+    if (database_ == nullptr || !database_->isOpen()) {
+        return;
+    }
+    QJsonArray profiles;
+    for (const QString &id : ids) {
+        profiles.append(QJsonObject{{QStringLiteral("id"), id},
+                                    {QStringLiteral("name"), names.value(id, id)}});
+    }
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral(
+        "INSERT INTO app_settings (key, value, updated_at) VALUES ('profiles', :value, CURRENT_TIMESTAMP) "
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP"));
+    query.bindValue(QStringLiteral(":value"),
+                    QString::fromUtf8(QJsonDocument(profiles).toJson(QJsonDocument::Compact)));
+    query.exec();
+}
+
+void SettingsController::resetDefaults()
+{
+    theme_ = QStringLiteral("dark");
+    fontSize_ = 18;
+    lineSpacing_ = 120;
+    continuousReading_ = true;
+    highContrast_ = false;
+    fontFamily_ = QStringLiteral("Segoe UI");
+    readerWidth_ = 860;
+    readerMargin_ = 30;
+    textAlignment_ = QStringLiteral("left");
+    imageFit_ = QStringLiteral("page");
+    readingDirection_ = QStringLiteral("ltr");
+    customReaderBackground_.clear();
+    customReaderText_.clear();
+    customHighlightColor_.clear();
 }
 
 } // namespace Lumina::Application

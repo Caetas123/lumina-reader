@@ -80,13 +80,28 @@ Controls.ComboBox {
 
     delegate: Controls.ItemDelegate {
         id: delegateItem
+        required property int index
+        // The popup uses a custom ListView backed by the ComboBox's model.
+        // Resolve the source row explicitly so object-backed models continue
+        // to render their textRole on Qt 6 across Windows and Linux.
+        property var rowData: control.model && control.model[index] !== undefined
+            ? control.model[index] : modelData
+        property string displayLabel: {
+            if (typeof rowData === "string") {
+                return rowData
+            }
+            if (control.textRole.length > 0 && rowData && rowData[control.textRole] !== undefined) {
+                return rowData[control.textRole]
+            }
+            return rowData === undefined || rowData === null ? "" : String(rowData)
+        }
         width: control.width - control.popup.leftPadding - control.popup.rightPadding
         height: 36
         padding: 10
         highlighted: control.highlightedIndex === index
 
         contentItem: Text {
-            text: control.textRole.length > 0 ? model[control.textRole] : modelData
+            text: delegateItem.displayLabel
             color: Theme.textPrimary
             font.family: Theme.readerFont
             font.pixelSize: 13

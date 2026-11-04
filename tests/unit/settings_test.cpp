@@ -130,6 +130,66 @@ private slots:
                                                 QStringLiteral("Segoe UI")),
                  QStringLiteral("Georgia"));
     }
+
+    void persistsNamedProfilesWithoutChangingDefaultPreferences()
+    {
+        Lumina::Infrastructure::Database database;
+        Lumina::Domain::Error error;
+        QVERIFY2(database.open(QStringLiteral(":memory:"), &error),
+                 qPrintable(error.logMessage()));
+        QVERIFY2(database.migrate(&error), qPrintable(error.logMessage()));
+
+        Lumina::Application::SettingsController settings;
+        settings.setDatabase(&database);
+        const QStringList defaultProfiles{QStringLiteral("Default")};
+        QCOMPARE(settings.profileNames(), defaultProfiles);
+        QCOMPARE(settings.activeProfile(), QStringLiteral("Default"));
+        settings.setTheme(QStringLiteral("dark"));
+        settings.setReaderPreferenceValue(QStringLiteral("font_size"),
+                                          QStringLiteral("global"),
+                                          QStringLiteral("txt"),
+                                          QStringLiteral("text"),
+                                          QStringLiteral("doc-1"),
+                                          QStringLiteral("18"));
+
+        QVERIFY(settings.createProfile(QStringLiteral("Study mode")));
+        QCOMPARE(settings.activeProfile(), QStringLiteral("Study mode"));
+        const QStringList namedProfiles{QStringLiteral("Default"), QStringLiteral("Study mode")};
+        QCOMPARE(settings.profileNames(), namedProfiles);
+        settings.setTheme(QStringLiteral("sepia"));
+        settings.setReaderPreferenceValue(QStringLiteral("font_size"),
+                                          QStringLiteral("global"),
+                                          QStringLiteral("txt"),
+                                          QStringLiteral("text"),
+                                          QStringLiteral("doc-1"),
+                                          QStringLiteral("24"));
+
+        settings.setActiveProfile(QStringLiteral("Default"));
+        QCOMPARE(settings.theme(), QStringLiteral("dark"));
+        QCOMPARE(settings.readerPreferenceValue(QStringLiteral("font_size"),
+                                                QStringLiteral("txt"),
+                                                QStringLiteral("text"),
+                                                QStringLiteral("doc-1"),
+                                                QStringLiteral("12")),
+                 QStringLiteral("18"));
+
+        settings.setActiveProfile(QStringLiteral("Study mode"));
+        QCOMPARE(settings.theme(), QStringLiteral("sepia"));
+        QCOMPARE(settings.readerPreferenceValue(QStringLiteral("font_size"),
+                                                QStringLiteral("txt"),
+                                                QStringLiteral("text"),
+                                                QStringLiteral("doc-1"),
+                                                QStringLiteral("12")),
+                 QStringLiteral("24"));
+
+        Lumina::Application::SettingsController reloaded;
+        reloaded.setDatabase(&database);
+        QCOMPARE(reloaded.activeProfile(), QStringLiteral("Study mode"));
+        QCOMPARE(reloaded.theme(), QStringLiteral("sepia"));
+        QVERIFY(reloaded.deleteProfile(QStringLiteral("Study mode")));
+        QCOMPARE(reloaded.activeProfile(), QStringLiteral("Default"));
+        QCOMPARE(reloaded.profileNames(), defaultProfiles);
+    }
 };
 
 QTEST_GUILESS_MAIN(SettingsTest)

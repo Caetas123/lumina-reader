@@ -854,6 +854,40 @@ ApplicationWindow {
     }
 
     Dialog {
+        id: createProfileDialog
+        modal: true
+        title: qsTr("Create reading profile")
+        width: Math.min(window.width - 80, 520)
+        standardButtons: Dialog.Ok | Dialog.Cancel
+
+        contentItem: ColumnLayout {
+            spacing: 12
+            Label {
+                text: qsTr("Save a separate reading style for a study plan, a book format, or another reader.")
+                color: Theme.textSecondary
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+            TextField {
+                id: profileNameField
+                Layout.fillWidth: true
+                placeholderText: qsTr("Profile name")
+                onAccepted: createProfileDialog.accept()
+            }
+        }
+
+        onOpened: profileNameField.forceActiveFocus()
+        onAccepted: {
+            window.notification = appController.settings.createProfile(profileNameField.text)
+                ? qsTr("Reading profile created.")
+                : qsTr("Enter a unique profile name.")
+            notificationTimer.restart()
+            profileNameField.clear()
+        }
+        onRejected: profileNameField.clear()
+    }
+
+    Dialog {
         id: regionAnnotationDialog
         property real regionLeft: 0
         property real regionTop: 0
@@ -3838,21 +3872,27 @@ ApplicationWindow {
 
                             Rectangle {
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: 48
+                                Layout.preferredHeight: selectionActionsFlow.implicitHeight + 16
+                                Layout.minimumHeight: selectionActionsFlow.implicitHeight + 16
                                 radius: 12
                                 color: Theme.surface
                                 border.color: Theme.border
-                                RowLayout {
-                                    anchors.fill: parent
+                                Flow {
+                                    id: selectionActionsFlow
+                                    anchors.left: parent.left
+                                    anchors.right: parent.right
+                                    anchors.top: parent.top
                                     anchors.margins: 8
+                                    spacing: 8
+
                                     ComboBox {
                                         id: selectionHighlightColor
-                                        Layout.preferredWidth: 110
+                                        width: 110
                                         model: [qsTr("Yellow"), qsTr("Green"), qsTr("Blue"), qsTr("Pink"), qsTr("Purple")]
                                     }
                                     ComboBox {
                                         id: selectionHighlightStyle
-                                        Layout.preferredWidth: 120
+                                        width: 120
                                         model: [qsTr("Highlight"), qsTr("Underline"), qsTr("Strikethrough")]
                                     }
                                     Button {
@@ -3895,52 +3935,51 @@ ApplicationWindow {
                                         text: qsTr("Copy")
                                         onClicked: readerText.copy()
                                     }
-                                     Button {
-                                         text: qsTr("Google")
-                                         onClicked: {
-                                             window.notification = appController.lookup.openGoogle(readerText.selectedText)
-                                                 ? qsTr("Opening your browser for this search.")
-                                                 : appController.lookup.lastError
-                                             notificationTimer.restart()
-                                         }
-                                     }
-                                     Button {
-                                         text: qsTr("Dictionary")
-                                         onClicked: {
-                                              lookupDialog.mode = "dictionary"
-                                              lookupDialog.queryText = readerText.selectedText
-                                              if (appController.lookup.lookupDictionary(readerText.selectedText)) {
-                                                  lookupDialog.open()
-                                              } else {
-                                                  window.notification = appController.lookup.lastError
-                                                  notificationTimer.restart()
-                                              }
-                                         }
-                                     }
-                                      ComboBox {
-                                          id: selectionTranslationLanguage
-                                          Layout.preferredWidth: 110
-                                          model: window.translationLanguageLabels
-                                          ToolTip.visible: hovered
-                                          ToolTip.text: qsTr("Translation target language")
-                                      }
-                                     Button {
-                                         text: qsTr("Translate")
-                                         onClicked: {
-                                              lookupDialog.mode = "translation"
-                                              lookupDialog.queryText = readerText.selectedText
-                                              if (appController.lookup.translateText(
-                                                      readerText.selectedText,
-                                                      "",
-                                                      window.translationLanguageKeys[selectionTranslationLanguage.currentIndex])) {
-                                                  lookupDialog.open()
-                                              } else {
-                                                  window.notification = appController.lookup.lastError
-                                                  notificationTimer.restart()
-                                              }
-                                         }
-                                     }
-                                    Item { Layout.fillWidth: true }
+                                    Button {
+                                        text: qsTr("Google")
+                                        onClicked: {
+                                            window.notification = appController.lookup.openGoogle(readerText.selectedText)
+                                                ? qsTr("Opening your browser for this search.")
+                                                : appController.lookup.lastError
+                                            notificationTimer.restart()
+                                        }
+                                    }
+                                    Button {
+                                        text: qsTr("Dictionary")
+                                        onClicked: {
+                                            lookupDialog.mode = "dictionary"
+                                            lookupDialog.queryText = readerText.selectedText
+                                            if (appController.lookup.lookupDictionary(readerText.selectedText)) {
+                                                lookupDialog.open()
+                                            } else {
+                                                window.notification = appController.lookup.lastError
+                                                notificationTimer.restart()
+                                            }
+                                        }
+                                    }
+                                    ComboBox {
+                                        id: selectionTranslationLanguage
+                                        width: 110
+                                        model: window.translationLanguageLabels
+                                        ToolTip.visible: hovered
+                                        ToolTip.text: qsTr("Translation target language")
+                                    }
+                                    Button {
+                                        text: qsTr("Translate")
+                                        onClicked: {
+                                            lookupDialog.mode = "translation"
+                                            lookupDialog.queryText = readerText.selectedText
+                                            if (appController.lookup.translateText(
+                                                    readerText.selectedText,
+                                                    "",
+                                                    window.translationLanguageKeys[selectionTranslationLanguage.currentIndex])) {
+                                                lookupDialog.open()
+                                            } else {
+                                                window.notification = appController.lookup.lastError
+                                                notificationTimer.restart()
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -4418,6 +4457,52 @@ ApplicationWindow {
                                     Layout.fillWidth: true
                                     Layout.alignment: Qt.AlignTop
                                     spacing: 12
+
+                                    Rectangle {
+                                        Layout.fillWidth: true
+                                        Layout.preferredHeight: 82
+                                        radius: 10
+                                        color: Theme.surfaceMuted
+                                        border.color: Theme.surfaceRaised
+
+                                        RowLayout {
+                                            anchors.fill: parent
+                                            anchors.leftMargin: 14
+                                            anchors.rightMargin: 14
+                                            spacing: 12
+
+                                            ColumnLayout {
+                                                Layout.fillWidth: true
+                                                spacing: 2
+                                                Label { text: qsTr("Reading profile"); color: Theme.textPrimary; font.pixelSize: 12; font.weight: Font.Medium }
+                                                Label { text: qsTr("Keep a separate set of reading preferences for each profile."); color: Theme.textSecondary; font.pixelSize: 10; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                                            }
+
+                                            ComboBox {
+                                                id: activeProfileCombo
+                                                Layout.preferredWidth: Math.min(180, Math.max(120, generalSettings.width * 0.28))
+                                                model: appController.settings.profileNames
+                                                currentIndex: Math.max(0, model.indexOf(appController.settings.activeProfile))
+                                                onActivated: appController.settings.setActiveProfile(model[index])
+                                            }
+
+                                            Button {
+                                                text: qsTr("New profile")
+                                                iconName: "plus"
+                                                onClicked: createProfileDialog.open()
+                                            }
+
+                                            Button {
+                                                text: qsTr("Delete")
+                                                enabled: appController.settings.activeProfile !== qsTr("Default")
+                                                onClicked: {
+                                                    var deleted = appController.settings.deleteProfile(appController.settings.activeProfile)
+                                                    window.notification = deleted ? qsTr("Reading profile deleted.") : qsTr("The default profile cannot be deleted.")
+                                                    notificationTimer.restart()
+                                                }
+                                            }
+                                        }
+                                    }
 
                                     Rectangle {
                                         Layout.fillWidth: true
