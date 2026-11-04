@@ -4,6 +4,31 @@ All notable changes to Lumina Reader will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows Semantic Versioning where a public release version exists.
 
+## [0.2.4] - 2026-11-04
+
+This release completes the full-engine packaging work for Windows and Linux and adds persisted reading profiles. The release assets are built from the same tag and include the OCR runtime required by the image-reading workflow.
+
+### Added
+
+- Named reading profiles with independent persisted preferences, profile switching, creation, and deletion from Settings > General.
+- Full-engine release configuration that fails early when PDF, speech, libarchive, DjVuLibre, WebP, or AVIF support is missing.
+- Bundled multilingual Tesseract OCR data in the Windows installer and Linux packages.
+
+### Fixed
+
+- Linux CI and release jobs now install the PulseAudio, PipeWire, and Speech Dispatcher dependencies required by Qt Multimedia and Qt Speech.
+- Linux AppImage staging now carries the non-glibc Tesseract runtime libraries instead of assuming that the user's system has them.
+- Linux OCR packaging now locates both modern and Ubuntu-style Tesseract tessdata directories and validates `configs/tsv` before deployment.
+- Windows release tests now put the vcpkg and DjVu runtime DLL directories on `PATH` before CTest.
+- Release documentation and direct download links now point to the synchronized `v0.2.4` artifacts.
+
+### Verified
+
+- Windows full-engine build and 11/11 Qt tests passed locally.
+- Ubuntu 24.04 full-engine build and 11/11 Qt tests passed locally.
+- Real Windows GUI validation covered the full requested format matrix, OCR, annotations, Knowledge center, TTS controls, PDF export/print, lookup actions, settings export, and database backup integrity.
+- The Linux executable launched through WSLg and rendered the native dark Lumina interface; detailed Linux control automation remains separately recorded in the final checklist where the WSLg wrapper limits accessibility inspection.
+
 ## [0.2.3] - 2026-11-03
 
 This patch release completes the PDF validation pass in the Windows GUI and restores the in-document search selection after page navigation. Windows, Linux, and macOS packages are published from the same tag by GitHub Actions.
