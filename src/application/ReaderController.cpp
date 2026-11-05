@@ -175,6 +175,11 @@ bool ReaderController::ocrAvailable() const
     return ocrProvider_ != nullptr && ocrProvider_->isAvailable();
 }
 
+QStringList ReaderController::availableOcrLanguages() const
+{
+    return ocrProvider_ != nullptr ? ocrProvider_->availableLanguages() : QStringList();
+}
+
 bool ReaderController::ocrRunning() const
 {
     return ocrDocumentRunning_ || (ocrProvider_ != nullptr && ocrProvider_->busy());

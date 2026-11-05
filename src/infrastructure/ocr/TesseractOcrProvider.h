@@ -18,6 +18,7 @@ public:
 
     [[nodiscard]] QString name() const override;
     [[nodiscard]] bool isAvailable() const override;
+    [[nodiscard]] QStringList availableLanguages() const;
     [[nodiscard]] bool busy() const;
     [[nodiscard]] static QStringList argumentsFor(const QString &imagePath,
                                                   const QString &language);

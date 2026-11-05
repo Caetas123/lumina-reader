@@ -225,6 +225,7 @@ qt_add_qml_module(lumina_reader
         assets/lumina-logo.png
         assets/empty-library-book.svg
         assets/empty-library-reference.png
+        src/ui/qml/OcrLanguages.js
 )
 
 if(WIN32)

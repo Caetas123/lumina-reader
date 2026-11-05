@@ -11,6 +11,17 @@
 
 namespace {
 
+QProcessEnvironment environmentForExecutable(const QString &executable)
+{
+    QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
+    const QFileInfo executableInfo(executable);
+    const QString bundledTessdata = executableInfo.dir().filePath(QStringLiteral("tessdata"));
+    if (QFileInfo(bundledTessdata).isDir()) {
+        environment.insert(QStringLiteral("TESSDATA_PREFIX"), bundledTessdata);
+    }
+    return environment;
+}
+
 Lumina::Domain::OcrProvider::Result parseTesseractTsv(const QByteArray &data, const QSize &imageSize)
 {
     Lumina::Domain::OcrProvider::Result result;
@@ -103,6 +114,44 @@ bool TesseractOcrProvider::isAvailable() const
     return !executablePath().isEmpty();
 }
 
+QStringList TesseractOcrProvider::availableLanguages() const
+{
+    const QString executable = executablePath();
+    if (executable.isEmpty()) {
+        return {};
+    }
+
+    QProcess probe;
+    probe.setProcessEnvironment(environmentForExecutable(executable));
+    probe.start(executable, {QStringLiteral("--list-langs")});
+    if (!probe.waitForFinished(5000)) {
+        probe.kill();
+        probe.waitForFinished();
+        return {};
+    }
+    if (probe.exitStatus() != QProcess::NormalExit || probe.exitCode() != 0) {
+        return {};
+    }
+
+    QStringList languages;
+    const QRegularExpression languagePattern(QStringLiteral("^[A-Za-z0-9_.-]+$"));
+    const QStringList lines = QString::fromLocal8Bit(probe.readAllStandardOutput())
+        .split(QChar('\n'), Qt::SkipEmptyParts);
+    for (const QString &rawLine : lines) {
+        const QString language = rawLine.trimmed();
+        if (language.isEmpty()
+            || language == QStringLiteral("osd")
+            || language == QStringLiteral("equ")
+            || !languagePattern.match(language).hasMatch()) {
+            continue;
+        }
+        languages.append(language);
+    }
+    languages.removeDuplicates();
+    languages.sort(Qt::CaseInsensitive);
+    return languages;
+}
+
 bool TesseractOcrProvider::busy() const
 {
     return busy_;
@@ -162,13 +211,7 @@ bool TesseractOcrProvider::recognize(const QImage &image,
 
     process_.setProgram(executable);
     process_.setArguments(argumentsFor(imageFile_.fileName(), normalizedLanguage));
-    QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
-    const QFileInfo executableInfo(executable);
-    const QString bundledTessdata = executableInfo.dir().filePath(QStringLiteral("tessdata"));
-    if (QFileInfo(bundledTessdata).isDir()) {
-        environment.insert(QStringLiteral("TESSDATA_PREFIX"), bundledTessdata);
-    }
-    process_.setProcessEnvironment(environment);
+    process_.setProcessEnvironment(environmentForExecutable(executable));
     imageSize_ = image.size();
     process_.start();
     return true;

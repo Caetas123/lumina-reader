@@ -3,6 +3,8 @@ import QtQuick.Controls
 import QtQuick.Dialogs
 import QtQuick.Layouts
 
+import "OcrLanguages.js" as OcrLanguages
+
 import LuminaReader 1.0
 
 ApplicationWindow {
@@ -41,8 +43,8 @@ ApplicationWindow {
     property var annotationKindLabels: [qsTr("Note"), qsTr("Image region")]
     property var translationLanguageKeys: ["en", "pt", "es", "fr", "de", "ja", "ko", "zh"]
     property var translationLanguageLabels: [qsTr("English"), qsTr("Portuguese"), qsTr("Spanish"), qsTr("French"), qsTr("German"), qsTr("Japanese"), qsTr("Korean"), qsTr("Chinese")]
-    property var ocrLanguageKeys: ["eng", "por", "spa", "jpn", "kor", "chi_sim"]
-    property var ocrLanguageLabels: [qsTr("English"), qsTr("Portuguese"), qsTr("Spanish"), qsTr("Japanese"), qsTr("Korean"), qsTr("Chinese")]
+    property var ocrLanguageKeys: appController.reader.availableOcrLanguages()
+    property var ocrLanguageLabels: OcrLanguages.labelsFor(window.ocrLanguageKeys)
     property var libraryBrowseOptions: []
     property var librarySortOptions: [
         { label: qsTr("Recently opened"), value: "recent" },
@@ -3539,8 +3541,9 @@ ApplicationWindow {
                                 id: ocrLanguageSelector
                                 visible: appController.reader.open && appController.reader.imageDocument
                                 enabled: !appController.reader.ocrRunning
-                                 width: 112
+                                width: window.width < 1100 ? 156 : 190
                                 model: window.ocrLanguageLabels
+                                currentIndex: Math.max(0, window.ocrLanguageKeys.indexOf("eng"))
                                 ToolTip.visible: hovered
                                 ToolTip.text: qsTr("OCR language")
                             }

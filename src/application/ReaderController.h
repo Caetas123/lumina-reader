@@ -6,6 +6,7 @@
 #include <QImage>
 #include <QList>
 #include <QString>
+#include <QStringList>
 
 #include <memory>
 
@@ -78,6 +79,7 @@ public:
     [[nodiscard]] bool ocrDocumentRunning() const;
     [[nodiscard]] double ocrProgress() const;
     [[nodiscard]] QString ocrStatus() const;
+    Q_INVOKABLE QStringList availableOcrLanguages() const;
     [[nodiscard]] bool showOcrText() const;
     void setShowOcrText(bool show);
     [[nodiscard]] int pageCount() const;
