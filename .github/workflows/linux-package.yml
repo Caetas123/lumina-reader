@@ -50,14 +50,7 @@ jobs:
             libspeechd2 \
             libwebp-dev \
             speech-dispatcher \
-            tesseract-ocr \
-            tesseract-ocr-eng \
-            tesseract-ocr-por \
-            tesseract-ocr-spa \
-            tesseract-ocr-jpn \
-            tesseract-ocr-kor \
-            tesseract-ocr-chi-sim \
-            tesseract-ocr-chi-tra
+            tesseract-ocr
 
       - name: Configure
         shell: bash

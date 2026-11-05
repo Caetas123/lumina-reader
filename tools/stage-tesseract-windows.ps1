@@ -13,7 +13,17 @@ $destination = [IO.Path]::GetFullPath($Destination)
 $tempRoot = Join-Path ([IO.Path]::GetTempPath()) ("lumina-tesseract-" + [Guid]::NewGuid().ToString("N"))
 $installer = Join-Path $tempRoot "tesseract-installer.exe"
 $extractRoot = Join-Path $tempRoot "extracted"
-$languages = @("eng", "por", "spa", "jpn", "kor", "chi_sim", "chi_tra", "osd")
+$languageManifest = Join-Path $PSScriptRoot "tesseract-languages.txt"
+$tessdataFastRefPath = Join-Path $PSScriptRoot "tessdata-fast-ref.txt"
+$tessdataFastRef = (Get-Content -LiteralPath $tessdataFastRefPath |
+    Where-Object { -not [string]::IsNullOrWhiteSpace($_) -and -not $_.Trim().StartsWith('#') } |
+    Select-Object -First 1).Trim()
+$languages = @(Get-Content -LiteralPath $languageManifest |
+    ForEach-Object { $_.Trim() } |
+    Where-Object { -not [string]::IsNullOrWhiteSpace($_) -and -not $_.StartsWith('#') })
+if ([string]::IsNullOrWhiteSpace($tessdataFastRef) -or $languages.Count -eq 0) {
+    throw "The Tesseract language manifest is empty or invalid."
+}
 
 $sevenZip = if ([string]::IsNullOrWhiteSpace($SevenZipPath)) {
     (Get-Command 7z.exe -ErrorAction SilentlyContinue)?.Source
@@ -59,13 +69,8 @@ try {
     Copy-Item -LiteralPath $configs -Destination $destinationTessdata -Recurse -Force
     foreach ($language in $languages) {
         $target = Join-Path $destinationTessdata "$language.traineddata"
-        $source = Join-Path $tessdata "$language.traineddata"
-        if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
-            $languageUrl = "https://github.com/tesseract-ocr/tessdata_fast/raw/main/$language.traineddata"
-            Invoke-WebRequest -Uri $languageUrl -OutFile $target -UseBasicParsing
-        } else {
-            Copy-Item -LiteralPath $source -Destination $target -Force
-        }
+        $languageUrl = "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/$tessdataFastRef/$language.traineddata"
+        Invoke-WebRequest -Uri $languageUrl -OutFile $target -UseBasicParsing
         if ((Get-Item -LiteralPath $target).Length -le 0) {
             throw "Tesseract language data is empty: $language"
         }
@@ -75,6 +80,8 @@ try {
         Copy-Item -Destination $destination -Force
     "Tesseract Windows runtime staged from $InstallerUrl" |
         Set-Content -LiteralPath (Join-Path $destination "TESSERACT_SOURCE.txt") -Encoding ascii
+    "tessdata_fast commit: $tessdataFastRef; models: $($languages.Count)" |
+        Add-Content -LiteralPath (Join-Path $destination "TESSERACT_SOURCE.txt") -Encoding ascii
 }
 finally {
     if (Test-Path -LiteralPath $tempRoot) {

@@ -5,6 +5,9 @@ version="${1:?Usage: build-appimage.sh <version> [build-directory] [output-direc
 build_directory="${2:-build/release}"
 output_directory="${3:-dist/linux}"
 project_directory="$(pwd)"
+language_manifest="${project_directory}/tools/tesseract-languages.txt"
+tessdata_fast_ref="$(sed -n '/^[[:space:]]*[^#[:space:]]/ { s/^[[:space:]]*//; s/[[:space:]]*$//; p; q; }' \
+    "${project_directory}/tools/tessdata-fast-ref.txt")"
 app_directory="${output_directory}/LuminaReader.AppDir"
 linuxdeployqt_path="${output_directory}/linuxdeployqt.AppImage"
 appimage_path="${output_directory}/LuminaReader-linux-x86_64.AppImage"
@@ -46,20 +49,36 @@ if command -v tesseract >/dev/null 2>&1; then
     fi
     install -Dm755 "$(command -v tesseract)" \
         "${app_directory}/usr/bin/ocr/tesseract"
-    for language in eng por spa jpn kor chi_sim chi_tra osd; do
-        if [[ ! -f "${tessdata_directory}/${language}.traineddata" ]]; then
+    if [[ -z "${tessdata_fast_ref}" ]]; then
+        echo "Missing tessdata_fast commit reference" >&2
+        exit 1
+    fi
+    while IFS= read -r language || [[ -n "${language}" ]]; do
+        language="$(printf '%s' "${language}" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+        [[ -z "${language}" || "${language}" == \#* ]] && continue
+        language_url="https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/${tessdata_fast_ref}/${language}.traineddata"
+        language_target="${app_directory}/usr/bin/ocr/tessdata/${language}.traineddata"
+        curl --fail --location --retry 3 --silent --show-error \
+            --output "${language_target}" "${language_url}"
+        if [[ ! -s "${language_target}" ]]; then
             echo "Missing Tesseract language data: ${language}" >&2
             exit 1
         fi
-        install -Dm644 "${tessdata_directory}/${language}.traineddata" \
-            "${app_directory}/usr/bin/ocr/tessdata/${language}.traineddata"
-    done
+    done < "${language_manifest}"
+    if [[ ! -s "${app_directory}/usr/bin/ocr/tessdata/eng.traineddata" ]]; then
+        echo "The Tesseract language manifest did not stage English" >&2
+        exit 1
+    fi
     if [[ ! -f "${tessdata_directory}/configs/tsv" ]]; then
         echo "Missing Tesseract TSV configuration: ${tessdata_directory}/configs/tsv" >&2
         exit 1
     fi
     cp -a "${tessdata_directory}/configs" \
         "${app_directory}/usr/bin/ocr/tessdata/"
+    printf 'tessdata_fast commit: %s; models: %s\n' \
+        "${tessdata_fast_ref}" \
+        "$(grep -Ev '^[[:space:]]*(#|$)' "${language_manifest}" | wc -l)" \
+        > "${app_directory}/usr/bin/ocr/TESSERACT_SOURCE.txt"
 
     # linuxdeployqt follows the main Qt executable.  Tesseract is a child
     # process, so explicitly copy its non-glibc runtime dependencies too.
