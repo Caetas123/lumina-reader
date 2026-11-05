@@ -49,6 +49,7 @@ if command -v tesseract >/dev/null 2>&1; then
     fi
     install -Dm755 "$(command -v tesseract)" \
         "${app_directory}/usr/bin/ocr/tesseract"
+    mkdir -p "${app_directory}/usr/bin/ocr/tessdata"
     if [[ -z "${tessdata_fast_ref}" ]]; then
         echo "Missing tessdata_fast commit reference" >&2
         exit 1
