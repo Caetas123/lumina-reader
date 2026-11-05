@@ -1,8 +1,8 @@
 # Implementation status
 
-Audit date: 2026-11-04
+Audit date: 2026-11-05
 Branch: `main`
-Release under audit: `0.2.5`
+Release under audit: `0.2.6`
 
 This report describes the current repository and separates local evidence from
 platform evidence that must come from GitHub Actions. The final checklist uses
@@ -21,6 +21,10 @@ being converted into a guessed pass.
   format-independent document engine contract.
 - Full Windows/Linux release engines: Qt PDF, Qt Speech, Qt Multimedia,
   libarchive, DjVuLibre, libwebp, libavif, and bundled Tesseract OCR.
+- Fully local OCR packaging for the official Tesseract `tessdata_fast`
+  manifest: 125 data files are bundled in the Windows/Linux release packages
+  (123 selectable language/script models after excluding `equ` and `osd`),
+  with runtime discovery of the models actually installed.
 - Single-page and two-page visual layouts, zoom, rotation, thumbnails,
   contents navigation, in-document search, selectable text, bookmarks, focus
   mode, full screen, and keyboard navigation.
@@ -49,6 +53,12 @@ script passes `bash -n` syntax validation.
 
 The image-codec test is also run with the real WebP and AVIF fixtures in the
 final evidence pass; it is not accepted merely because the test binary exists.
+
+For release `v0.2.6`, the pinned Tesseract manifest and commit were validated
+in the Windows and Linux packaging workflows. The downloaded AppImage and
+Debian package each contain exactly 125 `.traineddata` files, the Tesseract
+executable, `configs/tsv`, and `TESSERACT_SOURCE.txt` identifying the pinned
+source commit.
 
 ## GUI evidence
 

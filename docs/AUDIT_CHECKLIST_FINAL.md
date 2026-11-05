@@ -1,6 +1,6 @@
-# Final audit checklist — Lumina Reader v0.2.5
+# Final audit checklist — Lumina Reader v0.2.6
 
-Audit date: 2026-11-04
+Audit date: 2026-11-05
 Repository: `https://github.com/Caetas123/lumina-reader`
 Local checkout: `C:\Users\caeta\Documents\lumina-reader`
 
@@ -23,12 +23,13 @@ image.
 | Linux full-engine build | `/root/lumina-reader-linux-audit-20261104` in Ubuntu-24.04 WSL2 |
 | Linux WSLg launch log | `/root/lumina-linux-gui-024.log` |
 | Windows GUI OCR database | `%APPDATA%\Lumina Reader contributors\Lumina Reader\lumina.db` |
+| v0.2.6 release package verification | `C:\Users\caeta\AppData\Local\Temp\lumina-v026-release-verify` |
 
 ## Build, engines, and automated tests
 
 | Requirement | Platform | Version | Test/action | Observed result and evidence | Related commit | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| One release version | Windows/Linux | 0.2.5 | Read `project-version.txt` and configure CMake | Both full builds reported project version `0.2.5`; the stable release tag is `v0.2.5` | `d39258a` | PASS |
+| One release version | Windows/Linux | 0.2.6 | Read `project-version.txt`, configure CMake, and inspect the tag | `project-version.txt` is `0.2.6`; the stable release tag is `v0.2.6` and points to the corrected packaging commit | `518223a` | PASS |
 | Full document-engine gate | Windows | 0.2.5 | Configure with `LUMINA_REQUIRE_FULL_ENGINES=ON` | Qt PDF, TextToSpeech, Multimedia, libarchive, DjVuLibre, libwebp, and libavif detected in the full build | `e4cbfb6`, `a082d49` | PASS |
 | Full document-engine gate | Linux | 0.2.5 | Configure with `LUMINA_REQUIRE_FULL_ENGINES=ON` in Ubuntu-24.04 WSL2 | Configuration succeeded with the same full-engine gate | `e4cbfb6`, `a082d49` | PASS |
 | Automated suite | Windows | 0.2.5 | CTest in the full build with Qt/vcpkg/DjVu runtime paths | 11/11 tests passed | `e4cbfb6`, `03c7455` | PASS |
@@ -96,7 +97,7 @@ close/reopen persistence, and Knowledge/export coverage where applicable.
 | Text highlights, comments, annotations, bookmarks | Windows | 0.2.5 | GUI text/PDF/image workflows and persistence tests | Saved items reopened and remained searchable; image/PDF coordinates were persisted | `f5caac7` | PASS |
 | OCR page flow | Windows | 0.2.5 | Real Tesseract through packaged GUI | Status was `Text recognized and saved to the Knowledge center`; text area displayed recognized text | `a082d49` | PASS |
 | OCR database/FTS/word coordinates | Windows | 0.2.5 | Read-only SQLite verification after GUI OCR | `integrity ok`; one completed OCR page, one FTS row, and 22 OCR word rows were present | `a082d49` | PASS |
-| OCR language/runtime packaging | Windows/Linux | 0.2.5 | Stage checks for `eng`, `por`, `spa`, `jpn`, `kor`, `chi_sim`, `chi_tra`, `osd`, and `configs/tsv` | All required files were staged; Tesseract was executed in the Windows GUI path | `a082d49` | PASS |
+| OCR language/runtime packaging | Windows/Linux | 0.2.6 | Stage the pinned complete `tessdata_fast` manifest and inspect both published Linux packages | AppImage and `.deb` each contain exactly 125 `.traineddata` files, Tesseract, `configs/tsv`, and the pinned `TESSERACT_SOURCE.txt`; the Windows staging workflow passed the same 125-model script | `dcf85f0`, `518223a` | PASS |
 | Knowledge center search/export/navigation | Windows | 0.2.5 | Search saved OCR/highlight content; export Markdown/JSON/TXT/PDF | Saved content was found across formats and exported to the evidence directory | `c531394` | PASS |
 | Google, dictionary, and translation actions | Windows | 0.2.5 | Use public test text and explicit GUI actions | Google opened in the browser; dictionary/translation history and local reuse paths were exercised without uploading documents | `b1a192d` | PASS |
 | Text-to-speech controls | Windows | 0.2.5 | Reader `Read aloud` controls, pause/resume/stop state | Qt Speech controls and backend-dependent word-progress path were exercised; audio backend evidence is host-dependent | `ce81667` | PASS |
@@ -106,17 +107,20 @@ close/reopen persistence, and Knowledge/export coverage where applicable.
 
 ## Remote CI and release gate
 
-The remote evidence below was captured after the `v0.2.5` tag was pushed. It
-contains the exact GitHub run IDs, asset sizes, and SHA-256 values for the
-published artifacts.
+The remote evidence below was captured after the corrected `v0.2.6` tag was
+pushed. It contains the exact GitHub run IDs, asset sizes, and SHA-256 values
+for the published artifacts. The older GUI rows above remain as historical
+evidence from the v0.2.5 Windows GUI pass; v0.2.6 changes the OCR discovery and
+release packaging, not the audited UI behavior.
 
 | Requirement | Platform | Version | Test/action | Observed result and evidence | Related commit | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| GitHub CI build/test | Windows/Linux/macOS | 0.2.5 | Run the `ci.yml` workflow at the release commit | Run `41846304566` passed: Linux job `126630606400`, Windows job `126630607021`, macOS job `126630605801`; head `d39258a` | `d39258a` | PASS |
-| Windows release asset | Windows x64 | 0.2.5 | Tag workflow publishes direct installer EXE | [Direct EXE](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.5/LuminaReader-Setup-windows-x64.exe), 233,711,690 bytes, SHA-256 `66518947DE066FDF6B85652C0CE9315C3B37DD5DFD98F972646783C9BCE39D12`; workflow `41847338774` passed | `d39258a` | PASS |
-| Linux release assets | Linux x86_64 | 0.2.5 | Tag workflow publishes AppImage and `.deb` | [AppImage](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.5/LuminaReader-linux-x86_64.AppImage), 101,284,344 bytes, SHA-256 `FAD4C69D9ED429668BA2ABB66AE5F670B6444CF7E76E10719D2D3270EBA53AE0`; [Debian package](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.5/LuminaReader-linux-x86_64.deb), 87,620,064 bytes, SHA-256 `D8AFB804D30EB94EEBE639414254DC31EE6523F32FEF3B342415ED92E3CDA443`; workflow `41847338601` passed | `d39258a` | PASS |
-| Same Windows/Linux tag and README links | Windows/Linux | 0.2.5 | Inspect GitHub Release and direct README URLs | Stable [v0.2.5 release](https://github.com/Caetas123/lumina-reader/releases/tag/v0.2.5) contains the Windows EXE and both Linux packages under the same tag; README links resolve to those direct assets | `d39258a` | PASS |
-| No Windows ZIP end-user asset | Windows | 0.2.5 | Inspect release assets | The stable release contains exactly the Windows EXE, two Linux packages, and the macOS DMG; no ZIP is published for end users | `d39258a` | PASS |
+| GitHub CI build/test | Windows/Linux/macOS | 0.2.6 | Run the `ci.yml` workflow at the corrected release commit | Run `42011365712` passed on head `518223a`; Windows, Linux, and macOS jobs completed successfully | `518223a` | PASS |
+| Windows release asset | Windows x64 | 0.2.6 | Tag workflow publishes direct installer EXE | [Direct EXE](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.6/LuminaReader-Setup-windows-x64.exe), 403,286,090 bytes, SHA-256 `AB360136EF93B8722E6782933FB897A143BDEDD0DDCD1CF663378B62E6CBC3C8`; workflow `42011975972` passed | `518223a` | PASS |
+| Linux release assets | Linux x86_64 | 0.2.6 | Tag workflow publishes AppImage and `.deb` | [AppImage](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.6/LuminaReader-linux-x86_64.AppImage), 269,580,792 bytes, SHA-256 `5771B41DE3E8AAA88A4877E52AF7383AA4918D0FB0B5FD1D79BFB9421733DE17`; [Debian package](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.6/LuminaReader-linux-x86_64.deb), 248,015,626 bytes, SHA-256 `C211093EEAF8464BCDE37DC89B14FFF6F7FB5F2E6F7995CD36A89DA17E75EF2D`; workflow `42011975923` passed | `518223a` | PASS |
+| Offline OCR content in Linux packages | Linux x86_64 | 0.2.6 | Extract both published packages and count bundled models | AppImage and `.deb` each contain 125 `.traineddata` files plus Tesseract, `configs/tsv`, and the pinned manifest source `87416418657359cb625c412a48b6e1d6d41c29bd` | `dcf85f0`, `518223a` | PASS |
+| Same Windows/Linux tag and README links | Windows/Linux | 0.2.6 | Inspect GitHub Release and direct README URLs | Stable [v0.2.6 release](https://github.com/Caetas123/lumina-reader/releases/tag/v0.2.6) contains the Windows EXE and both Linux packages under the same tag; README links resolve to those direct assets | `518223a` | PASS |
+| No Windows ZIP end-user asset | Windows | 0.2.6 | Inspect release assets | The stable release contains the Windows EXE, two Linux packages, and the macOS DMG; no ZIP is published for end users | `518223a` | PASS |
 
 All remote release rows are now `PASS`. The platform boundaries above remain
 visible: this Windows host cannot provide native macOS GUI/DPI evidence, and
