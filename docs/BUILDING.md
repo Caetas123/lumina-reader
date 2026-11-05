@@ -12,7 +12,7 @@ Lumina Reader is a native C++20/Qt 6 desktop application. The repository contain
 - DjVuLibre;
 - libwebp;
 - libavif;
-- Tesseract OCR with `eng`, `por`, `spa`, `jpn`, `kor`, `chi_sim`, `chi_tra`, and `osd` language data for the full package.
+- Tesseract OCR plus the 125-file manifest in `tools/tesseract-languages.txt` and the pinned `tessdata_fast` commit in `tools/tessdata-fast-ref.txt` for the full package.
 
 The application has no server, browser runtime, Electron, WebView, or JavaScript service dependency. Online dictionary and translation calls are explicit user actions; normal reading and OCR remain local.
 
@@ -65,11 +65,13 @@ sudo apt-get install -y \
   build-essential cmake ninja-build pkg-config \
   libarchive-dev libavif-dev libdjvulibre-dev libwebp-dev \
   libpulse-dev libpipewire-0.3-0 libspeechd2 speech-dispatcher \
-  tesseract-ocr tesseract-ocr-eng tesseract-ocr-por tesseract-ocr-spa \
-  tesseract-ocr-jpn tesseract-ocr-kor tesseract-ocr-chi-sim tesseract-ocr-chi-tra
+  tesseract-ocr
 ```
 
-The AppImage and Debian package copy Tesseract, its language data, `tessdata/configs/tsv`, and its non-glibc runtime dependencies into the deployed application. The application looks for `usr/bin/ocr/tesseract` beside the deployed executable before falling back to `PATH`.
+The AppImage and Debian package copy Tesseract, all models in the language
+manifest, `tessdata/configs/tsv`, and its non-glibc runtime dependencies into
+the deployed application. The application looks for `usr/bin/ocr/tesseract`
+beside the deployed executable before falling back to `PATH`.
 
 The release runner is Ubuntu 22.04 so linuxdeployqt's portable-glibc guard is
 enabled by default. When validating the script on a newer local distribution,

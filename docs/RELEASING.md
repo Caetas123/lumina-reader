@@ -40,8 +40,8 @@ release contains:
 The Windows ZIP is created only as an internal input to the graphical installer
 and must not be uploaded or documented as an end-user download. The Windows
 installer embeds the Qt runtime, platform plugins, native document engines,
-Tesseract, language data, and `tessdata/configs/tsv`, then launches the installed
-application.
+Tesseract, every model in `tools/tesseract-languages.txt`, and
+`tessdata/configs/tsv`, then launches the installed application.
 
 The Linux AppImage and `.deb` copy Tesseract and its non-glibc runtime
 dependencies into the deployed application. The application first searches for
@@ -58,9 +58,9 @@ before CTest so the tests exercise the same native DLL set used by packaging.
 
 The Windows workflow stages Tesseract using
 `tools/stage-tesseract-windows.ps1`, which validates the executable, every
-published language file, and the TSV configuration before the installer is
-built. The Linux workflow validates the same languages and TSV configuration in
-`packaging/linux/build-appimage.sh`.
+model in the pinned `tessdata_fast` manifest, and the TSV configuration before
+the installer is built. The Linux workflow stages and validates the same
+manifest in `packaging/linux/build-appimage.sh`.
 
 The macOS workflow publishes the existing x86_64 core Qt DMG. It uses the same
 version/tag but does not claim the Windows/Linux full-engine gate; macOS-native

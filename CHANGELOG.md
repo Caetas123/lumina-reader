@@ -4,6 +4,21 @@ All notable changes to Lumina Reader will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows Semantic Versioning where a public release version exists.
 
+## [0.2.6] - 2026-11-05
+
+This release expands offline OCR coverage and removes the hard-coded six-language selector. OCR remains local: page images and recognized text are never sent to an online provider.
+
+### Added
+
+- 125 official Tesseract `tessdata_fast` data files (123 selectable language/script models) bundled in Windows and Linux release packages.
+- Runtime language discovery from the bundled Tesseract installation, with readable labels and script variants in the OCR selector.
+- A pinned language-data manifest and source revision so Windows and Linux package the same OCR models.
+
+### Fixed
+
+- OCR packaging no longer depends on the small set of language packages preinstalled by the Linux runner or the models included in the Windows Tesseract installer.
+- The OCR language selector now defaults to English when it is present and scrolls through the full installed model list.
+
 ## [0.2.5] - 2026-11-04
 
 This release completes the full-engine packaging work for Windows and Linux and adds persisted reading profiles. The release assets are built from the same tag and include the OCR runtime required by the image-reading workflow.

@@ -1,6 +1,6 @@
 # Format and feature support
 
-This is the user-facing capability matrix for Lumina Reader `v0.2.5`.
+This is the user-facing capability matrix for Lumina Reader `v0.2.6`.
 Windows and Linux release builds are configured with the full-engine gate and
 ship the native engines and OCR runtime required by the table. Development
 builds may intentionally omit those dependencies; the picker then hides the
@@ -52,13 +52,17 @@ supports:
 
 ## OCR
 
-Windows and Linux release packages include Tesseract, language data for
-English, Portuguese, Spanish, Japanese, Korean, Simplified Chinese,
-Traditional Chinese, and orientation detection, plus Tesseract's `configs/tsv`
-file required for word-coordinate parsing. OCR runs locally and asynchronously;
-recognized text, word boxes, and page status are persisted in the local
-database and indexed in Knowledge. The UI also supports cancellation and a
-manual region annotation fallback.
+Windows and Linux release packages include Tesseract and 125 official
+`tessdata_fast` data files (123 selectable language/script models), pinned to the commit recorded in
+`tools/tessdata-fast-ref.txt`, plus orientation detection and Tesseract's
+`configs/tsv` file required for word-coordinate parsing. The UI discovers the
+models installed beside the executable instead of exposing a hard-coded list.
+OCR runs locally and asynchronously; no page image or OCR result is sent to an
+online provider. Recognized text, word boxes, and page status are persisted in
+the local database and indexed in Knowledge. The UI also supports cancellation
+and a manual region annotation fallback. Google Translate's translation list
+is not an OCR model list, so a language without an official local Tesseract
+model cannot be promised as offline OCR support.
 
 ## Platform and build boundaries
 
