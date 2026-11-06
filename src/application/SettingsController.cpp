@@ -123,6 +123,11 @@ bool SettingsController::highContrast() const
     return highContrast_;
 }
 
+QString SettingsController::languageLocale() const
+{
+    return languageLocale_;
+}
+
 QString SettingsController::activeProfile() const
 {
     return profileNameForId(activeProfileId_);
@@ -269,7 +274,8 @@ bool SettingsController::createProfile(const QString &name)
     }
     while (source.next()) {
         const QString sourceKey = source.value(0).toString();
-        if (sourceKey == QStringLiteral("profiles") || sourceKey == QStringLiteral("active_profile")) {
+        if (sourceKey == QStringLiteral("profiles") || sourceKey == QStringLiteral("active_profile")
+            || sourceKey == QStringLiteral("language_locale")) {
             continue;
         }
         QString baseKey;
@@ -392,6 +398,23 @@ void SettingsController::setHighContrast(bool enabled)
     }
     highContrast_ = enabled;
     persist(QStringLiteral("high_contrast"), enabled ? QStringLiteral("1") : QStringLiteral("0"));
+    emit settingsChanged();
+}
+
+void SettingsController::setLanguageLocale(const QString &locale)
+{
+    QString normalized = locale.trimmed().replace(QLatin1Char('_'), QLatin1Char('-'));
+    if (normalized.isEmpty()) {
+        normalized = QStringLiteral("system");
+    }
+    if (normalized.compare(QStringLiteral("system"), Qt::CaseInsensitive) == 0) {
+        normalized = QStringLiteral("system");
+    }
+    if (normalized == languageLocale_) {
+        return;
+    }
+    languageLocale_ = normalized;
+    persistGlobal(QStringLiteral("language_locale"), languageLocale_);
     emit settingsChanged();
 }
 
@@ -521,22 +544,11 @@ QString SettingsController::readerPreferenceValue(const QString &key,
     }
     keys.append(normalizedKey);
 
-    QStringList candidates;
     const QString prefix = profileStoragePrefix();
     for (const QString &candidate : keys) {
-        candidates.append(prefix + candidate);
-    }
-    if (!prefix.isEmpty()) {
-        // A profile starts with a snapshot of the Default profile, but older
-        // databases may not have that snapshot. Keep the legacy values as a
-        // safe fallback instead of making an existing preference disappear.
-        candidates.append(keys);
-    }
-
-    for (const QString &candidate : candidates) {
         QSqlQuery query(database_->connection());
         query.prepare(QStringLiteral("SELECT value FROM app_settings WHERE key = :key"));
-        query.bindValue(QStringLiteral(":key"), candidate);
+        query.bindValue(QStringLiteral(":key"), prefix + candidate);
         if (query.exec() && query.next()) {
             return query.value(0).toString();
         }
@@ -581,6 +593,11 @@ void SettingsController::load()
     }
 
     resetDefaults();
+    QSqlQuery languageQuery(database_->connection());
+    languageQuery.prepare(QStringLiteral("SELECT value FROM app_settings WHERE key = 'language_locale'"));
+    if (languageQuery.exec() && languageQuery.next() && !languageQuery.value(0).toString().trimmed().isEmpty()) {
+        languageLocale_ = languageQuery.value(0).toString().trimmed().replace(QLatin1Char('_'), QLatin1Char('-'));
+    }
     const QString prefix = profileStoragePrefix();
     QSqlQuery query(database_->connection());
     if (!query.exec(QStringLiteral("SELECT key, value FROM app_settings"))) {
@@ -609,6 +626,8 @@ void SettingsController::load()
             continuousReading_ = value == QStringLiteral("1");
         } else if (key == QStringLiteral("high_contrast")) {
             highContrast_ = value == QStringLiteral("1");
+        } else if (key == QStringLiteral("language_locale") && !value.trimmed().isEmpty()) {
+            languageLocale_ = value.trimmed().replace(QLatin1Char('_'), QLatin1Char('-'));
         } else if (key == QStringLiteral("font_family") && !value.trimmed().isEmpty()) {
             fontFamily_ = value.trimmed().left(64);
         } else if (key == QStringLiteral("reader_width")) {
@@ -645,6 +664,20 @@ void SettingsController::persist(const QString &key, const QString &value)
         "INSERT INTO app_settings (key, value, updated_at) VALUES (:key, :value, CURRENT_TIMESTAMP) "
         "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP"));
     query.bindValue(QStringLiteral(":key"), profileStoragePrefix() + key);
+    query.bindValue(QStringLiteral(":value"), value);
+    query.exec();
+}
+
+void SettingsController::persistGlobal(const QString &key, const QString &value)
+{
+    if (database_ == nullptr || !database_->isOpen()) {
+        return;
+    }
+    QSqlQuery query(database_->connection());
+    query.prepare(QStringLiteral(
+        "INSERT INTO app_settings (key, value, updated_at) VALUES (:key, :value, CURRENT_TIMESTAMP) "
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP"));
+    query.bindValue(QStringLiteral(":key"), key);
     query.bindValue(QStringLiteral(":value"), value);
     query.exec();
 }
@@ -729,6 +762,7 @@ void SettingsController::resetDefaults()
     lineSpacing_ = 120;
     continuousReading_ = true;
     highContrast_ = false;
+    languageLocale_ = QStringLiteral("system");
     fontFamily_ = QStringLiteral("Segoe UI");
     readerWidth_ = 860;
     readerMargin_ = 30;

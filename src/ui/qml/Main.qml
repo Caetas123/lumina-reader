@@ -17,6 +17,8 @@ ApplicationWindow {
     minimumHeight: 620
     title: appController.applicationName
     color: Theme.windowBackground
+    LayoutMirroring.enabled: languageController.rightToLeft
+    LayoutMirroring.childrenInherit: true
 
     property int currentView: 0
     property int settingsSection: 0
@@ -79,6 +81,23 @@ ApplicationWindow {
 
     function readerHighlightColor() {
         return window.customHighlightColor.length > 0 ? window.customHighlightColor : Theme.highlight
+    }
+
+    function localizedInteger(value) {
+        // Read the locale property so numeric bindings refresh when the user
+        // changes the application language without restarting Lumina Reader.
+        var activeLocale = languageController.locale
+        return languageController.formatInteger(Number(value) || 0)
+    }
+
+    function localizedDecimal(value, fractionDigits) {
+        var activeLocale = languageController.locale
+        return languageController.formatDecimal(Number(value) || 0, fractionDigits)
+    }
+
+    function localizedPercent(value, fractionDigits) {
+        var activeLocale = languageController.locale
+        return languageController.formatPercent(Number(value) || 0, fractionDigits || 0)
     }
 
     Component.onCompleted: {
@@ -281,7 +300,7 @@ ApplicationWindow {
             paths.push(localPath(urls[index]))
         }
         if (paths.length > 0 && appController.library.importFiles(paths)) {
-            notification = qsTr("Added %1 document(s) to your library.").arg(paths.length)
+            notification = qsTr("Added %1 document(s) to your library.").arg(window.localizedInteger(paths.length))
             notificationTimer.restart()
         }
     }
@@ -466,13 +485,13 @@ ApplicationWindow {
     function readingTimeLabel(seconds) {
         var totalMinutes = Math.floor(Math.max(0, Number(seconds) || 0) / 60)
         if (totalMinutes < 60) {
-            return qsTr("%1 min read").arg(totalMinutes)
+            return qsTr("%1 min read").arg(window.localizedInteger(totalMinutes))
         }
         var hours = Math.floor(totalMinutes / 60)
         var minutes = totalMinutes % 60
         return minutes === 0
-            ? qsTr("%1 h read").arg(hours)
-            : qsTr("%1 h %2 min read").arg(hours).arg(minutes)
+            ? qsTr("%1 h read").arg(window.localizedInteger(hours))
+            : qsTr("%1 h %2 min read").arg(window.localizedInteger(hours)).arg(window.localizedInteger(minutes))
     }
 
     function refreshLibraryBrowseOptions() {
@@ -1253,7 +1272,7 @@ ApplicationWindow {
 
                 Label {
                     visible: searchHistoryDialog.entries.length > 0
-                    text: qsTr("%1 saved").arg(searchHistoryDialog.entries.length)
+                    text: qsTr("%1 saved").arg(window.localizedInteger(searchHistoryDialog.entries.length))
                     color: Theme.textSecondary
                     font.pixelSize: 12
                 }
@@ -1669,8 +1688,8 @@ ApplicationWindow {
                         text: {
                             var name = appController.reader.pageName(Number(index))
                             return name.length > 0
-                                ? qsTr("%1 · Page %2").arg(name).arg(Number(index) + 1)
-                                : qsTr("Page %1").arg(Number(index) + 1)
+                                ? qsTr("%1 · Page %2").arg(name).arg(window.localizedInteger(Number(index) + 1))
+                                : qsTr("Page %1").arg(window.localizedInteger(Number(index) + 1))
                         }
                         color: Theme.textSecondary
                         font.pixelSize: 11
@@ -1763,13 +1782,13 @@ ApplicationWindow {
                         anchors.margins: 8
                         spacing: 8
                         Label {
-                            text: String(modelData.label || qsTr("Page %1").arg(Number(modelData.page) + 1))
+                            text: String(modelData.label || qsTr("Page %1").arg(window.localizedInteger(Number(modelData.page) + 1)))
                             color: Theme.textPrimary
                             elide: Text.ElideRight
                             Layout.fillWidth: true
                         }
                         Label {
-                            text: qsTr("Page %1").arg(Number(modelData.page) + 1)
+                            text: qsTr("Page %1").arg(window.localizedInteger(Number(modelData.page) + 1))
                             color: Theme.textSecondary
                         }
                         Button {
@@ -2331,7 +2350,7 @@ ApplicationWindow {
                             onClicked: window.openSearchHistory("library")
                         }
                         Label {
-                            text: qsTr("%1 item(s)").arg(appController.library.count)
+                            text: qsTr("%1 item(s)").arg(window.localizedInteger(appController.library.count))
                             color: Theme.textSecondary
                             font.pixelSize: 13
                         }
@@ -2498,136 +2517,6 @@ ApplicationWindow {
                                     smooth: true
                                 }
 
-                                Item {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    width: 210
-                                    height: 124
-                                    visible: false
-                                    scale: 1.35
-                                    z: 2
-
-                                    Rectangle {
-                                        x: 22
-                                        y: 68
-                                        width: 166
-                                        height: 35
-                                        radius: 18
-                                        color: "#6255e8"
-                                        opacity: 0.18
-                                    }
-
-                                    Rectangle {
-                                        id: illustratedLeftPage
-                                        x: 42
-                                        y: 24
-                                        width: 68
-                                        height: 68
-                                        radius: 10
-                                        rotation: -11
-                                        transformOrigin: Item.BottomRight
-                                        gradient: Gradient {
-                                            GradientStop { position: 0.0; color: "#fbfbff" }
-                                            GradientStop { position: 0.62; color: "#d6d5ff" }
-                                            GradientStop { position: 1.0; color: "#a39aff" }
-                                        }
-                                        border.color: "#e3e1ff"
-                                        border.width: 1
-
-                                        Repeater {
-                                            model: 4
-                                            delegate: Rectangle {
-                                                x: 12
-                                                y: 15 + index * 10
-                                                width: 42
-                                                height: 2
-                                                radius: 1
-                                                color: "#9d98eb"
-                                                opacity: 0.58
-                                            }
-                                        }
-                                    }
-
-                                    Rectangle {
-                                        id: illustratedRightPage
-                                        x: 100
-                                        y: 24
-                                        width: 68
-                                        height: 68
-                                        radius: 10
-                                        rotation: 11
-                                        transformOrigin: Item.BottomLeft
-                                        gradient: Gradient {
-                                            GradientStop { position: 0.0; color: "#fbfbff" }
-                                            GradientStop { position: 0.58; color: "#d5d6ff" }
-                                            GradientStop { position: 1.0; color: "#9b91f2" }
-                                        }
-                                        border.color: "#e3e1ff"
-                                        border.width: 1
-
-                                        Repeater {
-                                            model: 4
-                                            delegate: Rectangle {
-                                                x: 14
-                                                y: 15 + index * 10
-                                                width: 42
-                                                height: 2
-                                                radius: 1
-                                                color: "#9d98eb"
-                                                opacity: 0.58
-                                            }
-                                        }
-                                    }
-
-                                    Rectangle {
-                                        x: 36
-                                        y: 82
-                                        width: 76
-                                        height: 9
-                                        radius: 4
-                                        rotation: -9
-                                        transformOrigin: Item.BottomRight
-                                        color: "#785de5"
-                                        border.color: "#9b87ff"
-                                    }
-
-                                    Rectangle {
-                                        x: 98
-                                        y: 82
-                                        width: 76
-                                        height: 9
-                                        radius: 4
-                                        rotation: 9
-                                        transformOrigin: Item.BottomLeft
-                                        color: "#694bd2"
-                                        border.color: "#8d79ff"
-                                    }
-
-                                    Rectangle {
-                                        x: 103
-                                        y: 42
-                                        width: 5
-                                        height: 48
-                                        radius: 2
-                                        color: "#8277e9"
-                                    }
-
-                                    Icon {
-                                        x: 163
-                                        y: 2
-                                        width: 18
-                                        height: 18
-                                        name: "sparkle"
-                                        iconColor: "#f7ecff"
-                                    }
-                                    Icon {
-                                        x: 145
-                                        y: 24
-                                        width: 11
-                                        height: 11
-                                        name: "sparkle"
-                                        iconColor: "#f7ecff"
-                                    }
-                                }
 
                                 Label {
                                     width: parent.width
@@ -2793,153 +2682,6 @@ ApplicationWindow {
                                     smooth: true
                                 }
 
-                                Item {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    width: 210
-                                    height: 124
-                                    visible: false
-
-                                    Canvas {
-                                        anchors.fill: parent
-                                        antialiasing: true
-
-                                        onPaint: {
-                                            var context = getContext("2d")
-                                            context.reset()
-                                            context.save()
-
-                                            var scale = width / 320
-                                            context.scale(scale, scale)
-
-                                            var glow = context.createRadialGradient(160, 105, 4, 160, 105, 128)
-                                            glow.addColorStop(0, "#9b8cffb8")
-                                            glow.addColorStop(0.5, "#5e52d845")
-                                            glow.addColorStop(1, "#1e235500")
-                                            context.fillStyle = glow
-                                            context.beginPath()
-                                            context.arc(160, 105, 128, 0, Math.PI * 2)
-                                            context.fill()
-
-                                            context.fillStyle = "#4a43a94d"
-                                            context.beginPath()
-                                            context.moveTo(40, 123)
-                                            context.bezierCurveTo(78, 120, 95, 96, 125, 99)
-                                            context.bezierCurveTo(145, 101, 151, 117, 160, 118)
-                                            context.bezierCurveTo(169, 117, 175, 101, 195, 99)
-                                            context.bezierCurveTo(225, 96, 242, 120, 280, 123)
-                                            context.bezierCurveTo(244, 135, 211, 137, 160, 134)
-                                            context.bezierCurveTo(109, 137, 76, 135, 40, 123)
-                                            context.fill()
-
-                                            context.fillStyle = "#6d5eea38"
-                                            context.beginPath()
-                                            context.moveTo(52, 138)
-                                            context.bezierCurveTo(86, 131, 110, 119, 136, 122)
-                                            context.bezierCurveTo(148, 124, 153, 131, 160, 133)
-                                            context.bezierCurveTo(167, 131, 172, 124, 184, 122)
-                                            context.bezierCurveTo(210, 119, 234, 131, 268, 138)
-                                            context.bezierCurveTo(229, 146, 197, 148, 160, 146)
-                                            context.bezierCurveTo(123, 148, 91, 146, 52, 138)
-                                            context.fill()
-
-                                            var leftPage = context.createLinearGradient(90, 63, 157, 127)
-                                            leftPage.addColorStop(0, "#fdfdff")
-                                            leftPage.addColorStop(0.58, "#d7d7ff")
-                                            leftPage.addColorStop(1, "#a49bff")
-                                            context.fillStyle = leftPage
-                                            context.strokeStyle = "#d9d8ff"
-                                            context.lineWidth = 1.5
-                                            context.beginPath()
-                                            context.moveTo(83, 117)
-                                            context.bezierCurveTo(91, 101, 96, 79, 105, 57)
-                                            context.bezierCurveTo(108, 49, 114, 47, 122, 49)
-                                            context.lineTo(157, 56)
-                                            context.lineTo(157, 125)
-                                            context.bezierCurveTo(145, 122, 132, 116, 119, 113)
-                                            context.bezierCurveTo(107, 110, 95, 112, 83, 117)
-                                            context.closePath()
-                                            context.fill()
-                                            context.stroke()
-
-                                            var rightPage = context.createLinearGradient(164, 68, 232, 126)
-                                            rightPage.addColorStop(0, "#fbfbff")
-                                            rightPage.addColorStop(0.56, "#d5d7ff")
-                                            rightPage.addColorStop(1, "#9b91f2")
-                                            context.fillStyle = rightPage
-                                            context.beginPath()
-                                            context.moveTo(237, 117)
-                                            context.bezierCurveTo(229, 101, 224, 79, 215, 57)
-                                            context.bezierCurveTo(212, 49, 206, 47, 198, 49)
-                                            context.lineTo(163, 56)
-                                            context.lineTo(163, 125)
-                                            context.bezierCurveTo(175, 122, 188, 116, 201, 113)
-                                            context.bezierCurveTo(213, 110, 225, 112, 237, 117)
-                                            context.closePath()
-                                            context.fill()
-                                            context.stroke()
-
-                                            var cover = context.createLinearGradient(102, 118, 220, 132)
-                                            cover.addColorStop(0, "#7c61ef")
-                                            cover.addColorStop(0.5, "#b18cff")
-                                            cover.addColorStop(1, "#6749d0")
-                                            context.fillStyle = cover
-                                            context.strokeStyle = "#8d79ff"
-                                            context.beginPath()
-                                            context.moveTo(83, 117)
-                                            context.bezierCurveTo(95, 112, 108, 112, 120, 115)
-                                            context.bezierCurveTo(135, 118, 148, 125, 160, 130)
-                                            context.bezierCurveTo(172, 125, 185, 118, 200, 115)
-                                            context.bezierCurveTo(212, 112, 225, 112, 237, 117)
-                                            context.lineTo(232, 130)
-                                            context.bezierCurveTo(215, 127, 190, 127, 160, 139)
-                                            context.bezierCurveTo(130, 127, 105, 127, 88, 130)
-                                            context.closePath()
-                                            context.fill()
-                                            context.stroke()
-
-                                            context.strokeStyle = "#8277e9"
-                                            context.lineWidth = 2.2
-                                            context.beginPath()
-                                            context.moveTo(160, 57)
-                                            context.lineTo(160, 130)
-                                            context.stroke()
-
-                                            context.strokeStyle = "#a6a0eea6"
-                                            context.lineWidth = 2.3
-                                            context.lineCap = "round"
-                                            var lineY = [67, 75, 84, 93]
-                                            for (var lineIndex = 0; lineIndex < lineY.length; ++lineIndex) {
-                                                context.beginPath()
-                                                context.moveTo(104 - lineIndex * 2, lineY[lineIndex])
-                                                context.bezierCurveTo(118, lineY[lineIndex], 133, lineY[lineIndex] + 5, 146, lineY[lineIndex] + 12)
-                                                context.stroke()
-                                                context.beginPath()
-                                                context.moveTo(216 + lineIndex * 2, lineY[lineIndex])
-                                                context.bezierCurveTo(202, lineY[lineIndex], 187, lineY[lineIndex] + 5, 174, lineY[lineIndex] + 12)
-                                                context.stroke()
-                                            }
-
-                                            context.fillStyle = "#f7ecff"
-                                            var stars = [ { x: 251, y: 42, r: 11 }, { x: 223, y: 46, r: 7 }, { x: 267, y: 62, r: 5 } ]
-                                            for (var starIndex = 0; starIndex < stars.length; ++starIndex) {
-                                                var star = stars[starIndex]
-                                                context.beginPath()
-                                                context.moveTo(star.x, star.y - star.r)
-                                                context.lineTo(star.x + star.r * 0.22, star.y - star.r * 0.22)
-                                                context.lineTo(star.x + star.r, star.y)
-                                                context.lineTo(star.x + star.r * 0.22, star.y + star.r * 0.22)
-                                                context.lineTo(star.x, star.y + star.r)
-                                                context.lineTo(star.x - star.r * 0.22, star.y + star.r * 0.22)
-                                                context.lineTo(star.x - star.r, star.y)
-                                                context.lineTo(star.x - star.r * 0.22, star.y - star.r * 0.22)
-                                                context.closePath()
-                                                context.fill()
-                                            }
-
-                                            context.restore()
-                                        }
-                                    }
-                                }
 
                                 Label {
                                     width: parent.width
@@ -3184,7 +2926,7 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                     }
                                      Label {
-                                         text: qsTr("Page %1 · %2").arg(Number(modelData.page) + 1).arg(modelData.kind === "annotation" ? qsTr("Note") : qsTr("Highlight"))
+                                         text: qsTr("Page %1 · %2").arg(window.localizedInteger(Number(modelData.page) + 1)).arg(modelData.kind === "annotation" ? qsTr("Note") : qsTr("Highlight"))
                                          color: Theme.textSecondary
                                          font.pixelSize: 11
                                      }
@@ -3389,7 +3131,7 @@ ApplicationWindow {
                             Label {
                                 visible: documentSearch.text.length > 0
                                 text: appController.reader.searchMatches > 0
-                                    ? qsTr("%1/%2").arg(appController.reader.searchCurrent + 1).arg(appController.reader.searchMatches)
+                                    ? qsTr("%1/%2").arg(window.localizedInteger(appController.reader.searchCurrent + 1)).arg(window.localizedInteger(appController.reader.searchMatches))
                                     : qsTr("No matches")
                                 color: Theme.textSecondary
                                 font.pixelSize: 11
@@ -3408,11 +3150,17 @@ ApplicationWindow {
                                     to: Math.max(1, appController.reader.pageCount)
                                     value: appController.reader.currentPage + 1
                                     editable: true
-                                     width: 76
+                                    width: 76
+                                    textFromValue: function(value, locale) {
+                                        return window.localizedInteger(value)
+                                    }
+                                    valueFromText: function(text, locale) {
+                                        return languageController.parseInteger(text)
+                                    }
                                     onValueModified: appController.reader.goToPage(value - 1)
                                 }
                                 Label {
-                                    text: qsTr("of %1").arg(appController.reader.pageCount)
+                                    text: qsTr("of %1").arg(window.localizedInteger(appController.reader.pageCount))
                                     color: Theme.textSecondary
                                     font.pixelSize: 11
                                 }
@@ -3480,7 +3228,7 @@ ApplicationWindow {
                                     ToolTip.text: qsTr("Zoom out (Ctrl+-)")
                                 }
                                 Label {
-                                    text: qsTr("%1%").arg(Math.round(window.imageZoom * 100))
+                                    text: window.localizedPercent(Math.round(window.imageZoom * 100))
                                     color: Theme.textSecondary
                                     horizontalAlignment: Text.AlignHCenter
                                     Layout.preferredWidth: 42
@@ -3995,324 +3743,6 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
 
-                ColumnLayout {
-                    anchors.fill: parent
-                    anchors.leftMargin: 240
-                    anchors.rightMargin: 28
-                    anchors.topMargin: 28
-                    anchors.bottomMargin: 28
-                    spacing: 18
-                    // The settings shell below owns every section. Keep the legacy
-                    // controls in the source for now, but do not render them behind it.
-                    visible: false
-                    Label {
-                        text: window.settingsSection === 1 ? qsTr("Reading")
-                            : window.settingsSection === 2 ? qsTr("Appearance")
-                                : window.settingsSection === 3 ? qsTr("Files & library")
-                                    : window.settingsSection === 4 ? qsTr("Privacy") : qsTr("About")
-                        color: Theme.textPrimary
-                        font.pixelSize: 30
-                        font.weight: Font.DemiBold
-                    }
-                    Rectangle {
-                        Layout.fillWidth: true
-                        implicitHeight: 150
-                        radius: 18
-                        color: Theme.surface
-                        border.color: Theme.border
-                        ColumnLayout {
-                            anchors.fill: parent
-                            anchors.margins: 20
-                            spacing: 8
-                            Label {
-                                text: qsTr("Privacy")
-                                color: Theme.textPrimary
-                                font.pixelSize: 16
-                                font.weight: Font.DemiBold
-                            }
-                            Label {
-                                text: qsTr("Lumina Reader keeps your library, progress, and saved passages on this device. Online lookups will always be optional and explicit.")
-                                color: Theme.textSecondary
-                                wrapMode: Text.WordWrap
-                                Layout.fillWidth: true
-                            }
-                        }
-                    }
-                    Rectangle {
-                        Layout.fillWidth: true
-                        implicitHeight: settingsColumn.implicitHeight + 40
-                        radius: 18
-                        color: Theme.surface
-                        border.color: Theme.border
-
-                        ColumnLayout {
-                            id: settingsColumn
-                            anchors.left: parent.left
-                            anchors.right: parent.right
-                            anchors.top: parent.top
-                            anchors.margins: 20
-                            spacing: 14
-
-                            Label {
-                                text: qsTr("Reading comfort")
-                                color: Theme.textPrimary
-                                font.pixelSize: 16
-                                font.weight: Font.DemiBold
-                            }
-
-                            RowLayout {
-                                Layout.fillWidth: true
-                                Label {
-                                    text: qsTr("Save reading preferences to")
-                                    color: Theme.textPrimary
-                                    Layout.fillWidth: true
-                                }
-                                ComboBox {
-                                    Layout.preferredWidth: 190
-                                    model: window.readerScopeLabels
-                                    currentIndex: Math.max(0, window.readerScopeKeys.indexOf(readerPreferences.scope))
-                                    onActivated: readerPreferences.setScope(window.readerScopeKeys[index])
-                                }
-                            }
-                            Label {
-                                visible: !readerPreferences.contextAvailable
-                                text: qsTr("Open a document to save preferences for a format, content type, or document.")
-                                color: Theme.textSecondary
-                                wrapMode: Text.WordWrap
-                                Layout.fillWidth: true
-                            }
-
-                            RowLayout {
-                                Layout.fillWidth: true
-                                Label { text: qsTr("Theme"); color: Theme.textPrimary; Layout.fillWidth: true }
-                                ComboBox {
-                                    Layout.preferredWidth: 190
-                                    model: [qsTr("Light"), qsTr("Dark"), qsTr("Sepia"), qsTr("Paper"), qsTr("Gray"), qsTr("High contrast"), qsTr("Low light")]
-                                    currentIndex: Math.max(0, window.themeKeys.indexOf(readerPreferences.theme))
-                                    onActivated: readerPreferences.setTheme(window.themeKeys[index])
-                                }
-                            }
-
-                            RowLayout {
-                                Layout.fillWidth: true
-                                Label { text: qsTr("Font size"); color: Theme.textPrimary; Layout.fillWidth: true }
-                                Slider {
-                                    Layout.preferredWidth: 190
-                                    from: 12
-                                    to: 32
-                                    stepSize: 1
-                                    value: readerPreferences.fontSize
-                                    onMoved: readerPreferences.setFontSize(Math.round(value))
-                                }
-                                Label { text: qsTr("%1 px").arg(readerPreferences.fontSize); color: Theme.textSecondary; Layout.preferredWidth: 44 }
-                            }
-
-                            RowLayout {
-                                Layout.fillWidth: true
-                                Label { text: qsTr("Line spacing"); color: Theme.textPrimary; Layout.fillWidth: true }
-                                Slider {
-                                    Layout.preferredWidth: 190
-                                    from: 100
-                                    to: 180
-                                    stepSize: 5
-                                    value: readerPreferences.lineSpacing
-                                    onMoved: readerPreferences.setLineSpacing(Math.round(value))
-                                }
-                                Label { text: qsTr("%1%").arg(readerPreferences.lineSpacing); color: Theme.textSecondary; Layout.preferredWidth: 44 }
-                            }
-
-                            RowLayout {
-                                Layout.fillWidth: true
-                                Label { text: qsTr("Font"); color: Theme.textPrimary; Layout.fillWidth: true }
-                                ComboBox {
-                                    Layout.preferredWidth: 190
-                                    model: ["Segoe UI", "Arial", "Georgia", "Verdana", "Times New Roman", "Consolas"]
-                                    currentIndex: Math.max(0, ["Segoe UI", "Arial", "Georgia", "Verdana", "Times New Roman", "Consolas"].indexOf(readerPreferences.fontFamily))
-                                    onActivated: readerPreferences.setFontFamily(["Segoe UI", "Arial", "Georgia", "Verdana", "Times New Roman", "Consolas"][index])
-                                }
-                            }
-
-                            RowLayout {
-                                Layout.fillWidth: true
-                                Label { text: qsTr("Text width"); color: Theme.textPrimary; Layout.fillWidth: true }
-                                Slider {
-                                    Layout.preferredWidth: 190
-                                    from: 600
-                                    to: 1400
-                                    stepSize: 20
-                                    value: readerPreferences.readerWidth
-                                    onMoved: readerPreferences.setReaderWidth(Math.round(value / 20) * 20)
-                                }
-                                Label { text: qsTr("%1 px").arg(readerPreferences.readerWidth); color: Theme.textSecondary; Layout.preferredWidth: 58 }
-                            }
-
-                            RowLayout {
-                                Layout.fillWidth: true
-                                Label { text: qsTr("Page margins"); color: Theme.textPrimary; Layout.fillWidth: true }
-                                Slider {
-                                    Layout.preferredWidth: 190
-                                    from: 12
-                                    to: 80
-                                    stepSize: 2
-                                    value: readerPreferences.readerMargin
-                                    onMoved: readerPreferences.setReaderMargin(Math.round(value / 2) * 2)
-                                }
-                                Label { text: qsTr("%1 px").arg(readerPreferences.readerMargin); color: Theme.textSecondary; Layout.preferredWidth: 58 }
-                            }
-
-                            RowLayout {
-                                Layout.fillWidth: true
-                                Label { text: qsTr("Alignment"); color: Theme.textPrimary; Layout.fillWidth: true }
-                                ComboBox {
-                                    Layout.preferredWidth: 190
-                                    model: [qsTr("Left"), qsTr("Centered"), qsTr("Right"), qsTr("Justified")]
-                                    currentIndex: Math.max(0, ["left", "center", "right", "justify"].indexOf(readerPreferences.textAlignment))
-                                    onActivated: readerPreferences.setTextAlignment(["left", "center", "right", "justify"][index])
-                                }
-                            }
-
-                            RowLayout {
-                                Layout.fillWidth: true
-                                Label { text: qsTr("Reading direction"); color: Theme.textPrimary; Layout.fillWidth: true }
-                                ComboBox {
-                                    Layout.preferredWidth: 190
-                                    model: [qsTr("Left to right"), qsTr("Right to left")]
-                                    currentIndex: readerPreferences.readingDirection === "rtl" ? 1 : 0
-                                    onActivated: readerPreferences.setReadingDirection(index === 1 ? "rtl" : "ltr")
-                                }
-                            }
-
-                            RowLayout {
-                                Layout.fillWidth: true
-                                Label { text: qsTr("Image fit"); color: Theme.textPrimary; Layout.fillWidth: true }
-                                ComboBox {
-                                    Layout.preferredWidth: 190
-                                    model: [qsTr("Fit page"), qsTr("Fit width"), qsTr("Fit height"), qsTr("Actual size")]
-                                    currentIndex: Math.max(0, ["page", "width", "height", "actual"].indexOf(readerPreferences.imageFit))
-                                    onActivated: readerPreferences.setImageFit(["page", "width", "height", "actual"][index])
-                                }
-                            }
-
-                            RowLayout {
-                                Layout.fillWidth: true
-                                Label { text: qsTr("Reader background"); color: Theme.textPrimary; Layout.fillWidth: true }
-                                TextField {
-                                    Layout.preferredWidth: 190
-                                    placeholderText: qsTr("#RRGGBB (optional)")
-                                    text: readerPreferences.customReaderBackground
-                                    onEditingFinished: readerPreferences.setCustomReaderBackground(text)
-                                }
-                            }
-
-                            RowLayout {
-                                Layout.fillWidth: true
-                                Label { text: qsTr("Reader text"); color: Theme.textPrimary; Layout.fillWidth: true }
-                                TextField {
-                                    Layout.preferredWidth: 190
-                                    placeholderText: qsTr("#RRGGBB (optional)")
-                                    text: readerPreferences.customReaderText
-                                    onEditingFinished: readerPreferences.setCustomReaderText(text)
-                                }
-                            }
-
-                            RowLayout {
-                                Layout.fillWidth: true
-                                Label { text: qsTr("Highlight color"); color: Theme.textPrimary; Layout.fillWidth: true }
-                                TextField {
-                                    Layout.preferredWidth: 190
-                                    placeholderText: qsTr("#RRGGBB (optional)")
-                                    text: readerPreferences.customHighlightColor
-                                    onEditingFinished: readerPreferences.setCustomHighlightColor(text)
-                                }
-                            }
-
-                            CheckBox {
-                                text: qsTr("Use continuous reading when available")
-                                checked: readerPreferences.continuousReading
-                                onToggled: readerPreferences.setContinuousReading(checked)
-                            }
-                            CheckBox {
-                                text: qsTr("High contrast controls")
-                                checked: readerPreferences.highContrast
-                                onToggled: readerPreferences.setHighContrast(checked)
-                            }
-
-                            Label {
-                                visible: appController.speech.available
-                                text: qsTr("Read aloud")
-                                color: Theme.textPrimary
-                                font.weight: Font.DemiBold
-                            }
-                            RowLayout {
-                                visible: appController.speech.available
-                                Layout.fillWidth: true
-                                Label { text: qsTr("Speed"); color: Theme.textPrimary; Layout.fillWidth: true }
-                                Slider {
-                                    Layout.preferredWidth: 190
-                                    from: 50
-                                    to: 200
-                                    stepSize: 5
-                                    value: appController.speech.rate
-                                    onMoved: appController.speech.rate = Math.round(value)
-                                }
-                                Label { text: qsTr("%1%").arg(appController.speech.rate); color: Theme.textSecondary; Layout.preferredWidth: 44 }
-                            }
-                            RowLayout {
-                                visible: appController.speech.available
-                                Layout.fillWidth: true
-                                Label { text: qsTr("Volume"); color: Theme.textPrimary; Layout.fillWidth: true }
-                                Slider {
-                                    Layout.preferredWidth: 190
-                                    from: 0
-                                    to: 100
-                                    stepSize: 5
-                                    value: appController.speech.volume
-                                    onMoved: appController.speech.volume = Math.round(value)
-                                }
-                                Label { text: qsTr("%1%").arg(appController.speech.volume); color: Theme.textSecondary; Layout.preferredWidth: 44 }
-                            }
-                        }
-                    }
-                    Label {
-                        text: qsTr("Your preferences are stored locally with your Lumina Reader library.")
-                        color: Theme.textSecondary
-                        wrapMode: Text.WordWrap
-                        Layout.fillWidth: true
-                    }
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Button {
-                            text: qsTr("Export library")
-                            onClicked: libraryExportDialog.open()
-                        }
-                        Button {
-                            text: qsTr("Create database backup")
-                            onClicked: databaseBackupDialog.open()
-                        }
-                        Button {
-                            text: qsTr("Restore database")
-                            onClicked: databaseRestoreDialog.open()
-                        }
-                        Button {
-                            text: qsTr("Restore library")
-                            onClicked: libraryRestoreDialog.open()
-                        }
-                        Button {
-                            text: qsTr("Export preferences")
-                            onClicked: settingsExportDialog.open()
-                        }
-                        Button {
-                            text: qsTr("Restore preferences")
-                            onClicked: settingsRestoreDialog.open()
-                        }
-                        Button {
-                            text: qsTr("New collection")
-                            onClicked: createCollectionDialog.open()
-                        }
-                        Item { Layout.fillWidth: true }
-                    }
-                    Item { Layout.fillHeight: true }
-                }
 
                 Rectangle {
                     id: settingsShell
@@ -4443,10 +3873,17 @@ ApplicationWindow {
                             Layout.fillHeight: true
                             visible: window.settingsSection === 0
 
-                            ColumnLayout {
+                            ScrollView {
+                                id: generalSettingsScroll
                                 anchors.fill: parent
-                                anchors.margins: 24
-                                spacing: 12
+                                anchors.margins: 28
+                                contentWidth: Math.max(0, generalSettings.width - 56)
+                                clip: true
+
+                                ColumnLayout {
+                                    id: generalSettingsContent
+                                    width: Math.max(0, generalSettings.width - 56)
+                                    spacing: 12
 
                                 Label {
                                     text: qsTr("General")
@@ -4460,6 +3897,76 @@ ApplicationWindow {
                                     Layout.fillWidth: true
                                     Layout.alignment: Qt.AlignTop
                                     spacing: 12
+
+                                    Rectangle {
+                                        Layout.fillWidth: true
+                                        implicitHeight: languageCard.implicitHeight + 28
+                                        radius: 10
+                                        color: Theme.surfaceMuted
+                                        border.color: Theme.surfaceRaised
+
+                                        ColumnLayout {
+                                            id: languageCard
+                                            anchors.fill: parent
+                                            anchors.margins: 14
+                                            spacing: 6
+
+                                            RowLayout {
+                                                Layout.fillWidth: true
+                                                spacing: 12
+
+                                                ColumnLayout {
+                                                    Layout.fillWidth: true
+                                                    spacing: 2
+                                                    Label {
+                                                        text: qsTr("Application language")
+                                                        color: Theme.textPrimary
+                                                        font.pixelSize: 12
+                                                        font.weight: Font.Medium
+                                                    }
+                                                    Label {
+                                                        text: qsTr("Use the Windows or Linux language automatically, or choose another language.")
+                                                        color: Theme.textSecondary
+                                                        font.pixelSize: 10
+                                                        wrapMode: Text.WordWrap
+                                                        Layout.fillWidth: true
+                                                    }
+                                                }
+
+                                                ComboBox {
+                                                    id: languageCombo
+                                                    Layout.preferredWidth: Math.min(330, Math.max(220, generalSettings.width * 0.40))
+                                                    model: languageController.availableLanguageLabels
+                                                    currentIndex: languageController.selectedLocale === "system"
+                                                        ? 0
+                                                        : Math.max(0, languageController.availableSelectionLocales.indexOf(
+                                                              languageController.displayLocaleFor(languageController.selectedLocale)) + 1)
+                                                    onActivated: {
+                                                        var selected = index === 0
+                                                            ? "system"
+                                                            : languageController.availableSelectionLocales[index - 1]
+                                                        languageController.setLanguage(selected)
+                                                    }
+                                                }
+                                            }
+
+                                            Label {
+                                                Layout.fillWidth: true
+                                                text: qsTr("Detected by your operating system: %1").arg(languageController.systemLanguageLabel)
+                                                color: Theme.textSecondary
+                                                font.pixelSize: 10
+                                                elide: Text.ElideRight
+                                            }
+
+                                            Label {
+                                                Layout.fillWidth: true
+                                                text: languageController.translationStatus
+                                                color: Theme.textSecondary
+                                                font.pixelSize: 10
+                                                wrapMode: Text.WordWrap
+                                            }
+                                        }
+                                    }
 
                                     Rectangle {
                                         Layout.fillWidth: true
@@ -4634,7 +4141,8 @@ ApplicationWindow {
                                     }
                                 }
 
-                                Item { Layout.fillHeight: true }
+                                    Item { Layout.preferredHeight: 12 }
+                                }
                             }
                         }
 
@@ -4719,7 +4227,7 @@ ApplicationWindow {
                                                     value: readerPreferences.fontSize
                                                     onMoved: readerPreferences.setFontSize(Math.round(value))
                                                 }
-                                                Label { text: qsTr("%1 px").arg(readerPreferences.fontSize); color: Theme.textSecondary; Layout.preferredWidth: 48 }
+                                                Label { text: window.localizedInteger(readerPreferences.fontSize) + " px"; color: Theme.textSecondary; Layout.preferredWidth: 48 }
                                             }
                                             RowLayout {
                                                 Layout.fillWidth: true
@@ -4732,7 +4240,7 @@ ApplicationWindow {
                                                     value: readerPreferences.lineSpacing
                                                     onMoved: readerPreferences.setLineSpacing(Math.round(value))
                                                 }
-                                                Label { text: qsTr("%1%").arg(readerPreferences.lineSpacing); color: Theme.textSecondary; Layout.preferredWidth: 48 }
+                                                Label { text: window.localizedPercent(readerPreferences.lineSpacing); color: Theme.textSecondary; Layout.preferredWidth: 48 }
                                             }
                                             RowLayout {
                                                 Layout.fillWidth: true
@@ -4755,7 +4263,7 @@ ApplicationWindow {
                                                     value: readerPreferences.readerWidth
                                                     onMoved: readerPreferences.setReaderWidth(Math.round(value / 20) * 20)
                                                 }
-                                                Label { text: qsTr("%1 px").arg(readerPreferences.readerWidth); color: Theme.textSecondary; Layout.preferredWidth: 58 }
+                                                Label { text: window.localizedInteger(readerPreferences.readerWidth) + " px"; color: Theme.textSecondary; Layout.preferredWidth: 58 }
                                             }
                                             RowLayout {
                                                 Layout.fillWidth: true
@@ -4768,7 +4276,7 @@ ApplicationWindow {
                                                     value: readerPreferences.readerMargin
                                                     onMoved: readerPreferences.setReaderMargin(Math.round(value / 2) * 2)
                                                 }
-                                                Label { text: qsTr("%1 px").arg(readerPreferences.readerMargin); color: Theme.textSecondary; Layout.preferredWidth: 58 }
+                                                Label { text: window.localizedInteger(readerPreferences.readerMargin) + " px"; color: Theme.textSecondary; Layout.preferredWidth: 58 }
                                             }
                                             RowLayout {
                                                 Layout.fillWidth: true
@@ -4828,13 +4336,13 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Label { text: qsTr("Speed"); color: Theme.textPrimary; Layout.fillWidth: true }
                                                 Slider { Layout.fillWidth: true; from: 50; to: 200; stepSize: 5; value: appController.speech.rate; onMoved: appController.speech.rate = Math.round(value) }
-                                                Label { text: qsTr("%1%").arg(appController.speech.rate); color: Theme.textSecondary; Layout.preferredWidth: 48 }
+                                                Label { text: window.localizedPercent(appController.speech.rate); color: Theme.textSecondary; Layout.preferredWidth: 48 }
                                             }
                                             RowLayout {
                                                 Layout.fillWidth: true
                                                 Label { text: qsTr("Volume"); color: Theme.textPrimary; Layout.fillWidth: true }
                                                 Slider { Layout.fillWidth: true; from: 0; to: 100; stepSize: 5; value: appController.speech.volume; onMoved: appController.speech.volume = Math.round(value) }
-                                                Label { text: qsTr("%1%").arg(appController.speech.volume); color: Theme.textSecondary; Layout.preferredWidth: 48 }
+                                                Label { text: window.localizedPercent(appController.speech.volume); color: Theme.textSecondary; Layout.preferredWidth: 48 }
                                             }
                                         }
                                     }

@@ -104,6 +104,8 @@ add_library(lumina_core STATIC
     src/application/BackupController.h
     src/application/LookupController.cpp
     src/application/LookupController.h
+    src/application/LanguageController.cpp
+    src/application/LanguageController.h
     src/application/ReaderController.cpp
     src/application/ReaderController.h
     src/application/ReaderPreferencesController.cpp
@@ -134,7 +136,6 @@ add_library(lumina_core STATIC
     src/infrastructure/reader/DjvuEngine.h
     src/infrastructure/text/TextDecoder.cpp
     src/infrastructure/text/TextDecoder.h
-    src/pdf/PdfEngine.h
 )
 
 target_include_directories(lumina_core
@@ -206,6 +207,12 @@ set_source_files_properties(
         QT_QML_SINGLETON_TYPE TRUE
 )
 
+set_source_files_properties(
+    localization/lumina-locales.txt
+    PROPERTIES
+        QT_RESOURCE_ALIAS "lumina-locales.txt"
+)
+
 qt_add_qml_module(lumina_reader
     URI LuminaReader
     VERSION 1.0
@@ -223,8 +230,8 @@ qt_add_qml_module(lumina_reader
         src/ui/qml/SpinBox.qml
     RESOURCES
         assets/lumina-logo.png
-        assets/empty-library-book.svg
         assets/empty-library-reference.png
+        localization/lumina-locales.txt
         src/ui/qml/OcrLanguages.js
 )
 

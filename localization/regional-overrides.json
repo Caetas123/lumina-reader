@@ -1,0 +1,255 @@
+{
+  "fr-ca": {
+    "app": {
+      "Library is empty": "Votre bibliothèque est vide",
+      "Search your library": "Rechercher dans votre bibliothèque",
+      "Online lookups": "Recherches en ligne",
+      "Open source project": "Projet à code source ouvert",
+      "Your documents stay where you put them. Lumina Reader only stores the library information needed to organize and reopen them.": "Vos documents restent là où vous les avez placés. Lumina Reader ne conserve que les renseignements nécessaires pour les organiser et les rouvrir.",
+      "Your library stays on this device.": "Votre bibliothèque reste sur cet appareil."
+    },
+    "installer": {
+      "BrandTagline": "Un espace paisible pour votre bibliothèque de lecture.",
+      "WelcomeBody": "Lumina Reader vous offre un espace calme et privé pour lire et organiser vos livres et vos documents. Vos fichiers restent par défaut sur votre ordinateur.",
+      "ReadyToInstallBody": "Choisissez où installer Lumina Reader et les raccourcis que vous souhaitez créer.",
+      "Browse": "Parcourir..."
+    }
+  },
+  "fr-fr": {
+    "app": {
+      "Online lookups": "Recherches sur Internet",
+      "Open source project": "Projet open source",
+      "Your documents stay where you put them. Lumina Reader only stores the library information needed to organize and reopen them.": "Vos documents restent là où vous les avez placés. Lumina Reader ne stocke que les informations nécessaires pour les organiser et les rouvrir.",
+      "Your library stays on this device.": "Votre bibliothèque reste sur cet appareil."
+    },
+    "installer": {
+      "BrandTagline": "Un espace calme pour votre bibliothèque de lecture.",
+      "WelcomeBody": "Lumina Reader vous offre un espace privé et paisible pour lire et organiser vos livres et vos documents. Vos fichiers restent par défaut sur votre ordinateur.",
+      "ReadyToInstallBody": "Choisissez l'emplacement d'installation de Lumina Reader et les raccourcis à créer.",
+      "Browse": "Parcourir…"
+    }
+  },
+  "es-mx": {
+    "app": {
+      "Add documents": "Agregar documentos",
+      "Add folder": "Agregar carpeta",
+      "Remove": "Quitar",
+      "Search your library": "Buscar en tu biblioteca",
+      "Your documents stay where you put them. Lumina Reader only stores the library information needed to organize and reopen them.": "Tus documentos permanecen donde los dejas. Lumina Reader solo guarda en tu computadora la información necesaria para organizarlos y volver a abrirlos.",
+      "Library is empty": "Tu biblioteca está vacía"
+    },
+    "installer": {
+      "WelcomeBody": "Lumina Reader te ofrece un espacio tranquilo y privado para leer y organizar tus libros y documentos. De forma predeterminada, tus archivos permanecen en tu computadora.",
+      "WhatYouAreInstallingBody": "• Lee y organiza tus libros y documentos\n• Guarda pasajes, notas y tu progreso de lectura\n• Mantén tu biblioteca privada en tu computadora\n• Lista para abrirse después de la instalación",
+      "Browse": "Examinar...",
+      "ReadyToInstallBody": "Elige dónde instalar Lumina Reader y qué accesos directos quieres crear."
+    }
+  },
+  "es-es": {
+    "app": {
+      "Add documents": "Añadir documentos",
+      "Add folder": "Añadir carpeta",
+      "Remove": "Eliminar",
+      "Search your library": "Buscar en tu biblioteca",
+      "Your documents stay where you put them. Lumina Reader only stores the library information needed to organize and reopen them.": "Tus documentos permanecen donde los dejas. Lumina Reader solo guarda en tu ordenador la información necesaria para organizarlos y volver a abrirlos.",
+      "Library is empty": "La biblioteca está vacía"
+    },
+    "installer": {
+      "WelcomeBody": "Lumina Reader te ofrece un espacio tranquilo y privado para leer y organizar tus libros y documentos. De forma predeterminada, tus archivos permanecen en tu ordenador.",
+      "WhatYouAreInstallingBody": "• Lee y organiza tus libros y documentos\n• Guarda pasajes, notas y tu progreso de lectura\n• Mantén tu biblioteca privada en tu ordenador\n• Lista para abrirse después de la instalación",
+      "Browse": "Examinar…",
+      "ReadyToInstallBody": "Elige dónde instalar Lumina Reader y qué accesos directos quieres crear."
+    }
+  },
+  "ca-es": {
+    "app": {
+      "Add documents": "Afegeix documents",
+      "Add folder": "Afegeix una carpeta",
+      "Watch folder": "Vigila una carpeta",
+      "Settings": "Configuració",
+      "Files & library": "Fitxers i biblioteca",
+      "Search your library": "Cerca a la teua biblioteca",
+      "Library is empty": "La biblioteca està buida"
+    },
+    "installer": {
+      "WelcomeHeading": "Benvingut a Lumina Reader",
+      "BrandTagline": "Un espai tranquil per a la teua biblioteca de lectura.",
+      "Continue": "Continua",
+      "Browse": "Navega..."
+    }
+  },
+  "ca-es-valencia": {
+    "app": {
+      "Add documents": "Afig documents",
+      "Add folder": "Afig una carpeta",
+      "Watch folder": "Vigila una carpeta",
+      "Settings": "Configuració",
+      "Files & library": "Fitxers i biblioteca",
+      "Search your library": "Busca a la teua biblioteca",
+      "Library is empty": "La teua biblioteca està buida"
+    },
+    "installer": {
+      "WelcomeHeading": "Benvingut a Lumina Reader",
+      "BrandTagline": "Un espai tranquil per a la teua biblioteca de lectura.",
+      "Continue": "Continua",
+      "Browse": "Navega…"
+    }
+  },
+  "nb-no": {
+    "app": {
+      "Add documents": "Legg til dokumenter",
+      "Add folder": "Legg til mappe",
+      "Open": "Åpne",
+      "Close": "Lukk",
+      "Settings": "Innstillinger",
+      "Files & library": "Filer og bibliotek",
+      "Search your library": "Søk i biblioteket",
+      "Library is empty": "Biblioteket er tomt"
+    },
+    "installer": {
+      "WelcomeHeading": "Velkommen til Lumina Reader",
+      "Continue": "Fortsett",
+      "Browse": "Bla gjennom...",
+      "Launch": "Åpne Lumina Reader"
+    }
+  },
+  "nn-no": {
+    "app": {
+      "Add documents": "Legg til dokument",
+      "Add folder": "Legg til mappe",
+      "Open": "Opne",
+      "Close": "Lukk",
+      "Settings": "Innstillingar",
+      "Files & library": "Filer og bibliotek",
+      "Search your library": "Søk i biblioteket",
+      "Library is empty": "Biblioteket er tomt",
+      "Your library": "Biblioteket ditt"
+    },
+    "installer": {
+      "WelcomeHeading": "Velkomen til Lumina Reader",
+      "Continue": "Hald fram",
+      "Browse": "Bla gjennom...",
+      "Launch": "Opne Lumina Reader"
+    }
+  },
+  "sr-latn-rs": {
+    "app": {
+      "My library": "Moja biblioteka",
+      "Favorites": "Omiljeno",
+      "To read": "Za čitanje",
+      "Reading": "Čitanje",
+      "Finished": "Završeno",
+      "Abandoned": "Napušteno",
+      "Knowledge center": "Centar znanja",
+      "Settings": "Podešavanja",
+      "Add documents": "Dodaj dokumente",
+      "Add folder": "Dodaj fasciklu",
+      "Search your library": "Pretraži biblioteku",
+      "History": "Istorija",
+      "Library is empty": "Biblioteka je prazna"
+    },
+    "installer": {
+      "BrandVersionTemplate": "Windows x64 · Verzija {0}",
+      "WelcomeHeading": "Dobro došli u Lumina Reader",
+      "Continue": "Nastavi",
+      "Close": "Zatvori",
+      "Install": "Instaliraj"
+    }
+  },
+  "sr-latn-cs": {
+    "app": {
+      "My library": "Moja biblioteka",
+      "Favorites": "Omiljene stavke",
+      "To read": "Za čitanje",
+      "Reading": "Čitanje",
+      "Finished": "Završeno",
+      "Abandoned": "Ostavljeno",
+      "Knowledge center": "Centar znanja",
+      "Settings": "Postavke",
+      "Add documents": "Dodaj fajlove",
+      "Add folder": "Dodaj mapu",
+      "Search your library": "Pretraži biblioteku",
+      "History": "Istorija",
+      "Library is empty": "Biblioteka je prazna"
+    },
+    "installer": {
+      "BrandVersionTemplate": "Windows x64 · Izdanje {0}",
+      "WelcomeHeading": "Dobro došli u Lumina Reader",
+      "Continue": "Nastavi",
+      "Close": "Zatvori",
+      "Install": "Instaliraj"
+    }
+  },
+  "sr-cyrl-rs": {
+    "app": {
+      "My library": "Моја библиотека",
+      "Favorites": "Омиљено",
+      "To read": "За читање",
+      "Reading": "Читање",
+      "Finished": "Завршено",
+      "Abandoned": "Напуштено",
+      "Knowledge center": "Центар знања",
+      "Settings": "Подешавања",
+      "Add documents": "Додај документе",
+      "Add folder": "Додај фасциклу",
+      "Search your library": "Претражи библиотеку",
+      "History": "Историја",
+      "Library is empty": "Библиотека је празна"
+    },
+    "installer": {
+      "BrandVersionTemplate": "Windows x64 · Верзија {0}",
+      "WelcomeHeading": "Добро дошли у Lumina Reader",
+      "Continue": "Настави",
+      "Close": "Затвори",
+      "Install": "Инсталирај"
+    }
+  },
+  "sr-cyrl-cs": {
+    "app": {
+      "My library": "Моја библиотека",
+      "Favorites": "Омиљене ставке",
+      "To read": "За читање",
+      "Reading": "Читање",
+      "Finished": "Завршено",
+      "Abandoned": "Остављено",
+      "Knowledge center": "Центар знања",
+      "Settings": "Поставке",
+      "Add documents": "Додај фајлове",
+      "Add folder": "Додај мапу",
+      "Search your library": "Претражи библиотеку",
+      "History": "Историја",
+      "Library is empty": "Библиотека је празна"
+    },
+    "installer": {
+      "BrandVersionTemplate": "Windows x64 · Издање {0}",
+      "WelcomeHeading": "Добро дошли у Lumina Reader",
+      "Continue": "Настави",
+      "Close": "Затвори",
+      "Install": "Инсталирај"
+    }
+  },
+  "sr-cyrl-ba": {
+    "app": {
+      "My library": "Моја библиотека",
+      "Favorites": "Омиљено",
+      "To read": "За читање",
+      "Reading": "Читање",
+      "Finished": "Завршено",
+      "Abandoned": "Напуштено",
+      "Knowledge center": "Центар знања",
+      "Settings": "Подешавања",
+      "Add documents": "Додај документе",
+      "Add folder": "Додај мапу",
+      "Search your library": "Претражи библиотеку",
+      "History": "Историја",
+      "Library is empty": "Ваша библиотека је празна"
+    },
+    "installer": {
+      "BrandVersionTemplate": "Windows x64 · Издање {0}",
+      "WelcomeHeading": "Добродошли у Lumina Reader",
+      "Continue": "Настави",
+      "Close": "Затвори",
+      "Install": "Инсталирај"
+    }
+  }
+}

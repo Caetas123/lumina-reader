@@ -154,8 +154,16 @@ internal static class Program
 
         public static UninstallerStrings ForSystemLanguage()
         {
-            var language = CultureInfo.InstalledUICulture.TwoLetterISOLanguageName;
-            return language.Equals("pt", StringComparison.OrdinalIgnoreCase)
+            var cultures = new[]
+            {
+                CultureInfo.CurrentUICulture,
+                CultureInfo.InstalledUICulture,
+                CultureInfo.CurrentCulture
+            };
+            var isPortuguese = cultures.Any(culture =>
+                culture.Name.StartsWith("pt", StringComparison.OrdinalIgnoreCase)
+                || culture.TwoLetterISOLanguageName.Equals("pt", StringComparison.OrdinalIgnoreCase));
+            return isPortuguese
                 ? Portuguese()
                 : English();
         }

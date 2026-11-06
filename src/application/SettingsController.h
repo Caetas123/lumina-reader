@@ -18,6 +18,7 @@ class SettingsController final : public QObject {
     Q_PROPERTY(int lineSpacing READ lineSpacing WRITE setLineSpacing NOTIFY settingsChanged)
     Q_PROPERTY(bool continuousReading READ continuousReading WRITE setContinuousReading NOTIFY settingsChanged)
     Q_PROPERTY(bool highContrast READ highContrast WRITE setHighContrast NOTIFY settingsChanged)
+    Q_PROPERTY(QString languageLocale READ languageLocale WRITE setLanguageLocale NOTIFY settingsChanged)
     Q_PROPERTY(QString activeProfile READ activeProfile WRITE setActiveProfile NOTIFY profilesChanged)
     Q_PROPERTY(QStringList profileNames READ profileNames NOTIFY profilesChanged)
 
@@ -29,6 +30,7 @@ public:
     [[nodiscard]] int lineSpacing() const;
     [[nodiscard]] bool continuousReading() const;
     [[nodiscard]] bool highContrast() const;
+    [[nodiscard]] QString languageLocale() const;
     [[nodiscard]] QString activeProfile() const;
     [[nodiscard]] QStringList profileNames() const;
     [[nodiscard]] QString fontFamily() const;
@@ -52,6 +54,7 @@ public slots:
     void setLineSpacing(int lineSpacing);
     void setContinuousReading(bool enabled);
     void setHighContrast(bool enabled);
+    void setLanguageLocale(const QString &locale);
     void setActiveProfile(const QString &profile);
     void setFontFamily(const QString &fontFamily);
     void setReaderWidth(int width);
@@ -82,6 +85,7 @@ signals:
 private:
     void load();
     void persist(const QString &key, const QString &value);
+    void persistGlobal(const QString &key, const QString &value);
     [[nodiscard]] QString profileStoragePrefix() const;
     [[nodiscard]] QString profileIdForName(const QString &name) const;
     [[nodiscard]] QString profileNameForId(const QString &id) const;
@@ -95,6 +99,7 @@ private:
     int lineSpacing_ = 120;
     bool continuousReading_ = true;
     bool highContrast_ = false;
+    QString languageLocale_ = QStringLiteral("system");
     QString fontFamily_ = QStringLiteral("Segoe UI");
     int readerWidth_ = 860;
     int readerMargin_ = 30;

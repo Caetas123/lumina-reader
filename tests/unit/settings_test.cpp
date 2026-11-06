@@ -1,4 +1,5 @@
 #include "application/SettingsController.h"
+#include "application/LanguageController.h"
 #include "application/SpeechController.h"
 #include "infrastructure/database/Database.h"
 
@@ -68,6 +69,93 @@ private slots:
         QVERIFY(query.exec(QStringLiteral("SELECT COUNT(*) FROM app_settings")));
         QVERIFY(query.next());
         QCOMPARE(query.value(0).toInt(), 16);
+    }
+
+    void detectsAndPersistsApplicationLanguage()
+    {
+        Lumina::Infrastructure::Database database;
+        Lumina::Domain::Error error;
+        QVERIFY2(database.open(QStringLiteral(":memory:"), &error),
+                 qPrintable(error.logMessage()));
+        QVERIFY2(database.migrate(&error), qPrintable(error.logMessage()));
+
+        Lumina::Application::SettingsController settings;
+        settings.setDatabase(&database);
+        Lumina::Application::LanguageController languages(&settings);
+
+        QCOMPARE(languages.availableLocales().size(), 91);
+        QCOMPARE(languages.availableSelectionLocales().size(), 89);
+        QVERIFY(languages.availableLanguageLabels().size()
+                == languages.availableSelectionLocales().size() + 1);
+        QVERIFY(languages.availableLocales().contains(QStringLiteral("pt-BR")));
+        QVERIFY(languages.availableLocales().contains(QStringLiteral("zh-HK")));
+        QVERIFY(languages.availableLocales().contains(QStringLiteral("sr-Latn-CS")));
+        QVERIFY(languages.availableLocales().contains(QStringLiteral("sr-Cyrl-RS")));
+        QCOMPARE(languages.availableLanguageLabels().count(
+                     QStringLiteral("Serbian (Latin, Serbia)")), 1);
+        QCOMPARE(languages.availableLanguageLabels().count(
+                     QStringLiteral("Serbian (Cyrillic, Serbia)")), 1);
+        QCOMPARE(languages.displayLocaleFor(QStringLiteral("sr-Latn-CS")),
+                 QStringLiteral("sr-Latn-RS"));
+        QCOMPARE(languages.displayLocaleFor(QStringLiteral("sr-Cyrl-CS")),
+                 QStringLiteral("sr-Cyrl-RS"));
+        for (const QString &label : languages.availableLanguageLabels()) {
+            QVERIFY(!label.contains(QChar('[')));
+        }
+        QVERIFY(languages.setLanguage(QStringLiteral("pt_BR")));
+        QCOMPARE(languages.selectedLocale(), QStringLiteral("pt-BR"));
+        QCOMPARE(languages.locale(), QStringLiteral("pt-BR"));
+        QCOMPARE(settings.languageLocale(), QStringLiteral("pt-BR"));
+        QVERIFY(languages.translationAvailable());
+        QVERIFY(languages.translationStatus().contains(QStringLiteral("local"), Qt::CaseInsensitive)
+                || languages.translationStatus().contains(QStringLiteral("localmente"), Qt::CaseInsensitive));
+
+        Lumina::Application::SettingsController reloaded;
+        reloaded.setDatabase(&database);
+        QCOMPARE(reloaded.languageLocale(), QStringLiteral("pt-BR"));
+
+        QVERIFY(settings.createProfile(QStringLiteral("Study mode")));
+        QCOMPARE(settings.languageLocale(), QStringLiteral("pt-BR"));
+
+        QVERIFY(languages.setLanguage(QStringLiteral("ar-SA")));
+        QVERIFY(languages.rightToLeft());
+        QVERIFY(languages.setLanguage(QStringLiteral("he-IL")));
+        QVERIFY(languages.rightToLeft());
+        QVERIFY(languages.setLanguage(QStringLiteral("ur-PK")));
+        QVERIFY(languages.rightToLeft());
+        QVERIFY(languages.setLanguage(QStringLiteral("en-US")));
+        QVERIFY(!languages.rightToLeft());
+        QVERIFY(languages.availableLocales().contains(QStringLiteral("chr-Cher-US")));
+        QVERIFY(languages.setLanguage(QStringLiteral("chr-CHER-US")));
+        QCOMPARE(languages.locale(), QStringLiteral("chr-Cher-US"));
+        QVERIFY(languages.setLanguage(QStringLiteral("en-US")));
+
+        QVERIFY(languages.setLanguage(QStringLiteral("system")));
+        QCOMPARE(languages.selectedLocale(), QStringLiteral("system"));
+        QCOMPARE(settings.languageLocale(), QStringLiteral("system"));
+    }
+
+    void formatsUserFacingNumbersUsingTheSelectedLocale()
+    {
+        Lumina::Infrastructure::Database database;
+        Lumina::Domain::Error error;
+        QVERIFY2(database.open(QStringLiteral(":memory:"), &error),
+                 qPrintable(error.logMessage()));
+        QVERIFY2(database.migrate(&error), qPrintable(error.logMessage()));
+
+        Lumina::Application::SettingsController settings;
+        settings.setDatabase(&database);
+        Lumina::Application::LanguageController languages(&settings);
+
+        QVERIFY(languages.setLanguage(QStringLiteral("pt-BR")));
+        QCOMPARE(languages.formatInteger(122453467), QStringLiteral("122.453.467"));
+        QCOMPARE(languages.formatDecimal(1234.5, 2), QStringLiteral("1.234,50"));
+        QCOMPARE(languages.parseInteger(languages.formatInteger(122453467)), 122453467);
+
+        QVERIFY(languages.setLanguage(QStringLiteral("en-US")));
+        QCOMPARE(languages.formatInteger(122453467), QStringLiteral("122,453,467"));
+        QCOMPARE(languages.formatDecimal(1234.5, 2), QStringLiteral("1,234.50"));
+        QCOMPARE(languages.parseInteger(languages.formatInteger(122453467)), 122453467);
     }
 
     void resolvesScopedReaderPreferences()

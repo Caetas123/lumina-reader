@@ -22,6 +22,7 @@ internal sealed class InstallerForm : Form
         Assembly.GetEntryAssembly()?
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
             .InformationalVersion
+            ?.Split('+')[0]
         ?? "unknown";
     private static readonly string InstallerProductVersion = ApplicationVersion.Split('+')[0];
     private const string UninstallerFileName = "LuminaReaderUninstaller.exe";
@@ -39,7 +40,9 @@ internal sealed class InstallerForm : Form
         "Programs",
         "Lumina Reader");
 
-    private readonly InstallerStrings text;
+    private InstallerStrings text;
+    private string selectedInstallerLocale;
+    private readonly string detectedInstallerLocale;
     private string executablePath;
     private readonly Image? logoImage;
     private readonly Panel contentPanel = new();
@@ -54,11 +57,18 @@ internal sealed class InstallerForm : Form
     private TextBox? installPathTextBox;
     private CheckBox? startMenuShortcutCheckBox;
     private CheckBox? desktopShortcutCheckBox;
+    private ProjectComboBox? languageComboBox;
+    private Label? brandTaglineLabel;
+    private Label? brandVersionLabel;
     private bool installationInProgress;
+    private bool languageSelectionChanged;
+    private int languageIndexBeforeDropDown = -1;
 
     public InstallerForm()
     {
-        text = InstallerStrings.ForSystemLanguage();
+        detectedInstallerLocale = InstallerLanguageCatalog.DetectSystemLocale();
+        selectedInstallerLocale = detectedInstallerLocale;
+        text = InstallerStrings.ForLocale(detectedInstallerLocale);
         executablePath = Path.Combine(installRoot, "lumina_reader.exe");
         logoImage = LoadLogo();
 
@@ -80,6 +90,7 @@ internal sealed class InstallerForm : Form
         BackColor = Color.FromArgb(247, 248, 252);
         Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
 
+        ApplyLayoutDirection();
         BuildShell();
         ShowWelcomePage();
     }
@@ -181,7 +192,7 @@ internal sealed class InstallerForm : Form
         };
         brand.Controls.Add(title);
 
-        var tagline = new Label
+        brandTaglineLabel = new Label
         {
             AutoSize = false,
             Location = new Point(36, 320),
@@ -191,9 +202,9 @@ internal sealed class InstallerForm : Form
             ForeColor = Color.FromArgb(226, 232, 255),
             BackColor = Color.Transparent
         };
-        brand.Controls.Add(tagline);
+        brand.Controls.Add(brandTaglineLabel);
 
-        var version = new Label
+        brandVersionLabel = new Label
         {
             AutoSize = false,
             Location = new Point(36, 0),
@@ -204,8 +215,8 @@ internal sealed class InstallerForm : Form
             ForeColor = Color.FromArgb(196, 200, 239),
             BackColor = Color.Transparent
         };
-        brand.Resize += (_, _) => version.Location = new Point(36, Math.Max(0, brand.ClientSize.Height - 48));
-        brand.Controls.Add(version);
+        brand.Resize += (_, _) => brandVersionLabel.Location = new Point(36, Math.Max(0, brand.ClientSize.Height - 48));
+        brand.Controls.Add(brandVersionLabel);
 
         return brand;
     }
@@ -331,6 +342,8 @@ internal sealed class InstallerForm : Form
         var layout = CreateContentLayout();
         layout.Controls.Add(CreateHeading(text.WelcomeHeading));
         layout.Controls.Add(CreateBody(text.WelcomeBody));
+
+        layout.Controls.Add(CreateLanguageSelectorPanel());
 
         layout.Controls.Add(CreateInfoCard(
             text.WhatYouAreInstallingHeading,
@@ -709,6 +722,132 @@ internal sealed class InstallerForm : Form
         installPathTextBox = null;
         startMenuShortcutCheckBox = null;
         desktopShortcutCheckBox = null;
+        languageComboBox = null;
+    }
+
+    private Panel CreateLanguageSelectorPanel()
+    {
+        var panel = new Panel
+        {
+            Width = contentPanel.ClientSize.Width - contentPanel.Padding.Horizontal,
+            Height = 58,
+            BackColor = Color.White,
+            Margin = new Padding(0, 0, 0, 14),
+            Padding = new Padding(16, 10, 16, 8)
+        };
+        panel.Paint += (_, eventArgs) =>
+        {
+            eventArgs.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            using var pen = new Pen(Color.FromArgb(229, 231, 240));
+            eventArgs.Graphics.DrawRectangle(pen, 0, 0, panel.Width - 1, panel.Height - 1);
+            using var accentBrush = new SolidBrush(Accent);
+            eventArgs.Graphics.FillRectangle(accentBrush, 0, 14, 4, panel.Height - 28);
+        };
+        ApplyRoundedCorners(panel, 14);
+
+        var label = new Label
+        {
+            AutoSize = false,
+            Location = new Point(16, 10),
+            Width = 190,
+            Height = 26,
+            Text = text.LanguageHeading,
+            Font = new Font("Segoe UI", 9.5F, FontStyle.Bold, GraphicsUnit.Point),
+            ForeColor = TextPrimary,
+            TextAlign = ContentAlignment.MiddleLeft
+        };
+        panel.Controls.Add(label);
+
+        languageComboBox = new ProjectComboBox
+        {
+            Location = new Point(210, 10),
+            Width = panel.Width - 242,
+            Height = 28,
+            Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point),
+            BackColor = Color.White,
+            ForeColor = TextPrimary,
+            DropDownHeight = 364
+        };
+        foreach (var option in InstallerLanguageCatalog.Visible)
+        {
+            languageComboBox.Items.Add(option.Label);
+        }
+
+        var selectedIndex = InstallerLanguageCatalog.FindVisibleIndex(selectedInstallerLocale);
+        languageComboBox.SelectedIndex = Math.Clamp(selectedIndex, 0, languageComboBox.Items.Count - 1);
+        languageComboBox.DropDown += (_, _) =>
+        {
+            languageIndexBeforeDropDown = languageComboBox?.SelectedIndex ?? -1;
+            languageSelectionChanged = false;
+        };
+        languageComboBox.SelectionChangeCommitted += (_, _) =>
+        {
+            var index = languageComboBox?.SelectedIndex ?? -1;
+            if (languageComboBox?.DroppedDown == true)
+            {
+                languageSelectionChanged = true;
+                return;
+            }
+
+            ApplyLanguageSelection(index);
+        };
+        languageComboBox.DropDownClosed += (_, _) =>
+        {
+            var index = languageComboBox?.SelectedIndex ?? -1;
+            var selectionChanged = languageSelectionChanged && index != languageIndexBeforeDropDown;
+            languageSelectionChanged = false;
+            languageIndexBeforeDropDown = -1;
+
+            if (!selectionChanged)
+            {
+                return;
+            }
+
+            ApplyLanguageSelection(index);
+        };
+        panel.Controls.Add(languageComboBox);
+
+        return panel;
+    }
+
+    private void ApplyLanguageSelection(int index)
+    {
+        selectedInstallerLocale = InstallerLanguageCatalog.FindByIndex(index)?.Locale ?? detectedInstallerLocale;
+        text = InstallerStrings.ForLocale(selectedInstallerLocale);
+        ApplyLayoutDirection();
+        RefreshBrandText();
+        ShowWelcomePage();
+    }
+
+    private void ApplyLayoutDirection()
+    {
+        var rightToLeft = InstallerLanguageCatalog.IsRightToLeft(selectedInstallerLocale);
+        RightToLeft = rightToLeft
+            ? System.Windows.Forms.RightToLeft.Yes
+            : System.Windows.Forms.RightToLeft.No;
+        RightToLeftLayout = rightToLeft;
+        footerButtons.RightToLeft = RightToLeft;
+        footerButtons.FlowDirection = rightToLeft
+            ? FlowDirection.RightToLeft
+            : FlowDirection.LeftToRight;
+        if (languageComboBox is not null)
+        {
+            languageComboBox.RightToLeft = RightToLeft;
+        }
+    }
+
+    private void RefreshBrandText()
+    {
+        Text = text.SetupTitle;
+        if (brandTaglineLabel is not null)
+        {
+            brandTaglineLabel.Text = text.BrandTagline;
+        }
+
+        if (brandVersionLabel is not null)
+        {
+            brandVersionLabel.Text = string.Format(text.BrandVersionTemplate, ApplicationVersion);
+        }
     }
 
     private void ConfigureFooter()
@@ -1101,6 +1240,491 @@ internal sealed class InstallerForm : Form
         }
     }
 
+    private sealed class ProjectComboBox : Control
+    {
+        private const int PopupItemHeight = 26;
+        private static readonly Color PopupSurface = Color.White;
+        private static readonly Color PopupHover = Color.FromArgb(242, 239, 255);
+        private static readonly Color PopupSelected = Color.FromArgb(79, 70, 229);
+        private static readonly Color PopupText = Color.FromArgb(32, 36, 43);
+        private static readonly Color PopupMutedText = Color.FromArgb(145, 151, 164);
+        private static readonly Color FieldBorder = Color.FromArgb(217, 222, 231);
+
+        private readonly List<object> items = new();
+        private int selectedIndex = -1;
+        private int openingIndex = -1;
+        private ToolStripDropDown? popup;
+        private ProjectLanguageListBox? popupList;
+
+        public ProjectComboBox()
+        {
+            SetStyle(
+                ControlStyles.UserPaint |
+                ControlStyles.AllPaintingInWmPaint |
+                ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.Selectable,
+                true);
+            TabStop = true;
+            Cursor = Cursors.Hand;
+            BackColor = Color.White;
+            ForeColor = PopupText;
+        }
+
+        public IList<object> Items => items;
+
+        [System.ComponentModel.DesignerSerializationVisibility(
+            System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public int SelectedIndex
+        {
+            get => selectedIndex;
+            set
+            {
+                var normalized = value < 0
+                    ? -1
+                    : Math.Min(value, items.Count - 1);
+                if (selectedIndex == normalized)
+                {
+                    return;
+                }
+
+                selectedIndex = normalized;
+                Invalidate();
+            }
+        }
+
+        [System.ComponentModel.DesignerSerializationVisibility(
+            System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public int DropDownHeight { get; set; } = 364;
+
+        public bool DroppedDown => popup is not null && !popup.IsDisposed;
+
+        public event EventHandler? DropDown;
+        public event EventHandler? DropDownClosed;
+        public event EventHandler? SelectionChangeCommitted;
+
+        protected override void OnPaint(PaintEventArgs eventArgs)
+        {
+            var graphics = eventArgs.Graphics;
+            graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            graphics.Clear(BackColor);
+
+            var bounds = new Rectangle(0, 0, Math.Max(0, Width - 1), Math.Max(0, Height - 1));
+            using var borderPen = new Pen(
+                DroppedDown || Focused ? Color.FromArgb(132, 116, 255) : FieldBorder,
+                1F);
+            graphics.DrawRectangle(borderPen, bounds);
+
+            var arrowBounds = new Rectangle(
+                RightToLeft == System.Windows.Forms.RightToLeft.Yes ? 1 : Math.Max(0, Width - 32),
+                1,
+                Math.Min(31, Math.Max(1, Width)),
+                Math.Max(1, Height - 2));
+            using var arrowBrush = new SolidBrush(
+                DroppedDown ? PopupHover : Color.FromArgb(247, 248, 250));
+            graphics.FillRectangle(arrowBrush, arrowBounds);
+
+            if (selectedIndex >= 0 && selectedIndex < items.Count)
+            {
+                var textBounds = new Rectangle(
+                    RightToLeft == System.Windows.Forms.RightToLeft.Yes ? 40 : 12,
+                    0,
+                    Math.Max(1, Width - 48),
+                    Height);
+                TextRenderer.DrawText(
+                    graphics,
+                    GetItemText(items[selectedIndex]),
+                    Font,
+                    textBounds,
+                    Enabled ? ForeColor : PopupMutedText,
+                    (RightToLeft == System.Windows.Forms.RightToLeft.Yes
+                        ? TextFormatFlags.Right
+                        : TextFormatFlags.Left) |
+                    TextFormatFlags.VerticalCenter |
+                    TextFormatFlags.NoPrefix |
+                    TextFormatFlags.EndEllipsis);
+            }
+
+            using var arrowPen = new Pen(
+                DroppedDown ? Color.FromArgb(79, 70, 229) : Color.FromArgb(95, 104, 117),
+                1.6F)
+            {
+                StartCap = System.Drawing.Drawing2D.LineCap.Round,
+                EndCap = System.Drawing.Drawing2D.LineCap.Round
+            };
+            var arrowCenterX = arrowBounds.Left + arrowBounds.Width / 2;
+            var arrowCenterY = arrowBounds.Top + arrowBounds.Height / 2;
+            var arrowPoints = DroppedDown
+                ? new[]
+                {
+                    new Point(arrowCenterX - 4, arrowCenterY + 2),
+                    new Point(arrowCenterX, arrowCenterY - 2),
+                    new Point(arrowCenterX + 4, arrowCenterY + 2)
+                }
+                : new[]
+                {
+                    new Point(arrowCenterX - 4, arrowCenterY - 2),
+                    new Point(arrowCenterX, arrowCenterY + 2),
+                    new Point(arrowCenterX + 4, arrowCenterY - 2)
+                };
+            graphics.DrawLines(arrowPen, arrowPoints);
+        }
+
+        protected override void OnRightToLeftChanged(EventArgs eventArgs)
+        {
+            base.OnRightToLeftChanged(eventArgs);
+            if (popupList is not null)
+            {
+                popupList.RightToLeft = RightToLeft;
+            }
+            Invalidate();
+        }
+
+        protected override void OnMouseDown(MouseEventArgs eventArgs)
+        {
+            base.OnMouseDown(eventArgs);
+            if (eventArgs.Button != MouseButtons.Left)
+            {
+                return;
+            }
+
+            Focus();
+            if (DroppedDown)
+            {
+                CloseDropDownWithoutCommit();
+            }
+            else
+            {
+                OpenDropDown();
+            }
+        }
+
+        protected override void OnKeyDown(KeyEventArgs eventArgs)
+        {
+            if (!DroppedDown &&
+                (eventArgs.KeyCode == Keys.Enter ||
+                 eventArgs.KeyCode == Keys.Space ||
+                 eventArgs.KeyCode == Keys.Down ||
+                 eventArgs.KeyCode == Keys.Up))
+            {
+                OpenDropDown();
+                eventArgs.Handled = true;
+                eventArgs.SuppressKeyPress = true;
+                return;
+            }
+
+            base.OnKeyDown(eventArgs);
+        }
+
+        private void OpenDropDown()
+        {
+            if (DroppedDown || items.Count == 0)
+            {
+                return;
+            }
+
+            openingIndex = selectedIndex;
+            DropDown?.Invoke(this, EventArgs.Empty);
+
+            var visibleItemCount = Math.Min(14, items.Count);
+            var listWidth = Math.Max(220, Width);
+            var listHeight = Math.Min(
+                DropDownHeight,
+                Math.Max(PopupItemHeight, visibleItemCount * PopupItemHeight));
+            var list = new ProjectLanguageListBox(this)
+            {
+                Font = Font,
+                Width = Math.Max(1, listWidth - 2),
+                Height = listHeight,
+                ItemHeight = PopupItemHeight,
+                RightToLeft = RightToLeft
+            };
+            foreach (var item in items)
+            {
+                list.Items.Add(item);
+            }
+
+            list.SelectedIndex = selectedIndex;
+            list.MouseClick += (_, mouseEventArgs) =>
+            {
+                if (list.IndexFromPoint(mouseEventArgs.Location) >= 0)
+                {
+                    CommitPopupSelection();
+                }
+            };
+
+            var host = new ToolStripControlHost(list)
+            {
+                AutoSize = false,
+                Margin = Padding.Empty,
+                Padding = Padding.Empty,
+                Size = list.Size
+            };
+            var nextPopup = new ToolStripDropDown
+            {
+                AutoSize = false,
+                BackColor = PopupSurface,
+                DropShadowEnabled = true,
+                Margin = Padding.Empty,
+                Padding = new Padding(1),
+                Size = new Size(list.Width + 2, list.Height + 2)
+            };
+            nextPopup.Items.Add(host);
+            nextPopup.Paint += (_, paintEventArgs) =>
+            {
+                using var pen = new Pen(FieldBorder);
+                paintEventArgs.Graphics.DrawRectangle(
+                    pen,
+                    0,
+                    0,
+                    Math.Max(0, nextPopup.Width - 1),
+                    Math.Max(0, nextPopup.Height - 1));
+            };
+            nextPopup.Closed += (_, _) =>
+            {
+                popup = null;
+                popupList = null;
+                Invalidate();
+                DropDownClosed?.Invoke(this, EventArgs.Empty);
+            };
+
+            popupList = list;
+            popup = nextPopup;
+            Invalidate();
+            nextPopup.Show(this, new Point(0, Height));
+            list.Focus();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                var openPopup = popup;
+                popup = null;
+                popupList = null;
+                if (openPopup is not null)
+                {
+                    openPopup.Close();
+                    openPopup.Dispose();
+                }
+            }
+
+            base.Dispose(disposing);
+        }
+
+        private void CommitPopupSelection()
+        {
+            var index = popupList?.SelectedIndex ?? -1;
+            if (index >= 0 && index != selectedIndex)
+            {
+                SelectedIndex = index;
+                SelectionChangeCommitted?.Invoke(this, EventArgs.Empty);
+            }
+
+            popup?.Close();
+        }
+
+        private void CloseDropDownWithoutCommit()
+        {
+            if (popupList is not null)
+            {
+                popupList.SelectedIndex = openingIndex;
+            }
+
+            popup?.Close();
+        }
+
+        private static string GetItemText(object item)
+        {
+            return Convert.ToString(item, CultureInfo.CurrentCulture) ?? string.Empty;
+        }
+
+        private sealed class ProjectLanguageListBox : ListBox
+        {
+            private const int WheelDelta = 120;
+            private readonly ProjectComboBox owner;
+            private int hoverIndex = -1;
+            private int wheelRemainder;
+
+            public ProjectLanguageListBox(ProjectComboBox owner)
+            {
+                this.owner = owner;
+                DrawMode = DrawMode.OwnerDrawFixed;
+                BorderStyle = BorderStyle.None;
+                BackColor = PopupSurface;
+                ForeColor = PopupText;
+                IntegralHeight = false;
+                HorizontalScrollbar = false;
+                ScrollAlwaysVisible = false;
+                SelectionMode = SelectionMode.One;
+                SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
+            }
+
+            protected override void OnMouseMove(MouseEventArgs eventArgs)
+            {
+                base.OnMouseMove(eventArgs);
+                var index = IndexFromPoint(eventArgs.Location);
+                if (index == hoverIndex)
+                {
+                    return;
+                }
+
+                var previousHoverIndex = hoverIndex;
+                hoverIndex = index;
+                InvalidateItem(previousHoverIndex);
+                InvalidateItem(hoverIndex);
+            }
+
+            protected override void OnMouseLeave(EventArgs eventArgs)
+            {
+                base.OnMouseLeave(eventArgs);
+                var previousHoverIndex = hoverIndex;
+                hoverIndex = -1;
+                InvalidateItem(previousHoverIndex);
+            }
+
+            protected override void OnSelectedIndexChanged(EventArgs eventArgs)
+            {
+                base.OnSelectedIndexChanged(eventArgs);
+                Invalidate();
+            }
+
+            private void InvalidateItem(int index)
+            {
+                if (index < 0 || index >= Items.Count)
+                {
+                    return;
+                }
+
+                var bounds = GetItemRectangle(index);
+                if (!bounds.IsEmpty)
+                {
+                    Invalidate(bounds);
+                }
+            }
+
+            protected override void WndProc(ref Message message)
+            {
+                const int WmMouseWheel = 0x020A;
+                if (message.Msg == WmMouseWheel)
+                {
+                    var delta = unchecked((short)((long)message.WParam >> 16));
+                    ScrollByWheelDelta(delta);
+                    return;
+                }
+
+                base.WndProc(ref message);
+            }
+
+            private void ScrollByWheelDelta(int delta)
+            {
+                if (delta == 0 || Items.Count == 0)
+                {
+                    return;
+                }
+
+                wheelRemainder += delta;
+                var notches = wheelRemainder / WheelDelta;
+                if (notches == 0)
+                {
+                    return;
+                }
+
+                wheelRemainder -= notches * WheelDelta;
+                var configuredLines = SystemInformation.MouseWheelScrollLines;
+                var linesPerNotch = configuredLines > 0 ? configuredLines : 3;
+                var visibleRows = Math.Max(1, ClientSize.Height / Math.Max(1, ItemHeight));
+                var maximumTopIndex = Math.Max(0, Items.Count - visibleRows);
+                var nextTopIndex = Math.Clamp(
+                    TopIndex - (notches * linesPerNotch),
+                    0,
+                    maximumTopIndex);
+
+                if (nextTopIndex != TopIndex)
+                {
+                    TopIndex = nextTopIndex;
+                    Invalidate();
+                }
+            }
+
+            protected override void OnKeyDown(KeyEventArgs eventArgs)
+            {
+                if (eventArgs.KeyCode == Keys.Enter)
+                {
+                    owner.CommitPopupSelection();
+                    eventArgs.Handled = true;
+                    eventArgs.SuppressKeyPress = true;
+                    return;
+                }
+
+                if (eventArgs.KeyCode == Keys.Escape)
+                {
+                    owner.CloseDropDownWithoutCommit();
+                    eventArgs.Handled = true;
+                    eventArgs.SuppressKeyPress = true;
+                    return;
+                }
+
+                if (eventArgs.KeyCode is Keys.Up
+                    or Keys.Down
+                    or Keys.PageUp
+                    or Keys.PageDown
+                    or Keys.Home
+                    or Keys.End)
+                {
+                    var previousHoverIndex = hoverIndex;
+                    hoverIndex = -1;
+                    InvalidateItem(previousHoverIndex);
+                }
+
+                base.OnKeyDown(eventArgs);
+            }
+
+            protected override void OnDrawItem(DrawItemEventArgs eventArgs)
+            {
+                if (eventArgs.Index < 0 || eventArgs.Index >= Items.Count)
+                {
+                    return;
+                }
+
+                var isSelected = (eventArgs.State & DrawItemState.Selected) == DrawItemState.Selected;
+                var isHovered = eventArgs.Index == hoverIndex;
+                var background = isSelected
+                    ? PopupSelected
+                    : isHovered ? PopupHover : PopupSurface;
+                var foreground = isSelected ? Color.White : PopupText;
+
+                eventArgs.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using var backgroundBrush = new SolidBrush(background);
+                eventArgs.Graphics.FillRectangle(backgroundBrush, eventArgs.Bounds);
+
+                if (isSelected)
+                {
+                    using var accentBrush = new SolidBrush(Color.FromArgb(177, 155, 255));
+                    var accentX = RightToLeft == System.Windows.Forms.RightToLeft.Yes
+                        ? eventArgs.Bounds.Right - 3
+                        : eventArgs.Bounds.X;
+                    eventArgs.Graphics.FillRectangle(
+                        accentBrush,
+                        new Rectangle(accentX, eventArgs.Bounds.Y, 3, eventArgs.Bounds.Height));
+                }
+
+                var textBounds = Rectangle.Inflate(eventArgs.Bounds, -12, 0);
+                TextRenderer.DrawText(
+                    eventArgs.Graphics,
+                    GetItemText(Items[eventArgs.Index]),
+                    Font,
+                    textBounds,
+                    Enabled ? foreground : PopupMutedText,
+                    (RightToLeft == System.Windows.Forms.RightToLeft.Yes
+                        ? TextFormatFlags.Right
+                        : TextFormatFlags.Left) |
+                    TextFormatFlags.VerticalCenter |
+                    TextFormatFlags.NoPrefix |
+                    TextFormatFlags.EndEllipsis);
+            }
+        }
+    }
+
     private static void ApplyRoundedCorners(Control control, int radius)
     {
         void UpdateRegion(object? _, EventArgs __)
@@ -1125,6 +1749,7 @@ internal sealed class InstallerForm : Form
         public string SetupTitle { get; init; } = string.Empty;
         public string BrandTagline { get; init; } = string.Empty;
         public string BrandVersionTemplate { get; init; } = string.Empty;
+        public string LanguageHeading { get; init; } = string.Empty;
         public string WelcomeHeading { get; init; } = string.Empty;
         public string WelcomeBody { get; init; } = string.Empty;
         public string WhatYouAreInstallingHeading { get; init; } = string.Empty;
@@ -1163,12 +1788,74 @@ internal sealed class InstallerForm : Form
         public string UninstallRegistrationFailed { get; init; } = string.Empty;
         public string InvalidPackagePath { get; init; } = string.Empty;
 
-        public static InstallerStrings ForSystemLanguage()
+        public static InstallerStrings ForLocale(string locale)
         {
-            var language = CultureInfo.InstalledUICulture.TwoLetterISOLanguageName;
-            return language.Equals("pt", StringComparison.OrdinalIgnoreCase)
-                ? Portuguese()
-                : English();
+            if (locale.Equals("pt-BR", StringComparison.OrdinalIgnoreCase))
+            {
+                return Portuguese();
+            }
+
+            if (locale.Equals("en-US", StringComparison.OrdinalIgnoreCase))
+            {
+                return English();
+            }
+
+            var catalog = InstallerLocalizationCatalog.ForLocale(locale);
+            return catalog is null ? English() : FromCatalog(catalog);
+        }
+
+        private static InstallerStrings FromCatalog(IReadOnlyDictionary<string, string> values)
+        {
+            var fallback = English();
+            string Get(string key, string fallbackValue) =>
+                values.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value)
+                    ? value
+                    : fallbackValue;
+
+            return new InstallerStrings
+            {
+                SetupTitle = Get(nameof(SetupTitle), fallback.SetupTitle),
+                BrandTagline = Get(nameof(BrandTagline), fallback.BrandTagline),
+                BrandVersionTemplate = Get(nameof(BrandVersionTemplate), fallback.BrandVersionTemplate),
+                LanguageHeading = Get(nameof(LanguageHeading), fallback.LanguageHeading),
+                WelcomeHeading = Get(nameof(WelcomeHeading), fallback.WelcomeHeading),
+                WelcomeBody = Get(nameof(WelcomeBody), fallback.WelcomeBody),
+                WhatYouAreInstallingHeading = Get(nameof(WhatYouAreInstallingHeading), fallback.WhatYouAreInstallingHeading),
+                WhatYouAreInstallingBody = Get(nameof(WhatYouAreInstallingBody), fallback.WhatYouAreInstallingBody),
+                PhaseNote = Get(nameof(PhaseNote), fallback.PhaseNote),
+                Close = Get(nameof(Close), fallback.Close),
+                Continue = Get(nameof(Continue), fallback.Continue),
+                ReadyToInstallHeading = Get(nameof(ReadyToInstallHeading), fallback.ReadyToInstallHeading),
+                ReadyToInstallBody = Get(nameof(ReadyToInstallBody), fallback.ReadyToInstallBody),
+                InstallationLocationHeading = Get(nameof(InstallationLocationHeading), fallback.InstallationLocationHeading),
+                Browse = Get(nameof(Browse), fallback.Browse),
+                SelectInstallFolder = Get(nameof(SelectInstallFolder), fallback.SelectInstallFolder),
+                StartMenuShortcut = Get(nameof(StartMenuShortcut), fallback.StartMenuShortcut),
+                DesktopShortcut = Get(nameof(DesktopShortcut), fallback.DesktopShortcut),
+                ConfirmNote = Get(nameof(ConfirmNote), fallback.ConfirmNote),
+                Back = Get(nameof(Back), fallback.Back),
+                Install = Get(nameof(Install), fallback.Install),
+                InstallingHeading = Get(nameof(InstallingHeading), fallback.InstallingHeading),
+                InstallingBody = Get(nameof(InstallingBody), fallback.InstallingBody),
+                PreparingInstallation = Get(nameof(PreparingInstallation), fallback.PreparingInstallation),
+                InstallingButton = Get(nameof(InstallingButton), fallback.InstallingButton),
+                InstallationCompleteHeading = Get(nameof(InstallationCompleteHeading), fallback.InstallationCompleteHeading),
+                InstallationCompleteBody = Get(nameof(InstallationCompleteBody), fallback.InstallationCompleteBody),
+                InstalledToHeading = Get(nameof(InstalledToHeading), fallback.InstalledToHeading),
+                InstallationCompleteNote = Get(nameof(InstallationCompleteNote), fallback.InstallationCompleteNote),
+                Launch = Get(nameof(Launch), fallback.Launch),
+                InstallingFiles = Get(nameof(InstallingFiles), fallback.InstallingFiles),
+                RegisteringApplication = Get(nameof(RegisteringApplication), fallback.RegisteringApplication),
+                CreatingShortcuts = Get(nameof(CreatingShortcuts), fallback.CreatingShortcuts),
+                InstallationCompleteStatus = Get(nameof(InstallationCompleteStatus), fallback.InstallationCompleteStatus),
+                InstallationError = Get(nameof(InstallationError), fallback.InstallationError),
+                LaunchError = Get(nameof(LaunchError), fallback.LaunchError),
+                PackageMissing = Get(nameof(PackageMissing), fallback.PackageMissing),
+                ExecutableMissing = Get(nameof(ExecutableMissing), fallback.ExecutableMissing),
+                UninstallerMissing = Get(nameof(UninstallerMissing), fallback.UninstallerMissing),
+                UninstallRegistrationFailed = Get(nameof(UninstallRegistrationFailed), fallback.UninstallRegistrationFailed),
+                InvalidPackagePath = Get(nameof(InvalidPackagePath), fallback.InvalidPackagePath)
+            };
         }
 
         private static InstallerStrings English()
@@ -1178,6 +1865,7 @@ internal sealed class InstallerForm : Form
                 SetupTitle = "Lumina Reader Setup",
                 BrandTagline = "A calm place for your reading library.",
                 BrandVersionTemplate = "Windows x64 · Version {0}",
+                LanguageHeading = "Installer language",
                 WelcomeHeading = "Welcome to Lumina Reader",
                 WelcomeBody = "Lumina Reader gives you a calm, private place to read and organize your books and documents. Your files stay on your computer by default.",
                 WhatYouAreInstallingHeading = "What you are installing",
@@ -1225,6 +1913,7 @@ internal sealed class InstallerForm : Form
                 SetupTitle = "Instalação do Lumina Reader",
                 BrandTagline = "Um espaço tranquilo para sua biblioteca de leitura.",
                 BrandVersionTemplate = "Windows x64 · Versão {0}",
+                LanguageHeading = "Idioma do instalador",
                 WelcomeHeading = "Bem-vindo ao Lumina Reader",
                 WelcomeBody = "O Lumina Reader oferece um espaço tranquilo e privado para ler e organizar seus livros e documentos. Seus arquivos ficam no seu computador por padrão.",
                 WhatYouAreInstallingHeading = "O que será instalado",
