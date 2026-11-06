@@ -97,6 +97,10 @@ sha256sum /tmp/lumina-release/*
 On Windows use `Get-FileHash -Algorithm SHA256` for the downloaded EXE. Record
 the run IDs, asset names, sizes, and digests in the final audit checklist.
 
-The installer detects the Windows UI language: Portuguese Windows uses the
-Portuguese installer interface and other languages use English until another
-translation is added. End users do not need a command prompt or a portable ZIP.
+The installer detects the Windows UI language from the user's UI culture (with
+installed/current culture fallbacks) and preselects that locale in its 91-entry
+language catalog. The installed application detects the Windows or Linux UI
+locale on first launch and lets the user change it later in Settings > General.
+The same offline locale catalog is used on both platforms, and the selected
+locale is persisted locally. End users do not need a command prompt or a
+portable ZIP.

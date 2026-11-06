@@ -8,7 +8,7 @@
 
 Lumina Reader is a native, local-first reading library for Windows, macOS, and Linux. It helps you import documents, keep your reading progress, save passages and notes, and find that knowledge again across your library. It is built with C++20, Qt 6, Qt Quick/QML, SQLite, and CMake.
 
-The project is privacy-focused: documents, reading data, OCR results, and search indexes stay on the device by default. The public release links below point to the synchronized `v0.2.6` release. Windows and Linux are the fully audited full-engine builds for this release; macOS remains a supported CI package with its platform-specific capability set.
+The project is privacy-focused: documents, reading data, OCR results, and search indexes stay on the device by default. The public release links below point to the synchronized `v0.2.7` release. Windows and Linux are the fully audited full-engine builds for this release; macOS remains a supported CI package with its platform-specific capability set.
 
 ## Download
 
@@ -16,15 +16,15 @@ Ready-to-run builds are published on [GitHub Releases](https://github.com/Caetas
 
 | Platform | Download | Notes |
 | --- | --- | --- |
-| Windows x64 | [Download installer EXE (`v0.2.6`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.6/LuminaReader-Setup-windows-x64.exe) | Recommended. Run the `.exe` to install the application and its Qt dependencies. |
-| macOS x86_64 | [Download DMG (`v0.2.6`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.6/LuminaReader-macos-x86_64.dmg) | Open the DMG and move Lumina Reader to Applications. The macOS workflow publishes the core Qt build; native macOS validation is tracked separately. |
-| Linux x86_64 | [Download AppImage (`v0.2.6`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.6/LuminaReader-linux-x86_64.AppImage) | Make it executable with `chmod +x`, then run it. No installation or Qt setup is required. |
-| Debian/Ubuntu x86_64 | [Download Debian package (`v0.2.6`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.6/LuminaReader-linux-x86_64.deb) | Install with your distribution's package manager. |
+| Windows x64 | [Download installer EXE (`v0.2.7`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.7/LuminaReader-Setup-windows-x64.exe) | Recommended. Run the `.exe` to install the application and its Qt dependencies. |
+| macOS x86_64 | [Download DMG (`v0.2.7`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.7/LuminaReader-macos-x86_64.dmg) | Open the DMG and move Lumina Reader to Applications. The macOS workflow publishes the core Qt build; native macOS validation is tracked separately. |
+| Linux x86_64 | [Download AppImage (`v0.2.7`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.7/LuminaReader-linux-x86_64.AppImage) | Make it executable with `chmod +x`, then run it. No installation or Qt setup is required. |
+| Debian/Ubuntu x86_64 | [Download Debian package (`v0.2.7`)](https://github.com/Caetas123/lumina-reader/releases/download/v0.2.7/LuminaReader-linux-x86_64.deb) | Install with your distribution's package manager. |
 
 The Windows installer is a self-contained `.exe` that installs the Qt runtime, platform plugins, native document engines, and multilingual OCR runtime before launching Lumina Reader.
 The Linux AppImage is a self-contained executable for 64-bit Linux systems and includes the Qt runtime, native document engines, speech runtime, and multilingual OCR runtime required by Lumina Reader.
 
-See the [v0.2.6 release notes](https://github.com/Caetas123/lumina-reader/releases/tag/v0.2.6) for the packages and their SHA-256 checksums. New builds are added to Releases when a version tag is published.
+See the [v0.2.7 release notes](https://github.com/Caetas123/lumina-reader/releases/tag/v0.2.7) for the packages and their SHA-256 checksums. New builds are added to Releases when a version tag is published.
 
 ## Principles
 
@@ -62,6 +62,8 @@ The current application provides:
 - system text-to-speech through Qt Speech, with word highlighting when the platform voice engine exposes word progress;
 - Markdown, JSON, and plain-text knowledge export, library metadata export, database backup and validated database restoration, and metadata restoration;
 - persisted reader preferences for font family, text width, margins, alignment, reading direction, image fitting, custom reader colors, and named reading profiles, with global, format, content-type, document, and profile scopes;
+- automatic Windows/Linux UI-language detection through Qt, a persistent language override in Settings > General, and a selector containing the 91-entry Windows desktop language-pack/LIP catalog, including compatibility aliases; the installer and application share a bundled offline translation catalog;
+- the graphical Windows installer presents the same current-locale selector on its welcome screen, preselects the detected Windows language, and keeps the chosen installer language through the installation flow;
 - plain-text export of the currently opened document when selectable text or OCR text is available;
 - PDF export and system printing of the opened document when its reader engine is available;
 - SQLite migrations, safe read-only archive handling, Zip Slip checks, archive entry limits, and Qt Test coverage;

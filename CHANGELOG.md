@@ -4,6 +4,34 @@ All notable changes to Lumina Reader will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows Semantic Versioning where a public release version exists.
 
+## [Unreleased]
+
+## [0.2.7] - 2026-11-06
+
+This release adds the shared offline language catalog and completes the
+regional, Cherokee, and right-to-left interface support across the application
+and Windows installer.
+
+### Added
+
+- Cross-platform application-language detection from the Windows/Linux UI locale.
+- A persistent Settings > General language selector covering the Windows desktop language-pack and LIP locale catalog, with live QML retranslation.
+- The same current-locale selector on the graphical Windows installer welcome screen, with automatic Windows-language preselection before installation continues.
+- Removed retired settings UI, the unused PDF abstraction header, and the obsolete highlight search index; existing databases clean that index through migration 11.
+- A shared compressed offline localization catalog used by the Windows installer and application for all 91 selectable Windows language-pack/LIP entries, including compatibility aliases.
+- Robust Windows installer and uninstaller culture detection using the current UI culture, installed UI culture, and current regional culture as fallbacks.
+
+### Changed
+
+- Regional catalogs now use distinct wording for French Canada/France, Spanish Mexico/Spain, Catalan/Valencian, Norwegian Bokmål/Nynorsk, and Serbian regions/scripts.
+- Cherokee now has a dedicated catalog instead of falling back to English; technical names, file formats, and runtime placeholders remain unchanged where required.
+- Right-to-left layouts mirror the Qt application and Windows installer controls for Arabic, Persian, Hebrew, Uyghur, and Urdu.
+
+### Fixed
+
+- Installer translation markers are normalized and validated before packaging, preventing missing runtime substitutions in Bangla, Urdu, and Serbian.
+- Cherokee locale normalization now accepts the canonical `chr-Cher-US` identifier when changing language at runtime.
+
 ## [0.2.6] - 2026-11-05
 
 This release expands offline OCR coverage and removes the hard-coded six-language selector. OCR remains local: page images and recognized text are never sent to an online provider.

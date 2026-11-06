@@ -1,6 +1,6 @@
 # Format and feature support
 
-This is the user-facing capability matrix for Lumina Reader `v0.2.6`.
+This is the user-facing capability matrix for Lumina Reader `v0.2.7`.
 Windows and Linux release builds are configured with the full-engine gate and
 ship the native engines and OCR runtime required by the table. Development
 builds may intentionally omit those dependencies; the picker then hides the

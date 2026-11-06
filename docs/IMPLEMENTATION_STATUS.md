@@ -1,8 +1,8 @@
 # Implementation status
 
-Audit date: 2026-11-05
+Audit date: 2026-11-06
 Branch: `main`
-Release under audit: `0.2.6`
+Release under audit: `0.2.7`
 
 This report describes the current repository and separates local evidence from
 platform evidence that must come from GitHub Actions. The final checklist uses
@@ -34,6 +34,11 @@ being converted into a guessed pass.
   no online request is made without a user action.
 - Named reading profiles with persisted preferences, switching, creation, and
   deletion in Settings > General.
+- Cross-platform language preference infrastructure: automatic system-locale
+  detection on Windows/Linux, a persistent Settings > General selector covering
+  the Windows desktop language-pack/LIP locale catalog, live QML retranslation,
+  and a shared compressed offline catalog for the installer and application,
+  covering all 91 selectable Windows language-pack/LIP entries and aliases.
 - Plain-text and annotated PDF export, system printing, library/Knowledge/
   settings export, metadata restore, and integrity-checked database backup and
   restore with a recoverable previous copy.
@@ -54,7 +59,7 @@ script passes `bash -n` syntax validation.
 The image-codec test is also run with the real WebP and AVIF fixtures in the
 final evidence pass; it is not accepted merely because the test binary exists.
 
-For release `v0.2.6`, the pinned Tesseract manifest and commit were validated
+For release `v0.2.7`, the pinned Tesseract manifest and commit were validated
 in the Windows and Linux packaging workflows. The downloaded AppImage and
 Debian package each contain exactly 125 `.traineddata` files, the Tesseract
 executable, `configs/tsv`, and `TESSERACT_SOURCE.txt` identifying the pinned
