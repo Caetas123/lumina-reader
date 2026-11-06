@@ -1076,15 +1076,6 @@ bool LibraryStore::removeDocument(const QString &documentId, bool deleteOriginal
         return false;
     }
 
-    QSqlQuery knowledgeSearch(connection);
-    knowledgeSearch.prepare(QStringLiteral("DELETE FROM knowledge_search WHERE document_id = :id"));
-    knowledgeSearch.bindValue(QStringLiteral(":id"), documentId);
-    if (!knowledgeSearch.exec()) {
-        connection.rollback();
-        setError(QStringLiteral("The document could not be removed from knowledge search."));
-        return false;
-    }
-
     QSqlQuery knowledgeItemsSearch(connection);
     knowledgeItemsSearch.prepare(
         QStringLiteral("DELETE FROM knowledge_items_search WHERE document_id = :id"));
@@ -1821,30 +1812,12 @@ bool LibraryStore::restoreHighlight(const QVariantMap &record)
     query.bindValue(QStringLiteral(":page"), record.value(QStringLiteral("page")));
     bool success = !id.isEmpty() && query.exec();
 
-    QSqlQuery legacyRemove(connection);
-    if (success) {
-        legacyRemove.prepare(QStringLiteral(
-            "DELETE FROM knowledge_search WHERE highlight_id = :id"));
-        legacyRemove.bindValue(QStringLiteral(":id"), id);
-        success = legacyRemove.exec();
-    }
     QSqlQuery searchRemove(connection);
     if (success) {
         searchRemove.prepare(QStringLiteral(
             "DELETE FROM knowledge_items_search WHERE source_id = :id AND source_kind = 'highlight'"));
         searchRemove.bindValue(QStringLiteral(":id"), id);
         success = searchRemove.exec();
-    }
-    if (success) {
-        QSqlQuery legacy(connection);
-        legacy.prepare(QStringLiteral(
-            "INSERT INTO knowledge_search (highlight_id, document_id, text, note) "
-            "VALUES (:highlight, :document, :text, :note)"));
-        legacy.bindValue(QStringLiteral(":highlight"), id);
-        legacy.bindValue(QStringLiteral(":document"), record.value(QStringLiteral("documentId")));
-        legacy.bindValue(QStringLiteral(":text"), record.value(QStringLiteral("text")));
-        legacy.bindValue(QStringLiteral(":note"), record.value(QStringLiteral("note")));
-        success = legacy.exec();
     }
     if (success) {
         QSqlQuery search(connection);
@@ -1882,12 +1855,6 @@ bool LibraryStore::deleteHighlightRecord(const QString &highlightId)
     search.bindValue(QStringLiteral(":id"), highlightId);
     bool success = search.exec();
     if (success) {
-        QSqlQuery legacy(connection);
-        legacy.prepare(QStringLiteral("DELETE FROM knowledge_search WHERE highlight_id = :id"));
-        legacy.bindValue(QStringLiteral(":id"), highlightId);
-        success = legacy.exec();
-    }
-    if (success) {
         QSqlQuery query(connection);
         query.prepare(QStringLiteral("DELETE FROM highlights WHERE id = :id"));
         query.bindValue(QStringLiteral(":id"), highlightId);
@@ -1918,14 +1885,6 @@ bool LibraryStore::updateHighlightRecord(const QVariantMap &record)
     query.bindValue(QStringLiteral(":style"), record.value(QStringLiteral("style")));
     query.bindValue(QStringLiteral(":id"), record.value(QStringLiteral("id")));
     bool success = query.exec() && query.numRowsAffected() > 0;
-    if (success) {
-        QSqlQuery legacy(connection);
-        legacy.prepare(QStringLiteral(
-            "UPDATE knowledge_search SET note = :note WHERE highlight_id = :id"));
-        legacy.bindValue(QStringLiteral(":note"), record.value(QStringLiteral("note")));
-        legacy.bindValue(QStringLiteral(":id"), record.value(QStringLiteral("id")));
-        success = legacy.exec();
-    }
     if (success) {
         QSqlQuery search(connection);
         search.prepare(QStringLiteral(
@@ -2184,17 +2143,6 @@ bool LibraryStore::addHighlight(const QString &documentId,
     if (success) {
         QSqlQuery search(connection);
         search.prepare(QStringLiteral(
-            "INSERT INTO knowledge_search (highlight_id, document_id, text, note) "
-            "VALUES (:highlight, :document, :text, :note)"));
-        search.bindValue(QStringLiteral(":highlight"), id);
-        search.bindValue(QStringLiteral(":document"), documentId);
-        search.bindValue(QStringLiteral(":text"), text);
-        search.bindValue(QStringLiteral(":note"), normalizedNote);
-        success = search.exec();
-    }
-    if (success) {
-        QSqlQuery search(connection);
-        search.prepare(QStringLiteral(
             "INSERT INTO knowledge_items_search "
             "(source_id, source_kind, document_id, text, note, page, locator, created_at) "
             "VALUES (:source, 'highlight', :document, :text, :note, :page, :locator, CURRENT_TIMESTAMP)"));
@@ -2314,14 +2262,6 @@ bool LibraryStore::updateHighlight(const QString &highlightId,
     query.bindValue(QStringLiteral(":id"), highlightId);
     bool success = query.exec() && query.numRowsAffected() > 0;
     if (success) {
-        QSqlQuery legacy(connection);
-        legacy.prepare(QStringLiteral(
-            "UPDATE knowledge_search SET note = :note WHERE highlight_id = :id"));
-        legacy.bindValue(QStringLiteral(":note"), note.trimmed());
-        legacy.bindValue(QStringLiteral(":id"), highlightId);
-        success = legacy.exec();
-    }
-    if (success) {
         QSqlQuery search(connection);
         search.prepare(QStringLiteral(
             "UPDATE knowledge_items_search SET note = :note "
@@ -2376,12 +2316,6 @@ bool LibraryStore::removeHighlight(const QString &highlightId)
         "DELETE FROM knowledge_items_search WHERE source_id = :id AND source_kind = 'highlight'"));
     search.bindValue(QStringLiteral(":id"), highlightId);
     bool success = search.exec();
-    if (success) {
-        QSqlQuery legacy(connection);
-        legacy.prepare(QStringLiteral("DELETE FROM knowledge_search WHERE highlight_id = :id"));
-        legacy.bindValue(QStringLiteral(":id"), highlightId);
-        success = legacy.exec();
-    }
     if (success) {
         QSqlQuery query(connection);
         query.prepare(QStringLiteral("DELETE FROM highlights WHERE id = :id"));

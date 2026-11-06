@@ -793,14 +793,6 @@ bool BackupController::restoreLibrary(const QString &path)
             const QString color = highlight.value(QStringLiteral("color")).toString().trimmed().isEmpty()
                 ? QStringLiteral("#f6c945")
                 : highlight.value(QStringLiteral("color")).toString().trimmed();
-            QSqlQuery removeLegacy(connection);
-            removeLegacy.prepare(QStringLiteral("DELETE FROM knowledge_search WHERE highlight_id = :id"));
-            removeLegacy.bindValue(QStringLiteral(":id"), id);
-            if (!removeLegacy.exec()) {
-                connection.rollback();
-                fail(QStringLiteral("The library highlights could not be restored."));
-                return false;
-            }
             QSqlQuery removeSearch(connection);
             removeSearch.prepare(QStringLiteral(
                 "DELETE FROM knowledge_items_search WHERE source_id = :id AND source_kind = 'highlight'"));
@@ -837,19 +829,6 @@ bool BackupController::restoreLibrary(const QString &path)
             if (!insert.exec()) {
                 connection.rollback();
                 fail(QStringLiteral("The library highlights could not be restored."));
-                return false;
-            }
-            QSqlQuery legacy(connection);
-            legacy.prepare(QStringLiteral(
-                "INSERT INTO knowledge_search (highlight_id, document_id, text, note) "
-                "VALUES (:id, :document, :text, :note)"));
-            legacy.bindValue(QStringLiteral(":id"), id);
-            legacy.bindValue(QStringLiteral(":document"), localDocumentId);
-            legacy.bindValue(QStringLiteral(":text"), text);
-            legacy.bindValue(QStringLiteral(":note"), highlight.value(QStringLiteral("note")).toString());
-            if (!legacy.exec()) {
-                connection.rollback();
-                fail(QStringLiteral("The library search index could not be restored."));
                 return false;
             }
             QSqlQuery search(connection);

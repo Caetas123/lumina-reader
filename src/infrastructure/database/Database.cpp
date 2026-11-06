@@ -196,18 +196,7 @@ QList<Migration> migrations()
         },
         {
             3,
-            {
-                QStringLiteral(
-                    "CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_search USING fts5 ("
-                    "highlight_id UNINDEXED, "
-                    "document_id UNINDEXED, "
-                    "text, "
-                    "note"
-                    ")"),
-                QStringLiteral(
-                    "INSERT INTO knowledge_search (highlight_id, document_id, text, note) "
-                    "SELECT id, document_id, text, note FROM highlights"),
-            },
+            {},
         },
         {
             4,
@@ -301,6 +290,12 @@ QList<Migration> migrations()
                 QStringLiteral(
                     "CREATE INDEX IF NOT EXISTS translation_history_favorite_idx "
                     "ON translation_history(is_favorite, created_at DESC)"),
+            },
+        },
+        {
+            11,
+            {
+                QStringLiteral("DROP TABLE IF EXISTS knowledge_search"),
             },
         },
     };

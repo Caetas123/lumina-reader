@@ -139,7 +139,6 @@ private slots:
                                        QStringLiteral("Temporary author"),
                                        QStringLiteral("Temporary description"),
                                        QStringLiteral("es")));
-        QVERIFY(settings.exec(QStringLiteral("DELETE FROM knowledge_search")));
         QVERIFY(settings.exec(QStringLiteral("DELETE FROM knowledge_items_search")));
         QVERIFY(settings.exec(QStringLiteral("DELETE FROM highlights")));
         QVERIFY(settings.exec(QStringLiteral("DELETE FROM annotations")));

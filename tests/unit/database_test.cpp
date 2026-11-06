@@ -15,12 +15,12 @@ private slots:
         QVERIFY2(database.open(QStringLiteral(":memory:"), &error),
                  qPrintable(error.logMessage()));
         QVERIFY2(database.migrate(&error), qPrintable(error.logMessage()));
-        QCOMPARE(database.schemaVersion(), 10);
+        QCOMPARE(database.schemaVersion(), 11);
 
         QSqlQuery query(database.connection());
         QVERIFY(query.exec(QStringLiteral(
             "SELECT name FROM sqlite_master WHERE name IN "
-            "('schema_migrations', 'app_settings', 'document_search', 'knowledge_search', "
+            "('schema_migrations', 'app_settings', 'document_search', "
             "'knowledge_items_search', 'documents', "
             "'highlights', 'annotations', 'bookmarks', 'ocr_pages', "
             "'dictionary_history', 'translation_history')")));
@@ -33,7 +33,6 @@ private slots:
         QVERIFY(tableNames.contains(QStringLiteral("schema_migrations")));
         QVERIFY(tableNames.contains(QStringLiteral("app_settings")));
         QVERIFY(tableNames.contains(QStringLiteral("document_search")));
-        QVERIFY(tableNames.contains(QStringLiteral("knowledge_search")));
         QVERIFY(tableNames.contains(QStringLiteral("knowledge_items_search")));
         QVERIFY(tableNames.contains(QStringLiteral("documents")));
         QVERIFY(tableNames.contains(QStringLiteral("highlights")));
@@ -53,12 +52,12 @@ private slots:
                  qPrintable(error.logMessage()));
         QVERIFY2(database.migrate(&error), qPrintable(error.logMessage()));
         QVERIFY2(database.migrate(&error), qPrintable(error.logMessage()));
-        QCOMPARE(database.schemaVersion(), 10);
+        QCOMPARE(database.schemaVersion(), 11);
 
         QSqlQuery query(database.connection());
         QVERIFY(query.exec(QStringLiteral("SELECT COUNT(*) FROM schema_migrations")));
         QVERIFY(query.next());
-        QCOMPARE(query.value(0).toInt(), 10);
+        QCOMPARE(query.value(0).toInt(), 11);
     }
 
     void rejectsEmptyPath()
